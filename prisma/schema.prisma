@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// C01 spike ran against SQLite (see docs/evidence-and-evolution.md).
+// Production target is PostgreSQL (docker-compose.yml); switching the
+// provider + running a fresh `prisma migrate dev` is the only change needed.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  createdAt    DateTime      @default(now())
+  reservations Reservation[]
+}
+
+model Resource {
+  id           String        @id @default(uuid())
+  name         String
+  capacity     Int
+  createdAt    DateTime      @default(now())
+  reservations Reservation[]
+}
+
+model Reservation {
+  id         String   @id @default(uuid())
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  startsAt   DateTime
+  endsAt     DateTime
+  state      String   @default("DRAFT")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
