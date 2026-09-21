@@ -33,7 +33,7 @@ npm run dev      # spustí HTTP server na http://localhost:3000
 ```
 
 Ověřeno z čistého checkoutu (21. 9. 2026): `npm install` → `npx prisma migrate dev` → `npm test`
-projde bez dalších kroků, 8/8 testů zelených.
+projde bez dalších kroků, všech 14 testů zelených (7 doménových, 1 persistence spike, 6 HTTP).
 
 ## CP1 walking skeleton
 

@@ -1,11 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import express, { Express, Request, Response } from "express";
+import express, { Express, NextFunction, Request, RequestHandler, Response } from "express";
 import { z } from "zod";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { ReservationRepository } from "../repositories/reservationRepository.js";
 import {
   ReservationService,
+  InvalidStateError,
   OverlapError,
   NoShowExpiredError,
   NotFoundError,
@@ -22,6 +23,13 @@ const reservationInputSchema = z
   })
   .refine((v) => v.endsAt > v.startsAt, { message: "endsAt must be after startsAt" });
 
+const availabilityQuerySchema = z
+  .object({
+    start: z.coerce.date(),
+    end: z.coerce.date(),
+  })
+  .refine((v) => v.end > v.start, { message: "end must be after start" });
+
 const userInputSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -32,6 +40,14 @@ const resourceInputSchema = z.object({
   capacity: z.coerce.number().int().positive(),
 });
 
+// Express 4 nezachytává odmítnuté promisy z async handlerů — bez tohoto obalu
+// shodí jediný chybný požadavek (např. FK violation) celý proces.
+function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>): RequestHandler {
+  return (req, res, next) => {
+    handler(req, res).catch(next);
+  };
+}
+
 export function createApp(prisma: PrismaClient): Express {
   const service = new ReservationService(new ReservationRepository(prisma));
   const app = express();
@@ -40,81 +56,117 @@ export function createApp(prisma: PrismaClient): Express {
 
   // Manual-testing helpers: reservations reference an existing User/Resource
   // (FK constraint), so the demo frontend needs a way to create and list them.
-  app.get("/users", async (_req: Request, res: Response) => {
-    return res.json(await prisma.user.findMany({ orderBy: { createdAt: "desc" } }));
-  });
+  app.get(
+    "/users",
+    asyncRoute(async (_req, res) => {
+      return res.json(await prisma.user.findMany({ orderBy: { createdAt: "desc" } }));
+    })
+  );
 
-  app.post("/users", async (req: Request, res: Response) => {
-    const parsed = userInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.flatten() });
-    }
-    const user = await prisma.user.create({ data: parsed.data });
-    return res.status(201).json(user);
-  });
+  app.post(
+    "/users",
+    asyncRoute(async (req, res) => {
+      const parsed = userInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const user = await prisma.user.create({ data: parsed.data });
+      return res.status(201).json(user);
+    })
+  );
 
-  app.get("/resources", async (_req: Request, res: Response) => {
-    return res.json(await prisma.resource.findMany({ orderBy: { createdAt: "desc" } }));
-  });
+  app.get(
+    "/resources",
+    asyncRoute(async (_req, res) => {
+      return res.json(await prisma.resource.findMany({ orderBy: { createdAt: "desc" } }));
+    })
+  );
 
-  app.post("/resources", async (req: Request, res: Response) => {
-    const parsed = resourceInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.flatten() });
-    }
-    const resource = await prisma.resource.create({ data: parsed.data });
-    return res.status(201).json(resource);
-  });
+  app.post(
+    "/resources",
+    asyncRoute(async (req, res) => {
+      const parsed = resourceInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const resource = await prisma.resource.create({ data: parsed.data });
+      return res.status(201).json(resource);
+    })
+  );
 
-  app.get("/resources/:id/reservations", async (req: Request, res: Response) => {
-    const reservations = await prisma.reservation.findMany({
-      where: { resourceId: req.params.id },
-      orderBy: { startsAt: "asc" },
-    });
-    return res.json(reservations);
-  });
+  app.get(
+    "/resources/:id/reservations",
+    asyncRoute(async (req, res) => {
+      const reservations = await prisma.reservation.findMany({
+        where: { resourceId: req.params.id },
+        orderBy: { startsAt: "asc" },
+      });
+      return res.json(reservations);
+    })
+  );
 
   // CP1 walking skeleton entry point: validate -> persist -> return reservation ID.
-  app.post("/reservations", async (req: Request, res: Response) => {
-    const parsed = reservationInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.flatten() });
-    }
-    const reservation = await service.createReservation(parsed.data);
-    return res.status(201).json({ id: reservation.id, state: reservation.state });
-  });
+  app.post(
+    "/reservations",
+    asyncRoute(async (req, res) => {
+      const parsed = reservationInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const reservation = await service.createReservation(parsed.data);
+      return res.status(201).json({ id: reservation.id, state: reservation.state });
+    })
+  );
 
-  app.post("/reservations/:id/confirm", async (req: Request, res: Response) => {
-    try {
+  app.post(
+    "/reservations/:id/confirm",
+    asyncRoute(async (req, res) => {
       const reservation = await service.confirmReservation(req.params.id);
       return res.json(reservation);
-    } catch (err) {
-      return handleServiceError(err, res);
-    }
-  });
+    })
+  );
 
-  app.post("/reservations/:id/cancel", async (req: Request, res: Response) => {
-    try {
+  app.post(
+    "/reservations/:id/cancel",
+    asyncRoute(async (req, res) => {
       const reservation = await service.cancelReservation(req.params.id);
       return res.json(reservation);
-    } catch (err) {
-      return handleServiceError(err, res);
-    }
-  });
+    })
+  );
 
-  app.get("/resources/:id/availability", async (req: Request, res: Response) => {
-    const startsAt = new Date(String(req.query.start));
-    const endsAt = new Date(String(req.query.end));
-    const available = await service.checkAvailability(req.params.id, startsAt, endsAt);
-    return res.json({ available });
-  });
+  app.get(
+    "/resources/:id/availability",
+    asyncRoute(async (req, res) => {
+      const parsed = availabilityQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const available = await service.checkAvailability(
+        req.params.id,
+        parsed.data.start,
+        parsed.data.end
+      );
+      return res.json({ available });
+    })
+  );
+
+  app.use(errorMiddleware);
 
   return app;
 }
 
-function handleServiceError(err: unknown, res: Response) {
+// Jediné místo, kde se doménové a DB chyby překládají na HTTP status kódy.
+function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof OverlapError) return res.status(409).json({ error: err.message });
+  if (err instanceof InvalidStateError) return res.status(409).json({ error: err.message });
   if (err instanceof NoShowExpiredError) return res.status(410).json({ error: err.message });
-  throw err;
+
+  // P2003 = foreign key constraint: rezervace odkazuje na neexistující stůl nebo hosta.
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+    return res.status(400).json({ error: "Unknown resourceId or userId" });
+  }
+
+  console.error(err);
+  return res.status(500).json({ error: "Internal server error" });
 }

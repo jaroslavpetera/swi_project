@@ -74,3 +74,41 @@ Test Files  2 passed (2)
 ```
 
 Žádný nezdokumentovaný krok nebyl potřeba — README je tedy ověřené, ne jen napsané.
+
+---
+
+# Hardening po spike (21. 9. 2026)
+
+Po dokončení spike jsme běžící server ručně proklepli hraničními vstupy (ne jen happy path).
+Našli jsme tři chyby, které by blokovaly CP1 walking skeleton, a opravili je:
+
+| # | Problém | Pozorované chování před opravou | Oprava |
+|---|---|---|---|
+| 1 | Async chyby v Express 4 | `POST /reservations` s neexistujícím `resourceId` → Prisma `P2003` → unhandled rejection → **spadl celý proces**, server dál neodpovídal | `asyncRoute()` obal nad všemi handlery + jeden `errorMiddleware`, který mapuje doménové i Prisma chyby na HTTP kódy (`P2003` → 400) |
+| 2 | Chybějící guard na stav | `create → cancel → confirm` vrátilo `CONFIRMED`, tj. zrušenou rezervaci šlo znovu potvrdit (a obejít tím no-show pravidlo) | `confirmReservation` vyžaduje výchozí stav `DRAFT`, jinak `InvalidStateError` → HTTP 409 |
+| 3 | Nevalidovaný vstup u availability | `GET /resources/:id/availability` bez parametrů i s `?start=blabla` vrátilo `{"available":true}` — systém hlásil „volno“, i když neměl data | Zod schéma `availabilityQuerySchema` (parsovatelná data, `end > start`), jinak HTTP 400 |
+
+**Ověření po opravě** (stejné požadavky proti běžícímu serveru):
+
+```
+1) confirm po cancelu : 409 {"error":"Reservation is in state CANCELLED, expected DRAFT"}
+2) availability        : 400 (bez parametrů) / 400 (start=blabla&end=nic)
+3) neexistující FK     : 400 {"error":"Unknown resourceId or userId"}
+   server po chybě     : 200 (proces běží dál)
+```
+
+Všechny tři případy jsou navíc pokryté regresními testy v `tests/http/app.test.ts`, takže se
+nemohou vrátit nepozorovaně:
+
+```
+✓ tests/domain/rules.test.ts (7 tests)
+✓ tests/spike/persistence.spike.test.ts (1 test)
+✓ tests/http/app.test.ts (6 tests)
+
+Test Files  3 passed (3)
+     Tests  14 passed (14)
+```
+
+**Decision:** validace vstupu a překlad chyb na HTTP kódy patří do walking skeletonu už od CP1 —
+krok `validate` v `POST /reservations` nestačí řešit jen Zod schématem, protože část chyb
+(neexistující stůl/host) se pozná až na úrovni DB.
