@@ -1,4 +1,4 @@
-import { ReservationState, TimeRange, ReservationRecord } from "./types.js";
+import { ReservationState, TimeRange, ReservationRecord, OrderLine } from "./types.js";
 
 export const NO_SHOW_GRACE_MINUTES = 30;
 
@@ -26,4 +26,18 @@ export function isExpiredDraft(
   if (reservation.state !== ReservationState.DRAFT) return false;
   const graceDeadline = new Date(reservation.startsAt.getTime() - graceMinutes * 60_000);
   return now >= graceDeadline;
+}
+
+// BR-05 (ordering window): objednávat k rezervaci lze jen tehdy, když je
+// rezervace CONFIRMED a právě probíhá — tedy start <= now < end (BR-01).
+export function isOrderingWindowOpen(
+  reservation: Pick<ReservationRecord, "state" | "startsAt" | "endsAt">,
+  now: Date
+): boolean {
+  if (reservation.state !== ReservationState.CONFIRMED) return false;
+  return now >= reservation.startsAt && now < reservation.endsAt;
+}
+
+export function orderTotalCents(lines: Pick<OrderLine, "quantity" | "unitPriceCents">[]): number {
+  return lines.reduce((sum, line) => sum + line.quantity * line.unitPriceCents, 0);
 }

@@ -19,3 +19,33 @@ export interface ReservationRecord extends ReservationInput {
   state: ReservationState;
   createdAt: Date;
 }
+
+export enum OrderState {
+  PLACED = "PLACED",
+  SERVED = "SERVED",
+  PAID = "PAID",
+}
+
+export enum MenuCategory {
+  FOOD = "FOOD",
+  DRINK = "DRINK",
+}
+
+export interface OrderLineInput {
+  menuItemId: string;
+  quantity: number;
+}
+
+export interface OrderLine extends OrderLineInput {
+  name: string;
+  unitPriceCents: number;
+}
+
+export interface OrderRecord {
+  id: string;
+  reservationId: string;
+  state: OrderState;
+  placedAt: Date;
+  lines: OrderLine[];
+  totalCents: number;
+}

@@ -108,3 +108,40 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Objednávky jídla a pití */
+.menu {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #f7f7f7;
+}
+
+.menu-row input {
+  width: 4rem;
+}
+
+.menu-row.sold-out {
+  opacity: 0.5;
+}
+
+.state-PLACED {
+  color: #b26a00;
+}
+
+.state-SERVED {
+  color: #1a5fb4;
+}
+
+.state-PAID {
+  color: #2e7d32;
+}

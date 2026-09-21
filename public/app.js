@@ -15,6 +15,8 @@ const api = {
 
 let users = [];
 let resources = [];
+let menuItems = [];
+let reservations = [];
 
 function fillSelect(select, items, labelFn) {
   const previous = select.value;
@@ -114,6 +116,12 @@ async function loadReservations() {
   const resourceId = document.getElementById("reservations-resource").value;
   if (!resourceId) return;
   const { body } = await api.get(`/resources/${resourceId}/reservations`);
+  reservations = body;
+  fillSelect(
+    document.getElementById("order-reservation"),
+    reservations,
+    (r) => `${new Date(r.startsAt).toLocaleString()} – ${r.state}`
+  );
   const tbody = document.querySelector("#reservation-table tbody");
   tbody.innerHTML = body
     .map(
@@ -143,6 +151,91 @@ document.querySelector("#reservation-table tbody").addEventListener("click", asy
 document.getElementById("refresh-reservations").addEventListener("click", loadReservations);
 document.getElementById("reservations-resource").addEventListener("change", loadReservations);
 
+// --- Objednávky jídla a pití (OP-06) ---
+
+function formatCzk(cents) {
+  return (cents / 100).toLocaleString("cs-CZ", { style: "currency", currency: "CZK" });
+}
+
+async function loadMenu() {
+  const { body } = await api.get("/menu-items");
+  menuItems = body;
+  document.getElementById("menu-list").innerHTML = menuItems
+    .map(
+      (item) => `
+      <label class="menu-row ${item.available ? "" : "sold-out"}">
+        <span>${item.name} — ${formatCzk(item.priceCents)}</span>
+        <input type="number" min="0" value="0" data-menu-item="${item.id}" ${item.available ? "" : "disabled"} />
+      </label>`
+    )
+    .join("");
+}
+
+function selectedOrderLines() {
+  return [...document.querySelectorAll("#menu-list input[data-menu-item]")]
+    .map((input) => ({ menuItemId: input.dataset.menuItem, quantity: Number(input.value) }))
+    .filter((line) => line.quantity > 0);
+}
+
+document.getElementById("place-order").addEventListener("click", async () => {
+  const reservationId = document.getElementById("order-reservation").value;
+  if (!reservationId) return;
+  const { status, body } = await api.post(`/reservations/${reservationId}/orders`, {
+    items: selectedOrderLines(),
+  });
+  document.getElementById("order-result").textContent = `HTTP ${status}
+${JSON.stringify(body, null, 2)}`;
+  if (status === 201) {
+    document.querySelectorAll("#menu-list input[data-menu-item]").forEach((i) => (i.value = 0));
+    await loadTab();
+  }
+});
+
+async function loadTab() {
+  const reservationId = document.getElementById("order-reservation").value;
+  if (!reservationId) return;
+  const { status, body } = await api.get(`/reservations/${reservationId}/tab`);
+  const tbody = document.querySelector("#tab-table tbody");
+  if (status !== 200) {
+    tbody.innerHTML = "";
+    document.getElementById("tab-summary").textContent = `HTTP ${status}
+${JSON.stringify(body, null, 2)}`;
+    return;
+  }
+  tbody.innerHTML = body.orders
+    .map(
+      (order) => `
+      <tr>
+        <td><code>${order.id.slice(0, 8)}</code></td>
+        <td>${order.lines.map((l) => `${l.quantity}× ${l.name}`).join("<br/>")}</td>
+        <td>${formatCzk(order.totalCents)}</td>
+        <td class="state-${order.state}">${order.state}</td>
+        <td>
+          <button data-order-action="serve" data-id="${order.id}" ${order.state !== "PLACED" ? "disabled" : ""}>Podáno</button>
+          <button data-order-action="pay" data-id="${order.id}" ${order.state !== "SERVED" ? "disabled" : ""}>Zaplaceno</button>
+        </td>
+      </tr>`
+    )
+    .join("");
+  document.getElementById("tab-summary").textContent =
+    `Nezaplaceno: ${formatCzk(body.unpaidCents)} · zaplaceno: ${formatCzk(body.paidCents)} · celkem: ${formatCzk(body.totalCents)}`;
+}
+
+document.querySelector("#tab-table tbody").addEventListener("click", async (e) => {
+  const button = e.target.closest("button[data-order-action]");
+  if (!button) return;
+  const { orderAction, id } = button.dataset;
+  const { status, body } = await api.post(`/orders/${id}/${orderAction}`, {});
+  if (status !== 200) {
+    document.getElementById("order-result").textContent = `HTTP ${status}
+${JSON.stringify(body, null, 2)}`;
+  }
+  await loadTab();
+});
+
+document.getElementById("refresh-tab").addEventListener("click", loadTab);
+document.getElementById("order-reservation").addEventListener("change", loadTab);
+
 (async function init() {
-  await Promise.all([loadUsers(), loadResources()]);
+  await Promise.all([loadUsers(), loadResources(), loadMenu()]);
 })();

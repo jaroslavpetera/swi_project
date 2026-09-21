@@ -4,6 +4,7 @@ import express, { Express, NextFunction, Request, RequestHandler, Response } fro
 import { z } from "zod";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { ReservationRepository } from "../repositories/reservationRepository.js";
+import { OrderRepository } from "../repositories/orderRepository.js";
 import {
   ReservationService,
   InvalidStateError,
@@ -11,6 +12,13 @@ import {
   NoShowExpiredError,
   NotFoundError,
 } from "../services/reservationService.js";
+import {
+  OrderService,
+  InvalidOrderStateError,
+  OrderNotFoundError,
+  OrderingWindowClosedError,
+  UnknownMenuItemError,
+} from "../services/orderService.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
@@ -40,6 +48,24 @@ const resourceInputSchema = z.object({
   capacity: z.coerce.number().int().positive(),
 });
 
+const menuItemInputSchema = z.object({
+  name: z.string().min(1),
+  category: z.enum(["FOOD", "DRINK"]),
+  priceCents: z.coerce.number().int().positive(),
+  available: z.boolean().optional(),
+});
+
+const orderInputSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        menuItemId: z.string().min(1),
+        quantity: z.coerce.number().int().positive(),
+      })
+    )
+    .min(1, "an order must contain at least one item"),
+});
+
 // Express 4 nezachytává odmítnuté promisy z async handlerů — bez tohoto obalu
 // shodí jediný chybný požadavek (např. FK violation) celý proces.
 function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>): RequestHandler {
@@ -49,7 +75,9 @@ function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>):
 }
 
 export function createApp(prisma: PrismaClient): Express {
-  const service = new ReservationService(new ReservationRepository(prisma));
+  const reservationRepository = new ReservationRepository(prisma);
+  const service = new ReservationService(reservationRepository);
+  const orderService = new OrderService(new OrderRepository(prisma), reservationRepository);
   const app = express();
   app.use(express.json());
   app.use(express.static(publicDir));
@@ -141,12 +169,81 @@ export function createApp(prisma: PrismaClient): Express {
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.flatten() });
       }
+      // OP-02 předpoklad: Resource existuje. Na neexistující stůl se neodpovídá
+      // „available“ — nezodpověditelná otázka nemá odpověď.
+      const resource = await prisma.resource.findUnique({ where: { id: req.params.id } });
+      if (!resource) {
+        return res.status(404).json({ error: `Resource ${req.params.id} not found` });
+      }
       const available = await service.checkAvailability(
         req.params.id,
         parsed.data.start,
         parsed.data.end
       );
       return res.json({ available });
+    })
+  );
+
+  // --- Objednávky jídla a pití k rezervaci (OP-06, BR-05) ---
+
+  app.get(
+    "/menu-items",
+    asyncRoute(async (_req, res) => {
+      return res.json(
+        await prisma.menuItem.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] })
+      );
+    })
+  );
+
+  app.post(
+    "/menu-items",
+    asyncRoute(async (req, res) => {
+      const parsed = menuItemInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const menuItem = await prisma.menuItem.create({ data: parsed.data });
+      return res.status(201).json(menuItem);
+    })
+  );
+
+  app.post(
+    "/reservations/:id/orders",
+    asyncRoute(async (req, res) => {
+      const parsed = orderInputSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+      }
+      const order = await orderService.placeOrder(req.params.id, parsed.data.items);
+      return res.status(201).json(order);
+    })
+  );
+
+  app.get(
+    "/reservations/:id/orders",
+    asyncRoute(async (req, res) => {
+      return res.json(await orderService.listOrders(req.params.id));
+    })
+  );
+
+  app.get(
+    "/reservations/:id/tab",
+    asyncRoute(async (req, res) => {
+      return res.json(await orderService.getTab(req.params.id));
+    })
+  );
+
+  app.post(
+    "/orders/:id/serve",
+    asyncRoute(async (req, res) => {
+      return res.json(await orderService.serveOrder(req.params.id));
+    })
+  );
+
+  app.post(
+    "/orders/:id/pay",
+    asyncRoute(async (req, res) => {
+      return res.json(await orderService.payOrder(req.params.id));
     })
   );
 
@@ -161,6 +258,13 @@ function errorMiddleware(err: unknown, _req: Request, res: Response, _next: Next
   if (err instanceof OverlapError) return res.status(409).json({ error: err.message });
   if (err instanceof InvalidStateError) return res.status(409).json({ error: err.message });
   if (err instanceof NoShowExpiredError) return res.status(410).json({ error: err.message });
+  if (err instanceof OrderNotFoundError) return res.status(404).json({ error: err.message });
+  if (err instanceof InvalidOrderStateError) return res.status(409).json({ error: err.message });
+  if (err instanceof UnknownMenuItemError) return res.status(400).json({ error: err.message });
+  // Objednávka mimo čas rezervace není chyba požadavku, ale konflikt se stavem světa.
+  if (err instanceof OrderingWindowClosedError) {
+    return res.status(409).json({ error: err.message, reason: err.reason });
+  }
 
   // P2003 = foreign key constraint: rezervace odkazuje na neexistující stůl nebo hosta.
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
