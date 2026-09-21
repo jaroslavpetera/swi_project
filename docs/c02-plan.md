@@ -6,7 +6,7 @@ nic z toho se znovu nevytváří.
 
 | | Osoba A | Osoba B |
 |---|---|---|
-| Jméno | *(doplnit)* | *(doplnit)* |
+| Jméno | **Michal Křižák** | *(doplnit)* |
 | Těžiště | **Vstup do systému**: Create + Check Availability, use-case pohled, evidence | **Životní cyklus rezervace**: Confirm + Cancel + Approve, stavový diagram, změna v0.2 |
 
 Princip rozdělení: A vlastní *„co do systému vstupuje a co systém odpovídá"*, B vlastní
@@ -43,6 +43,7 @@ jsou v příslušných fázích níže.
 | A13 | 7 | Implementace chování Availability dle v0.2 + aktualizace testovacího UI v `public/` | `src/`, `public/`, `tests/` |
 | A14 | 8 | **Napsat evidenci C02** (všech 8 položek) | `docs/evidence-and-evolution.md` |
 | A15 | 8 | **Review** OP-05 Approve, stavového diagramu v0.2 a architektonického driveru od B | komentáře v PR |
+| A16 | mimo baseline | **OP-06 Place Order** — objednávka jídla a pití k probíhající rezervaci + účet hosta: specifikace, BR-05/BR-06, activity diagram, implementace, 19 testů | `specification.md`, `docs/diagrams/`, `src/`, `tests/` — **hotovo** |
 
 ### Osoba B — životní cyklus rezervace
 
@@ -384,5 +385,8 @@ Ať se nepíše znovu to, co platí:
 - No-show pravidlo (BR-04) je implementované a otestované z C01.
 - Souběh při Confirm **není ošetřen** — to je záměrně future pressure Q z C01 a zároveň
   hotový architektonický driver pro C03 (REQ-04).
-- 14 automatizovaných testů (7 doménových, 1 persistence spike, 6 HTTP) — příklady ověření z C02
-  se přidávají k nim.
+- 43 automatizovaných testů (15 doménových, 1 persistence spike, 6 HTTP, 21 příkladů ověření
+  ze specifikace).
+- **Objednávky jídla a pití (OP-06)** jsou hotové včetně účtu hosta — je to rozšíření nad rámec
+  minimální baseline, takže se nepočítá mezi čtyři základní operace, ale používá stejná pravidla
+  (BR-01 pro hranici intervalu) a je specifikované stejnou šablonou.

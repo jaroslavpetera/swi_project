@@ -88,6 +88,35 @@
     </table>
   </section>
 
+  <section class="card">
+    <h2>Objednávka k rezervaci</h2>
+    <p class="hint">
+      Objednat jde jen k potvrzené rezervaci a jen v jejím čase (BR-05) — jinak server odpoví 409.
+    </p>
+    <label>Rezervace
+      <select id="order-reservation"></select>
+    </label>
+    <div id="menu-list" class="menu"></div>
+    <button id="place-order" type="button">Objednat</button>
+    <p id="order-result" class="result"></p>
+
+    <h3>Účet (tab)</h3>
+    <button id="refresh-tab" type="button">Načíst účet</button>
+    <table id="tab-table">
+      <thead>
+        <tr>
+          <th>Objednávka</th>
+          <th>Položky</th>
+          <th>Částka</th>
+          <th>Stav</th>
+          <th>Akce</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="tab-summary" class="result"></p>
+  </section>
+
   <script src="/app.js"></script>
 </body>
 </html>

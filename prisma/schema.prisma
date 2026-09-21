@@ -19,11 +19,14 @@ model User {
 }
 
 model Resource {
-  id           String        @id @default(uuid())
-  name         String
-  capacity     Int
-  createdAt    DateTime      @default(now())
-  reservations Reservation[]
+  id               String        @id @default(uuid())
+  name             String
+  capacity         Int
+  // C02 BR-05: routes Confirm through the approval workflow (PENDING_APPROVAL)
+  // instead of straight to CONFIRMED when true.
+  requiresApproval Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  reservations     Reservation[]
 }
 
 model Reservation {
@@ -37,4 +40,39 @@ model Reservation {
   state      String   @default("DRAFT")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  orders     Order[]
+}
+
+// Položka jídelního / nápojového lístku. Cena je v haléřích (celé číslo),
+// aby se na penězích nepočítalo s plovoucí desetinnou čárkou.
+model MenuItem {
+  id            String      @id @default(uuid())
+  name          String
+  category      String // FOOD | DRINK
+  priceCents    Int
+  available     Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  state         String      @default("PLACED") // PLACED | SERVED | PAID
+  placedAt      DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  // Cena se kopíruje v okamžiku objednání — pozdější změna ceníku
+  // nesmí měnit částku už podané objednávky.
+  unitPriceCents Int
 }

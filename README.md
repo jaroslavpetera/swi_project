@@ -12,6 +12,10 @@
 - Rezervace stolů v hospodě s akutálním stavem dluhu na účtu k zaplacení
 - Možnost objednání piva na určitý čas
 
+Obojí je od C02 implementované: k potvrzené rezervaci lze **v jejím čase** objednat jídlo a pití
+a průběžně vidět účet (zaplaceno / nezaplaceno). Podmínky jsou popsané ve
+[`docs/specification.md`](docs/specification.md) jako OP-06 a pravidla BR-05/BR-06.
+
 Podrobný Project Frame (doména, business rules, future pressure) je v
 [`docs/intent-and-change.md`](docs/intent-and-change.md), zdůvodnění tech stacku v
 [`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) a evidence
@@ -28,12 +32,29 @@ jako produkční cíl (viz ADR v `docs/architecture-and-decisions.md`). Testy: V
 npm install
 cp .env.example .env
 npx prisma migrate dev
-npm test        # spustí unit testy + C01 persistence spike
+npm run seed    # naplní jídelní a nápojový lístek
+npm test        # spustí unit testy + C01 persistence spike + příklady ověření ze specifikace
 npm run dev      # spustí HTTP server na http://localhost:3000
 ```
 
+Na `http://localhost:3000` běží jednoduché testovací UI: uživatelé, stoly, rezervace, dostupnost
+a objednávky k rezervaci včetně účtu.
+
 Ověřeno z čistého checkoutu (21. 9. 2026): `npm install` → `npx prisma migrate dev` → `npm test`
-projde bez dalších kroků, všech 14 testů zelených (7 doménových, 1 persistence spike, 6 HTTP).
+projde bez dalších kroků. Aktuální sada má **43 testů** (15 doménových, 1 persistence spike,
+6 HTTP, 21 příkladů ověření ze specifikace).
+
+## API
+
+| Operace | Endpoint |
+|---|---|
+| Create reservation | `POST /reservations` |
+| Confirm / cancel | `POST /reservations/:id/confirm`, `POST /reservations/:id/cancel` |
+| Check availability | `GET /resources/:id/availability?start=&end=` |
+| Jídelní lístek | `GET /menu-items`, `POST /menu-items` |
+| Objednávka k rezervaci | `POST /reservations/:id/orders`, `GET /reservations/:id/orders` |
+| Účet hosta | `GET /reservations/:id/tab` |
+| Průběh objednávky | `POST /orders/:id/serve`, `POST /orders/:id/pay` |
 
 ## CP1 walking skeleton
 
