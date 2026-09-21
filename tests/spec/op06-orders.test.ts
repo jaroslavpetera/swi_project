@@ -1,4 +1,4 @@
-// Příklady ověření pro OP-06 Place Order (BR-05) z docs/specification.md.
+// Příklady ověření pro OP-06 Place Order (BR-07) z docs/specification.md.
 //
 // Pozn. k přípravě dat: rezervaci, která právě probíhá, nelze potvrdit přes API,
 // protože BR-04 (no-show) potvrzení 30 minut před začátkem zakazuje. Stav
@@ -79,7 +79,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe("OP-06 Place Order (REQ-06, BR-05)", () => {
+describe("OP-06 Place Order (REQ-07, BR-07)", () => {
   it("V-06.1: CONFIRMED reservation during its slot → order is placed with a total", async () => {
     const reservationId = await ongoingConfirmed();
 

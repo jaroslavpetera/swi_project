@@ -52,7 +52,7 @@ nelze potvrdit kvůli BR-04), ale může to překvapit. **Vědomě nerozhodnuto*
 
 ---
 
-## OP-06 — Place Order (REQ-06, REQ-07, BR-05/BR-06) — rozšíření domény
+## OP-06 — Place Order (REQ-07, REQ-08, BR-07/BR-08) — rozšíření domény
 
 Spuštěno stejným způsobem (`npx tsx src/index.ts`, port 3103, `curl`) proti reálné DB, 21. 9. 2026.
 

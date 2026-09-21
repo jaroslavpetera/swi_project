@@ -19,11 +19,14 @@ model User {
 }
 
 model Resource {
-  id           String        @id @default(uuid())
-  name         String
-  capacity     Int
-  createdAt    DateTime      @default(now())
-  reservations Reservation[]
+  id               String        @id @default(uuid())
+  name             String
+  capacity         Int
+  // C02 BR-05: routes Confirm through the approval workflow (PENDING_APPROVAL)
+  // instead of straight to CONFIRMED when true.
+  requiresApproval Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  reservations     Reservation[]
 }
 
 model Reservation {

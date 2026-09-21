@@ -1,6 +1,6 @@
 # Activity diagram — OP-06 Place Order (extension)
 
-Owner: A. Odpovídá `../specification.md`, sekce OP-06, BR-05 a BR-06.
+Owner: A. Odpovídá `../specification.md`, sekce OP-06, BR-07 a BR-08.
 
 ```mermaid
 flowchart TD
@@ -10,11 +10,11 @@ flowchart TD
     v1 -->|ne| rej1[/Odmítnout: NOT_CONFIRMED/]
     v1 -->|ano| v2{now >= start?}
     v2 -->|ne| rej2[/Odmítnout: BEFORE_START/]
-    v2 -->|ano| v3{now &lt; end?<br/>BR-01 / BR-05}
+    v2 -->|ano| v3{now &lt; end?<br/>BR-01 / BR-07}
     v3 -->|ne| rej3[/Odmítnout: AFTER_END/]
     v3 -->|ano| v4{Všechny položky existují<br/>a jsou dostupné?}
     v4 -->|ne| rej4[/Odmítnout celou objednávku/]
-    v4 -->|ano| price[Zafixovat aktuální ceny<br/>položek — BR-06]
+    v4 -->|ano| price[Zafixovat aktuální ceny<br/>položek — BR-08]
     price --> persist[Uložit objednávku<br/>stav = PLACED]
     persist --> out[/Vrátit objednávku včetně součtu/]
 ```
@@ -23,7 +23,7 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PLACED: place order [BR-05 splněno]
+    [*] --> PLACED: place order [BR-07 splněno]
     PLACED --> SERVED: serve
     SERVED --> PAID: pay
     PAID --> [*]

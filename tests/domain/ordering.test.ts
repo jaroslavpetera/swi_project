@@ -7,7 +7,7 @@ const slot = {
   endsAt: new Date("2027-03-01T20:00:00Z"),
 };
 
-describe("BR-05 ordering window", () => {
+describe("BR-07 ordering window", () => {
   it("is open for a CONFIRMED reservation during its slot", () => {
     const now = new Date("2027-03-01T19:00:00Z");
     expect(isOrderingWindowOpen({ ...slot, state: ReservationState.CONFIRMED }, now)).toBe(true);

@@ -53,7 +53,7 @@ export class OrderService {
     const reservation = await this.reservations.findById(reservationId);
     if (!reservation) throw new NotFoundError(reservationId);
 
-    // BR-05: objednávat jde jen k potvrzené rezervaci a jen v jejím čase.
+    // BR-07: objednávat jde jen k potvrzené rezervaci a jen v jejím čase.
     if (!isOrderingWindowOpen(reservation, now)) {
       throw new OrderingWindowClosedError(reasonFor(reservation, now));
     }
