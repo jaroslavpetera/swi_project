@@ -14,6 +14,15 @@ export class NoShowExpiredError extends Error {
   }
 }
 
+export class InvalidStateError extends Error {
+  constructor(
+    public readonly currentState: ReservationState,
+    public readonly expectedState: ReservationState
+  ) {
+    super(`Reservation is in state ${currentState}, expected ${expectedState}`);
+  }
+}
+
 export class NotFoundError extends Error {
   constructor(id: string) {
     super(`Reservation ${id} not found`);
@@ -30,6 +39,12 @@ export class ReservationService {
   async confirmReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
     const reservation = await this.repository.findById(id);
     if (!reservation) throw new NotFoundError(id);
+
+    // Potvrdit lze jen DRAFT — bez této pojistky by šlo znovu potvrdit
+    // i zrušenou rezervaci (CANCELLED → CONFIRMED).
+    if (reservation.state !== ReservationState.DRAFT) {
+      throw new InvalidStateError(reservation.state, ReservationState.DRAFT);
+    }
 
     if (isExpiredDraft(reservation, now)) {
       await this.repository.updateState(id, ReservationState.CANCELLED);

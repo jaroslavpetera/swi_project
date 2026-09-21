@@ -1,7 +1,12 @@
-# Budete pracovat nebo dostanete bídu!!!!!
-# swi_project
+# Hospoda Devs — rezervační systém (SWI, C01)
 
-jarda petarda, honzik kovarčík, Bc. Michal Křižák
+*„Budete pracovat nebo dostanete bídu!!!!!“*
+
+| | |
+|---|---|
+| **Název týmu** | Hospoda Devs |
+| **Členové** | Jaroslav Petera, Michal Křižák, Jan Kovařčík |
+| **Repozitář** | https://github.com/jaroslavpetera/swi_project |
 
 ## Plán
 - Rezervace stolů v hospodě s akutálním stavem dluhu na účtu k zaplacení
@@ -27,6 +32,9 @@ npm test        # spustí unit testy + C01 persistence spike
 npm run dev      # spustí HTTP server na http://localhost:3000
 ```
 
+Ověřeno z čistého checkoutu (21. 9. 2026): `npm install` → `npx prisma migrate dev` → `npm test`
+projde bez dalších kroků, všech 14 testů zelených (7 doménových, 1 persistence spike, 6 HTTP).
+
 ## CP1 walking skeleton
 
 Jedna end-to-end cesta, která bude skutečně runnable po C03 / před C04:
@@ -43,3 +51,23 @@ Základ této cesty (validate → persist → return ID) je již implementován 
 ověřen v rámci C01 engineering spike (viz `docs/evidence-and-evolution.md`) — do CP1 zbývá
 doplnit zbytek operací nad plnou doménou (confirm/cancel/availability jsou navrženy a částečně
 implementovány, ale nejsou ještě předmětem povinného walking skeleton kroku).
+
+## Definition of Done (C01) — kde co najdete
+
+| # | Položka | Stav | Kde |
+|---|---|---|---|
+| 1 | tým 3–4 členové | ✅ | tabulka nahoře (3 členové) |
+| 2 | společný repo | ✅ | https://github.com/jaroslavpetera/swi_project |
+| 3 | jasný reservation domain | ✅ | `docs/intent-and-change.md` → *Reservation domain* |
+| 4 | Resource + Reservation + User | ✅ | `prisma/schema.prisma`, `src/domain/types.ts` |
+| 5 | meaningful Reservation states | ✅ | `DRAFT / CONFIRMED / CANCELLED` — `src/domain/types.ts` |
+| 6 | create + confirm + cancel + availability | ✅ | `src/services/reservationService.ts`, `src/http/app.ts` |
+| 7 | common overlap rule | ✅ | `src/domain/rules.ts::findOverlappingConfirmed` + testy |
+| 8 | 1 domain-specific business rule | ✅ | no-show timeout — `src/domain/rules.ts::isExpiredDraft` |
+| 9 | 1 external/system boundary | ✅ | Notification Service (definovaná boundary) — `docs/intent-and-change.md` |
+| 10 | kompletní Project Frame | ✅ | `docs/intent-and-change.md` |
+| 11 | 1 Q/C/R/L future pressure | ✅ | Q — Quality/Scale — `docs/intent-and-change.md` → *Selected future pressure* |
+| 12 | 1 reviewed and integrated change | ✅ | PR #5 — `docs/evidence-and-evolution.md` → *C01 change + review loop* |
+| 13 | 1 executed engineering spike | ✅ | Spike A (persistence) — `tests/spike/persistence.spike.test.ts` |
+| 14 | spike evidence + decision | ✅ | `docs/evidence-and-evolution.md` |
+| 15 | definovaný CP1 walking skeleton | ✅ | sekce *CP1 walking skeleton* výše |
