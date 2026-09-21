@@ -43,4 +43,9 @@ export class ReservationRepository {
     const row = await this.prisma.reservation.update({ where: { id }, data: { state } });
     return toRecord(row);
   }
+
+  async findResourceById(resourceId: string): Promise<{ id: string; requiresApproval: boolean } | null> {
+    const row = await this.prisma.resource.findUnique({ where: { id: resourceId } });
+    return row ? { id: row.id, requiresApproval: row.requiresApproval } : null;
+  }
 }

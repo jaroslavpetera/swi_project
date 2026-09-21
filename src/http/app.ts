@@ -9,8 +9,12 @@ import {
   InvalidStateError,
   OverlapError,
   NoShowExpiredError,
+  ApprovalExpiredError,
+  NotCancellableError,
+  CancellationWindowError,
   NotFoundError,
 } from "../services/reservationService.js";
+import { ReservationState } from "../domain/types.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
@@ -38,6 +42,9 @@ const userInputSchema = z.object({
 const resourceInputSchema = z.object({
   name: z.string().min(1),
   capacity: z.coerce.number().int().positive(),
+  // BR-05: whether Confirm routes this Resource's reservations through the
+  // approval workflow (PENDING_APPROVAL) instead of straight to CONFIRMED.
+  requiresApproval: z.coerce.boolean().optional().default(false),
 });
 
 // Express 4 nezachytává odmítnuté promisy z async handlerů — bez tohoto obalu
@@ -122,6 +129,25 @@ export function createApp(prisma: PrismaClient): Express {
     "/reservations/:id/confirm",
     asyncRoute(async (req, res) => {
       const reservation = await service.confirmReservation(req.params.id);
+      // 202: a Resource requiring approval only *accepted* the request —
+      // it isn't CONFIRMED yet, that's OP-05 approve's job.
+      const status = reservation.state === ReservationState.PENDING_APPROVAL ? 202 : 200;
+      return res.status(status).json(reservation);
+    })
+  );
+
+  app.post(
+    "/reservations/:id/approve",
+    asyncRoute(async (req, res) => {
+      const reservation = await service.approveReservation(req.params.id);
+      return res.json(reservation);
+    })
+  );
+
+  app.post(
+    "/reservations/:id/reject",
+    asyncRoute(async (req, res) => {
+      const reservation = await service.rejectReservation(req.params.id);
       return res.json(reservation);
     })
   );
@@ -160,7 +186,10 @@ function errorMiddleware(err: unknown, _req: Request, res: Response, _next: Next
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof OverlapError) return res.status(409).json({ error: err.message });
   if (err instanceof InvalidStateError) return res.status(409).json({ error: err.message });
+  if (err instanceof NotCancellableError) return res.status(409).json({ error: err.message });
+  if (err instanceof CancellationWindowError) return res.status(409).json({ error: err.message });
   if (err instanceof NoShowExpiredError) return res.status(410).json({ error: err.message });
+  if (err instanceof ApprovalExpiredError) return res.status(410).json({ error: err.message });
 
   // P2003 = foreign key constraint: rezervace odkazuje na neexistující stůl nebo hosta.
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
