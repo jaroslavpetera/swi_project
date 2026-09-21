@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hospoda rezervace — manuální test</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <h1>Hospoda rezervace — manuální test UI</h1>
+  <p class="hint">Jednoduché rozhraní nad REST API pro ruční testování. Není a nemá být produkční UI.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Uživatelé</h2>
+      <form id="user-form">
+        <input name="name" placeholder="Jméno" required />
+        <input name="email" type="email" placeholder="Email" required />
+        <button type="submit">Přidat uživatele</button>
+      </form>
+      <ul id="user-list" class="entity-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Stoly / resources</h2>
+      <form id="resource-form">
+        <input name="name" placeholder="Název (např. Stůl 3)" required />
+        <input name="capacity" type="number" min="1" placeholder="Kapacita" required />
+        <button type="submit">Přidat stůl</button>
+      </form>
+      <ul id="resource-list" class="entity-list"></ul>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Vytvořit rezervaci</h2>
+    <form id="reservation-form">
+      <label>Stůl
+        <select name="resourceId" id="reservation-resource" required></select>
+      </label>
+      <label>Uživatel
+        <select name="userId" id="reservation-user" required></select>
+      </label>
+      <label>Od
+        <input name="startsAt" type="datetime-local" required />
+      </label>
+      <label>Do
+        <input name="endsAt" type="datetime-local" required />
+      </label>
+      <button type="submit">Vytvořit rezervaci (DRAFT)</button>
+    </form>
+    <p id="reservation-result" class="result"></p>
+  </section>
+
+  <section class="card">
+    <h2>Dostupnost stolu</h2>
+    <form id="availability-form">
+      <label>Stůl
+        <select name="resourceId" id="availability-resource" required></select>
+      </label>
+      <label>Od
+        <input name="start" type="datetime-local" required />
+      </label>
+      <label>Do
+        <input name="end" type="datetime-local" required />
+      </label>
+      <button type="submit">Zkontrolovat dostupnost</button>
+    </form>
+    <p id="availability-result" class="result"></p>
+  </section>
+
+  <section class="card">
+    <h2>Rezervace pro vybraný stůl</h2>
+    <label>Stůl
+      <select id="reservations-resource"></select>
+    </label>
+    <button id="refresh-reservations" type="button">Načíst rezervace</button>
+    <table id="reservation-table">
+      <thead>
+        <tr>
+          <th>Od</th>
+          <th>Do</th>
+          <th>Stav</th>
+          <th>Akce</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>
