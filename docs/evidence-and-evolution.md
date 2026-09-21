@@ -36,3 +36,41 @@ Zároveň platí rozhodnutí zapsané v `docs/architecture-and-decisions.md` (AD
 u SQLite kvůli nedostupnosti Dockeru/PostgreSQL ve vývojovém prostředí, přechod na PostgreSQL je
 naplánovaný nejpozději před C03/C04 a je zdokumentovaný jako mechanický krok (změna providera +
 nová migrace), ne jako otevřená otázka.
+
+---
+
+# C01 change + review loop
+
+Povinný výstup bodu 6 zadání: jedna konkrétní změna, kterou před integrací viděl druhý člen týmu.
+
+| | |
+|---|---|
+| **Task / issue** | C01 engineering spike — persistence (`Reservation` → skutečná DB → načtení → ověření) |
+| **Branch** | `c01-spike-persistence` |
+| **Obsah změny** | Prisma schéma + migrace, repository/service vrstva, doménová pravidla (overlap, no-show), HTTP endpointy, spike test `tests/spike/persistence.spike.test.ts`, doplnění `docs/` |
+| **Autor změny** | Jaroslav Petera (commity `a99601a`, `3929548`) |
+| **Reviewer před integrací** | Michal Křižák — review na GitHubu v rámci PR #5 |
+| **Integrace** | Pull request #5 `c01-spike-persistence → main`, merge commit `c9b84d1` |
+
+Změna tedy nešla do `main` přímo, ale přes PR, který před mergem prošel review druhého člena týmu.
+
+---
+
+# Ověření reprodukovatelnosti (21. 9. 2026)
+
+Spike byl znovu spuštěn z čistého checkoutu (bez `node_modules`, bez `prisma/dev.db`) pouze podle
+kroků v README:
+
+```
+npm install
+cp .env.example .env
+npx prisma migrate dev
+npm test
+
+✓ tests/domain/rules.test.ts (7 tests)
+✓ tests/spike/persistence.spike.test.ts (1 test)
+Test Files  2 passed (2)
+     Tests  8 passed (8)
+```
+
+Žádný nezdokumentovaný krok nebyl potřeba — README je tedy ověřené, ne jen napsané.
