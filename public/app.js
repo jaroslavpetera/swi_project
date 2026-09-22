@@ -47,7 +47,7 @@ async function loadResources() {
   document.getElementById("resource-list").innerHTML = resources
     .map((r) => `<li>${r.name} — kapacita ${r.capacity} <code>${r.id}</code></li>`)
     .join("");
-  const labelFn = (r) => `${r.name} (kap. ${r.capacity})`;
+  const labelFn = (r) => `${r.name} (kap. ${r.capacity})${r.requiresApproval ? " — schválení" : ""}`;
   fillSelect(document.getElementById("reservation-resource"), resources, labelFn);
   fillSelect(document.getElementById("availability-resource"), resources, labelFn);
   fillSelect(document.getElementById("reservations-resource"), resources, labelFn);
@@ -78,6 +78,7 @@ document.getElementById("resource-form").addEventListener("submit", async (e) =>
   const { ok, body } = await api.post("/resources", {
     name: form.get("name"),
     capacity: Number(form.get("capacity")),
+    requiresApproval: form.has("requiresApproval"),
   });
   if (ok) {
     e.target.reset();
@@ -132,7 +133,9 @@ async function loadReservations() {
         <td class="state-${r.state}">${r.state}</td>
         <td>
           <button data-action="confirm" data-id="${r.id}" ${r.state !== "DRAFT" ? "disabled" : ""}>Confirm</button>
-          <button data-action="cancel" data-id="${r.id}" ${r.state === "CANCELLED" ? "disabled" : ""}>Cancel</button>
+          <button data-action="approve" data-id="${r.id}" ${r.state !== "PENDING_APPROVAL" ? "disabled" : ""}>Approve</button>
+          <button data-action="reject" data-id="${r.id}" ${r.state !== "PENDING_APPROVAL" ? "disabled" : ""}>Reject</button>
+          <button data-action="cancel" data-id="${r.id}" ${!["DRAFT", "CONFIRMED", "PENDING_APPROVAL"].includes(r.state) || Date.now() >= new Date(r.startsAt).getTime() ? "disabled" : ""}>Cancel</button>
         </td>
       </tr>`
     )
@@ -143,7 +146,8 @@ document.querySelector("#reservation-table tbody").addEventListener("click", asy
   const button = e.target.closest("button[data-action]");
   if (!button) return;
   const { action, id } = button.dataset;
-  const { ok, body } = await api.post(`/reservations/${id}/${action}`, {});
+  const { ok, status, body } = await api.post(`/reservations/${id}/${action}`, {});
+  document.getElementById("reservation-action-result").textContent = `HTTP ${status}\n${JSON.stringify(body, null, 2)}`;
   if (!ok) alert("Chyba: " + JSON.stringify(body));
   await loadReservations();
 });

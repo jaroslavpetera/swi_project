@@ -1,48 +1,73 @@
-# Use case diagram — minimal system (v0.1)
+# Use-case view — reservation system
 
-Owner: A. Scope: the whole minimal reservation system, four goals, system boundary and actors.
-Nothing else — no databases, no classes, no internal components.
+System boundary and actor goals, consistent with OP-01…06 in
+[specification](../specification.md). Updated by Codex, 22 September 2026.
+Actors describe intended use; authentication and ownership checks are outside
+this candidate (R-7). Notification Service remains a future boundary, not an
+implemented actor interaction.
+
+## v0.1 — four core goals
 
 ```mermaid
 flowchart LR
-    guest(["Host<br/>(Guest)"])
-    staff(["Obsluha<br/>(Staff)"])
-
-    subgraph system["Table Reservation System"]
-        uc1(["OP-01<br/>Create Reservation"])
-        uc2(["OP-02<br/>Check Availability"])
-        uc3(["OP-03<br/>Confirm Reservation"])
-        uc4(["OP-04<br/>Cancel Reservation"])
+    guest([Guest])
+    staff([Staff])
+    subgraph system[Table Reservation System v0.1]
+        create([OP-01 Create Reservation])
+        available([OP-02 Check Availability])
+        confirm([OP-03 Confirm Reservation])
+        cancel([OP-04 Cancel Reservation])
     end
-
-    guest --- uc1
-    guest --- uc2
-    guest --- uc4
-    staff --- uc2
-    staff --- uc3
-    staff --- uc4
+    guest --- create
+    guest --- available
+    guest --- cancel
+    staff --- available
+    staff --- confirm
+    staff --- cancel
 ```
 
-## Actors
+## v0.2 — approval plus retained ordering extension
 
-| Actor | Goals | Why it is here |
+```mermaid
+flowchart LR
+    guest([Guest])
+    staff([Staff])
+    approver([Approver])
+    subgraph system[Table Reservation System v0.2]
+        create([OP-01 Create Reservation])
+        available([OP-02 Check Availability])
+        confirm([OP-03 Confirm / Request Approval])
+        cancel([OP-04 Cancel Reservation])
+        approve([OP-05 Approve Reservation])
+        reject([OP-05 Reject Reservation])
+        order([OP-06 Place Order])
+        tab([OP-06 View Orders / Tab])
+        serve([OP-06 Record Served])
+        pay([OP-06 Record Paid])
+    end
+    guest --- create
+    guest --- available
+    guest --- cancel
+    guest --- order
+    guest --- tab
+    staff --- available
+    staff --- confirm
+    staff --- cancel
+    staff --- tab
+    staff --- serve
+    staff --- pay
+    approver --- approve
+    approver --- reject
+```
+
+| Actor | Goals | Text |
 |---|---|---|
-| **Host (Guest)** | Create a reservation, check availability, cancel own reservation | The person whose intent starts the whole process |
-| **Obsluha (Staff)** | Check availability, confirm a reservation, cancel a reservation | The party that turns intent into a committed allocation of a table |
+| Guest | Create, availability, cancel, order, inspect tab | OP-01/02/04/06 |
+| Staff | Availability, confirm/request approval, cancel, inspect tab, record service/payment | OP-02/03/04/06 |
+| Approver | Accept or decline a pending request | OP-05 |
 
-## Deliberate omissions
-
-- **Notification Service is not drawn.** It is a defined system boundary from C01, but no
-  behaviour in baseline v0.1 sends a notification. Drawing it would show a collaboration the
-  specification does not describe. It gets drawn when an operation actually needs it.
-- **No `include` / `extend` relations.** The four goals are independent; adding them would imply
-  a decomposition that no requirement calls for.
-- **Confirm is attributed to Staff only.** Under D-07 authorization is TBD, so this reflects the
-  intended domain (the pub accepts the booking), not an enforced rule. If the team later decides
-  guests may confirm their own reservations, this diagram and OP-03 change together.
-
-## Consistency with the text (check K-5, owner B)
-
-Every goal in the diagram has a specified operation, and every specified operation appears as a
-goal. Once OP-03 and OP-04 are written, verify that the actor attributed to each goal matches the
-preconditions stated there.
+Approver can be the same person as Staff; it is a distinct goal role, not a new
+authentication mechanism. Expiry is an outcome of Approve under BR-06, not a
+separate actor goal or timer use case. Recording payment is not a payment-provider
+integration. All four original goals remain in v0.2; no database/component nodes
+or unsupported include/extend dependencies are introduced.

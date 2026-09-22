@@ -1,12 +1,18 @@
 # C02 — plán práce pro 2 lidi
 
+> Původní plán a rozdělení odpovědností. Stav po provedení auditu 22. 9. 2026 je v
+> [evidenci dokončení](c02-completion-evidence.md#aktualizovaný-stav-issue-9).
+> Níže uvedené návrhy a historické počty testů nepřepisují aktuální specifikaci.
+> Technické review provedl Codex; požadované křížové lidské review a týmové
+> schválení musí být doloženy skutečnými členy týmu.
+
 Rozdělení práce na C02 (*Úplná specifikace základního chování → aplikace vytvořená s pomocí AI → změna*).
 Deadline: **před C03**. Vstup: dokončené C01 (Project Frame, doména, repo, spike, walking skeleton) —
 nic z toho se znovu nevytváří.
 
 | | Osoba A | Osoba B |
 |---|---|---|
-| Jméno | **Michal Křižák** | *(doplnit)* |
+| Jméno | **Michal Křižák** | **Jaroslav Petera** |
 | Těžiště | **Vstup do systému**: Create + Check Availability, use-case pohled, evidence | **Životní cyklus rezervace**: Confirm + Cancel + Approve, stavový diagram, změna v0.2 |
 
 Princip rozdělení: A vlastní *„co do systému vstupuje a co systém odpovídá"*, B vlastní

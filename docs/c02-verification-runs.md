@@ -1,5 +1,9 @@
 # C02 — skutečně provedené příklady ověření (část A)
 
+> Historický záznam z 21. 9. 2026. Aktuální sjednocené ověření A+B je v
+> [c02-completion-evidence.md](c02-completion-evidence.md). Tehdejší počty 24/43 a
+> označení D-xx jsou zachované jako historie; současná specifikace používá R-xx.
+
 Podklad pro sekci *Evidence C02* v `evidence-and-evolution.md`. Operace OP-01 a OP-02
 (Create, Check Availability), baseline v0.1, vlastník A.
 

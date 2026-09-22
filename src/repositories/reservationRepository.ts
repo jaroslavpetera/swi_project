@@ -1,6 +1,12 @@
 import { PrismaClient, Reservation as PrismaReservation } from "@prisma/client";
 import { ReservationInput, ReservationRecord, ReservationState } from "../domain/types.js";
 
+export class ReservationConflictError extends Error {
+  constructor(id: string) {
+    super(`Reservation ${id} changed concurrently or its slot is no longer available; reload and retry`);
+  }
+}
+
 function toRecord(row: PrismaReservation): ReservationRecord {
   return {
     id: row.id,
@@ -39,9 +45,33 @@ export class ReservationRepository {
     return rows.map(toRecord);
   }
 
-  async updateState(id: string, state: ReservationState): Promise<ReservationRecord> {
-    const row = await this.prisma.reservation.update({ where: { id }, data: { state } });
-    return toRecord(row);
+  async transition(reservation: ReservationRecord, state: ReservationState): Promise<ReservationRecord> {
+    // SQLite serializes writers. The state guard AND overlap predicate belong
+    // to this single UPDATE, not to an earlier read that another writer can stale.
+    // Reassess isolation/constraints before moving this implementation to Postgres.
+    const result = await this.prisma.reservation.updateMany({
+      where: {
+        id: reservation.id,
+        state: reservation.state,
+        ...(state === ReservationState.CONFIRMED ? {
+          resource: { reservations: { none: {
+            id: { not: reservation.id },
+            state: ReservationState.CONFIRMED,
+            startsAt: { lt: reservation.endsAt },
+            endsAt: { gt: reservation.startsAt },
+          } } },
+        } : {}),
+      },
+      data: { state },
+    });
+    if (result.count === 0) {
+      const current = await this.findById(reservation.id);
+      // Two concurrent cancellations still have the same idempotent result.
+      if (state === ReservationState.CANCELLED && current?.state === state) return current;
+      throw new ReservationConflictError(reservation.id);
+    }
+    // Return this transition's result, even if another operation has since run.
+    return { ...reservation, state };
   }
 
   async findResourceById(resourceId: string): Promise<{ id: string; requiresApproval: boolean } | null> {

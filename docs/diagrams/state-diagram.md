@@ -12,7 +12,7 @@ stateDiagram-v2
     DRAFT --> CONFIRMED: confirm [no overlap & now < start-30min]
     DRAFT --> CANCELLED: cancel [now < start]
     CONFIRMED --> CANCELLED: cancel [now < start]
-    DRAFT --> CANCELLED: confirm attempt after no-show deadline
+    DRAFT --> CANCELLED: confirm [now >= start-30min, BR-04]
     CANCELLED --> [*]
 ```
 
@@ -31,11 +31,11 @@ stateDiagram-v2
     DRAFT --> CONFIRMED: confirm [!resource.requiresApproval & no overlap & now < start-30min]
     DRAFT --> PENDING_APPROVAL: confirm [resource.requiresApproval & now < start-30min]
     DRAFT --> CANCELLED: cancel [now < start]
-    DRAFT --> CANCELLED: confirm attempt after no-show deadline
+    DRAFT --> CANCELLED: confirm [now >= start-30min, BR-04]
 
     PENDING_APPROVAL --> CONFIRMED: approve [no overlap & before approval deadline]
     PENDING_APPROVAL --> REJECTED: reject
-    PENDING_APPROVAL --> EXPIRED: approve attempt after approval deadline
+    PENDING_APPROVAL --> EXPIRED: approve [now >= start-30min, BR-06]
     PENDING_APPROVAL --> CANCELLED: cancel [now < start]
 
     CONFIRMED --> CANCELLED: cancel [now < start]
@@ -49,7 +49,14 @@ Guardy 1:1 s implementací (`src/domain/rules.ts`, `src/services/reservationServ
 
 | Guard v diagramu | Odpovídající funkce/kontrola |
 |---|---|
-| `no overlap` | `findOverlappingConfirmed` (BR-02) |
+| `no overlap` | `findOverlappingConfirmed` + atomický guard v `ReservationRepository.transition` (BR-02, REQ-04) |
 | `now < start-30min` (confirm), `before approval deadline` (approve) | `isExpiredDraft` / `isApprovalExpired` (BR-04/BR-06) |
 | `now < start` (cancel) | `!isPastCancellationWindow` (BR-03/R-4) |
 | `resource.requiresApproval` | `Resource.requiresApproval` (BR-05) |
+
+Upřesnění v0.2 (22. 9. 2026): Reject nemá deadline guard; může ukončit i opožděnou
+čekající žádost. Čtení a Availability nemění stav a nevyvolávají EXPIRED. Cancel na
+CANCELLED je úspěšný no-op i po začátku. CONFIRMED nemá automatický přechod po konci
+intervalu; COMPLETED není v rozsahu. Každý skutečný přechod ověřuje očekávaný stav
+při zápisu; ztracený souběh vrací 409 bez přepsání vítěze. Diagram zobrazuje pouze
+úspěšné přechody, nikoli chyby bez změny stavu.

@@ -1,5 +1,10 @@
 # Project Frame
 
+> Původní rámec C01. Aktuální operace, rozhodnutí a rozsah C02 jsou autoritativně
+> v [specification.md](specification.md). Původní riziko souběhu je pro současné
+> SQLite aplikační příkazy řešeno; přenos garance na PostgreSQL a vyšší zátěž
+> zůstává driverem C03, viz [architektura](architecture-and-decisions.md).
+
 ## Reservation domain
 Rezervace stolů v hospodě. Host si rezervuje konkrétní stůl na časový slot; systém dále eviduje
 stav rezervace a v budoucnu (mimo rozsah C01) i navázaný účet/dluh hosta a možnost předobjednat
