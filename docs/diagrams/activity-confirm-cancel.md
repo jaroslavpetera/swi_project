@@ -54,8 +54,7 @@ flowchart TD
     E -- no --> F[state -> CANCELLED\n200, slot freed for BR-02]
 ```
 
-## Approve Reservation (OP-05) — v0.2, pro úplnost (doplňuje aktivitu, na kterou Confirm v0.2
-odkazuje větví "requiresApproval")
+## Approve Reservation (OP-05) — v0.2
 
 ```mermaid
 flowchart TD
@@ -69,3 +68,11 @@ flowchart TD
     E -- yes --> E1[409 Overlap\nstate stays PENDING_APPROVAL]
     E -- no --> F[state -> CONFIRMED\n200]
 ```
+
+Všechny uzly změny stavu používají očekávaný výchozí stav při zápisu; uzly vedoucí
+do CONFIRMED navíc atomicky ověřují BR-02. Ztracený souběh vrací 409 bez přepsání
+aktuálního stavu, i když předchozí čtení prošlo. Dva Cancely mohou oba úspěšně
+vrátit CANCELLED. Viz REQ-04 a `tests/services/concurrency.test.ts`.
+
+Reject (druhá větev OP-05): existence → PENDING_APPROVAL → REJECTED (200);
+neznámá rezervace → 404, jiný stav → 409. Deadline se u Reject nekontroluje (BR-06).

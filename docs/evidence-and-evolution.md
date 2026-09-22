@@ -1,5 +1,10 @@
 # C01 Engineering Spike
 
+> Historická evidence C01 a oddělené větve C02 z 21. 9. 2026. Aktuální integrovaný
+> stav, 89 testů, výsledky UI a vazby REQ → test → snapshot jsou v
+> [Evidence C02 — dokončení](c02-completion-evidence.md). Níže uvedené počty testů,
+> otevřené otázky a názvy větví popisují tehdejší běhy, nikoli aktuální stav.
+
 **Question / unknown:** Dokážeme reálně persistovat `Reservation` do skutečné databáze a znovu ji
 načíst se stejnými daty (ne jen s in-memory mockem repository)?
 
