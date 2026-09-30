@@ -1,8 +1,9 @@
 # C02 — plán práce pro 2 lidi
 
-> Původní plán a rozdělení odpovědností. Stav po provedení auditu 22. 9. 2026 je v
-> [evidenci dokončení](c02-completion-evidence.md#aktualizovaný-stav-issue-9).
-> Níže uvedené návrhy a historické počty testů nepřepisují aktuální specifikaci.
+> **Archiv původního plánu a rozdělení odpovědností C02.** Stav po provedení auditu
+> 22. 9. 2026 je v [evidenci dokončení](../../c02-completion-evidence.md#aktualizovaný-stav-issue-9).
+> Níže uvedené návrhy, nezaškrtnuté úkoly a počty testů zachycují tehdejší plán,
+> nikoli aktuální stav. Cesty v původním textu jsou od kořene repozitáře.
 > Technické review provedl Codex; požadované křížové lidské review a týmové
 > schválení musí být doloženy skutečnými členy týmu.
 

@@ -1,7 +1,12 @@
 # Plán: Rezervační systém pro hospodu (C01 → C02)
 
+> **Archiv původního návrhu C01.** Varianty stacku a otázky níže zachycují tehdejší
+> plánování, nikoli dnešní úkoly. Přijatá rozhodnutí jsou v
+> [architektuře](../../architecture-and-decisions.md), aktuální chování ve
+> [specifikaci](../../specification.md). Cesty v původním textu jsou od kořene repozitáře.
+
 Pracovní návrh k odsouhlasení týmem, než začnu psát kód a povinné dokumenty do `docs/`.
-Cíl: splnit všech 15 bodů Definition of Done z `TASK.md` před C02.
+Cíl: splnit všech 15 bodů Definition of Done z [původního zadání](assignment.md) před C02.
 
 ---
 

@@ -1,6 +1,6 @@
 # 9b — Reservation state diagram
 
-Vlastník: **Osoba B** (`docs/c02-plan.md` úkoly B6, B14). Guardy odpovídají textu v
+Vlastník: **Osoba B** ([původní plán](../archive/c02/plan.md), úkoly B6, B14). Guardy odpovídají textu v
 `docs/specification.md` (OP-03, OP-04, OP-05, BR-03, BR-04, BR-05, BR-06) — viz konzistenční
 kontrola K-3.
 

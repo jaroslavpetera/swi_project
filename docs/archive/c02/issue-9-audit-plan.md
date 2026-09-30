@@ -1,6 +1,7 @@
 # Issue #9 — kontrola C02 a plán dokončení
 
-> **Následné provedení plánu:** [evidence dokončení C02](c02-completion-evidence.md)
+> **Archiv auditu a plánu z 22. 9. 2026.** Cesty v původním textu jsou od kořene repozitáře.
+> **Následné provedení plánu:** [evidence dokončení C02](../../c02-completion-evidence.md)
 > obsahuje aktuální stav, 89 úspěšných testů a novou trasovatelnost. Níže je zachován
 > původní audit `0fa81a1`, aby se neztratilo, z čeho plán vycházel. Po dokončení je
 > 12 bodů plně doložených; lidské review/schválení a původní pořadí analýzy zůstávají

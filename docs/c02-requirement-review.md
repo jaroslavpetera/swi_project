@@ -1,7 +1,7 @@
 # C02 — kontrola přijetí požadavků
 
 Datum: 22. 9. 2026. Reviewer: **Codex**. Rozsah: REQ-01 až REQ-08 v aktuální
-`specification.md`, všechny otázky z fáze 1 původního `c02-plan.md`.
+`specification.md`, všechny otázky z fáze 1 [původního plánu](archive/c02/plan.md).
 Kontrola porovnává text, diagramy, implementaci a skutečně spuštěné testy uvedené v
 [evidenci](c02-completion-evidence.md). Výsledek: technicky přijatelné v uvedeném
 rozsahu SQLite demonstrátoru. Nejde o podpis Michala/Jaroslava ani o náhradu

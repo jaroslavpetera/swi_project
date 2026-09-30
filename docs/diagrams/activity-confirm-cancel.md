@@ -1,6 +1,6 @@
 # 9c — Activity diagrams: Confirm a Cancel
 
-Vlastník: **Osoba B** (`docs/c02-plan.md` úkol B7 pro v0.1; aktualizace pro v0.2 doplněna, aby
+Vlastník: **Osoba B** ([původní plán](../archive/c02/plan.md), úkol B7 pro v0.1; aktualizace pro v0.2 doplněna, aby
 diagram nebyl neaktuální vůči `docs/specification.md`, viz konzistenční kontrola K-3).
 
 ## Confirm Reservation (OP-03) — v0.1

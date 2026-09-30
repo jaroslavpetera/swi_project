@@ -150,6 +150,19 @@ specifikace, diagramů, review, předběžné analýzy, README a konfigurace. Ha
 neobsahuje tento popis výsledků ani sám sebe, aby nevznikla kruhová závislost.
 Samotný base commit není vydáván za commit obsahující nové změny.
 
+### Úklid dokumentace po review (30. 9. 2026)
+
+Na základě [komentáře v PR #14](https://github.com/jaroslavpetera/swi_project/pull/14#pullrequestreview-5293939796)
+byly původní plány a zadání přesunuty do [archivu](archive/README.md).
+README nyní rozlišuje aktuální specifikaci, evidenci a historické podklady;
+odkazy na přesunuté dokumenty byly aktualizovány. Ověření této změny zahrnuje
+kontrolu místních Markdown odkazů a `git diff --check`.
+
+Jde pouze o změnu dokumentace. Výše uvedené testy a oba JSON manifesty zůstávají
+záznamem běhů z 22. 9. 2026, jejichž soubory jsou uložené v commitu `d41668f`.
+Hash snapshotu se nevztahuje na dokumentaci po tomto úklidu; aplikace ani testy
+se při úklidu neměnily a testovací sada nebyla znovu spouštěna.
+
 ## Aktualizovaný stav issue #9
 
 | Body | Stav po dokončení |

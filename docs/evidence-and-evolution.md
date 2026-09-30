@@ -122,12 +122,12 @@ krok `validate` v `POST /reservations` nestačí řešit jen Zod schématem, pro
 
 ## Evidence C02: specifikace → běžící aplikace (Osoba B)
 
-> Tato sekce pokrývá jen díl Osoby B (`c02-person-b` branch) dle rozdělení v `docs/c02-plan.md`.
+> Tato sekce pokrývá jen díl Osoby B (`c02-person-b` branch) dle rozdělení v [původním plánu](archive/c02/plan.md).
 > Díl Osoby A (Create, Availability, use case diagram, review) je mimo rozsah této branch a bude
 > doplněn odděleně.
 
 **Přijatá baseline:** Specification Baseline v0.1 (`docs/specification.md`) — status **draft**,
-napsáno Osobou B (R-1–R-10 přejaty z doporučení `docs/c02-plan.md`, OP-03/OP-04/BR-03/BR-04
+napsáno Osobou B (R-1–R-10 přejaty z doporučení [původního plánu](archive/c02/plan.md), OP-03/OP-04/BR-03/BR-04
 kompletně specifikovány). Formální `approved by the team` hlavička čeká na review od Osoby A a
 společný Sync 1/Sync 2 — viz "Zbývající předpoklad / neznámá" níže.
 
@@ -204,7 +204,7 @@ approve time").
 
 **Nalezený nesoulad a způsob vyřešení:**
 - Před touto branch **Cancel nehlídal čas začátku** — dalo se zrušit i po startu rezervace, což je
-  přesně nesoulad, který `docs/c02-plan.md` (fáze 4 tabulka) predikoval. Oprava: `isCancellable` +
+  přesně nesoulad, který [původní plán](archive/c02/plan.md) (fáze 4 tabulka) predikoval. Oprava: `isCancellable` +
   `isPastCancellationWindow` v `src/domain/rules.ts`, použito v `cancelReservation`. Pokryto testy.
 - Před touto branch nebyla ověřena/otestována **idempotence Cancelu** (R-5) — druhé zavolání
   cancelu na už zrušenou rezervaci fungovalo náhodou (Prisma `update` na stejný stav neselže), ale
@@ -242,7 +242,7 @@ Availability, Use case diagram, Ověření dostupnosti) čekají na Osobu A.
 
 **Commit / tag aplikace:** branch `c02-person-b`, tag `v0.2` (na finálním commitu této branch).
 Poznámka k procesu: tato branch byla dokončena v jednom souvislém běhu, ne ve dvou oddělených
-fázích podle harmonogramu z `docs/c02-plan.md` (sekce 12) — v0.1 (cancellation window + idempotent
+fázích podle harmonogramu z [původního plánu](archive/c02/plan.md) (sekce 12) — v0.1 (cancellation window + idempotent
 cancel) a v0.2 (approval workflow) jsou proto zdokumentované jako dvě jasně oddělené sekce v
 `docs/specification.md` a `docs/diagrams/`, ale v gitu existuje jen finální `v0.2` tag, ne
 samostatný `v0.1` tag na dřívějším commitu.
