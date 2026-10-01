@@ -1,0 +1,619 @@
+{
+  "startedAt": "2026-09-22T13:59:53.293Z",
+  "completedAt": "2026-09-22T14:00:03.351Z",
+  "baseCommit": "0fa81a1fc47a0ae266f3c6efe5830fdcfbb47ebf",
+  "snapshotSha256": "13453bf90dcbd7b1aecbc9473ca26eae491f5073fd6ee744097f571fd1a674a2",
+  "note": "Hashes identify the tested working files, including uncommitted changes; baseCommit alone does not.",
+  "runtime": {
+    "node": "v22.19.0",
+    "platform": "win32",
+    "database": "new isolated SQLite database"
+  },
+  "steps": [
+    {
+      "label": "Generate Prisma client",
+      "exitCode": 0
+    },
+    {
+      "label": "Migrate new isolated SQLite database",
+      "exitCode": 0
+    },
+    {
+      "label": "Seed demo menu",
+      "exitCode": 0
+    },
+    {
+      "label": "TypeScript build",
+      "exitCode": 0
+    },
+    {
+      "label": "Browser JavaScript syntax",
+      "exitCode": 0
+    },
+    {
+      "label": "Full test suite",
+      "exitCode": 0
+    }
+  ],
+  "passed": 89,
+  "failed": 0,
+  "total": 89,
+  "suites": [
+    {
+      "file": "tests/http/app.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "POST /reservations validates, persists and returns the reservation ID",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations rejects an unknown resourceId with 400 and keeps the server alive",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm cannot confirm a cancelled reservation",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm returns 404 for an unknown reservation",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm confirms a DRAFT reservation with no conflict",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm rejects confirm when a CONFIRMED reservation already overlaps the same resource",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm, /approve, /reject — BR-05 approval workflow routes Confirm to PENDING_APPROVAL (202) for a resource that requires approval, then Approve confirms it",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm, /approve, /reject — BR-05 approval workflow rejects a PENDING_APPROVAL reservation via /reject",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy cancels a CONFIRMED reservation before its start and frees the slot",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy rejects cancelling a reservation after its start time",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy is idempotent when cancelling an already-cancelled reservation",
+          "status": "passed"
+        },
+        {
+          "name": "GET /resources/:id/availability rejects missing or unparsable query parameters with 400",
+          "status": "passed"
+        },
+        {
+          "name": "GET /resources/:id/availability reports a confirmed slot as unavailable and a free slot as available",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/domain/ordering.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "BR-07 ordering window is open for a CONFIRMED reservation during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window opens exactly at the start of the slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window closes exactly at the end of the slot — [start,end) per BR-01",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed before the slot starts",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed for a DRAFT reservation even during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed for a CANCELLED reservation even during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "order total sums quantity times the price captured at ordering time",
+          "status": "passed"
+        },
+        {
+          "name": "order total is zero for no lines",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/domain/rules.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "rangesOverlap detects overlapping ranges",
+          "status": "passed"
+        },
+        {
+          "name": "rangesOverlap does not flag back-to-back ranges as overlapping",
+          "status": "passed"
+        },
+        {
+          "name": "findOverlappingConfirmed ignores non-confirmed reservations",
+          "status": "passed"
+        },
+        {
+          "name": "findOverlappingConfirmed flags overlap with another confirmed reservation",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft expires a DRAFT reservation once inside the no-show grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft does not expire a DRAFT reservation outside the grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft never expires a CONFIRMED reservation",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired expires a PENDING_APPROVAL reservation once inside the approval grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired does not expire a PENDING_APPROVAL reservation outside the grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired never expires a state other than PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "isCancellable allows cancelling DRAFT, CONFIRMED and PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "isCancellable does not allow cancelling REJECTED, EXPIRED or CANCELLED",
+          "status": "passed"
+        },
+        {
+          "name": "isPastCancellationWindow is false while now is before the reservation's start",
+          "status": "passed"
+        },
+        {
+          "name": "isPastCancellationWindow is true once now reaches or passes the reservation's start",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/concurrency.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.1: overlapping allocation has exactly one winner (approval=false)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.1: overlapping allocation has exactly one winner (approval=true)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.2: duplicate approval has one winner",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.3: cancellation cannot be overwritten by a stale allocation (approval=false)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.3: cancellation cannot be overwritten by a stale allocation (approval=true)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.4: Approve and Reject cannot both succeed on the same pending request",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.5: simultaneous cancellations are idempotent",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.6: touching intervals can both be confirmed concurrently",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.7: direct Confirm competes safely with a previously pending Approve",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/reservationService.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-03 Confirm — BR-05 requiresApproval routing confirms directly to CONFIRMED when the resource does not require approval",
+          "status": "passed"
+        },
+        {
+          "name": "OP-03 Confirm — BR-05 requiresApproval routing routes to PENDING_APPROVAL when the resource requires approval",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation approves a PENDING_APPROVAL reservation with no conflict",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation re-checks BR-02 overlap at approve time, not just at request time",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation expires a PENDING_APPROVAL reservation once the approval deadline has passed",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation rejects approving a reservation that is not PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Reject Reservation moves a PENDING_APPROVAL reservation to REJECTED",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy cancels a CONFIRMED reservation before its start and frees the slot",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy allows cancelling a PENDING_APPROVAL reservation (B13 decision)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy rejects cancelling once the cancellation window has passed (R-4)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy is idempotent: cancelling an already-CANCELLED reservation succeeds without error (R-5)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy rejects cancelling a REJECTED reservation — cancel does not apply to a closed decision",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/c02-completion.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "C02 v0.2 — requirement verification V-02.8: pending does not allocate; approval allocates; cancel releases (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-02.9: rejected and cancelled pending requests do not block (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.5: new competing approval rejects the older pending request without changing it (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-03.3: confirm one millisecond before deadline succeeds; at deadline cancels",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.6: approve before deadline succeeds; at deadline persists EXPIRED and leaves slot free",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.7: reads do not expire a pending request; reject after deadline still succeeds",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-04.3: repeat cancel succeeds after start; pending cancel between deadline and start succeeds",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-01.5: past interval can be created but never confirmed (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.8: HTTP expiry returns 410 with persisted EXPIRED, then 409 on retry",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.9: requiresApproval must be a JSON boolean, not a truthy string",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-04R.8: concurrent HTTP confirmations return 200/409 and allocate once",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/op01-op02.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.1: valid Resource, User and interval → one DRAFT reservation with an identifier",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.2: start == end → rejected, nothing created (BR-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.3: unknown Resource → rejected, nothing created",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.4: interval inside a CONFIRMED reservation → still accepted as DRAFT (D-02)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.1 / V-02.2: free slot → available, overlapping slot → unavailable",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.3 / V-02.4: touching intervals are available — [start,end) boundary (BR-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.5: a DRAFT reservation does not block the slot (D-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.6: invalid interval → rejected, never answered with 'available'",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.7: unknown Resource → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) availability is a pure query: no reservation is created or changed",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/op06-orders.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.1: CONFIRMED reservation during its slot → order is placed with a total",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.2: DRAFT reservation during its slot → rejected (NOT_CONFIRMED)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.3: CONFIRMED reservation that has not started yet → rejected (BEFORE_START)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.4: CONFIRMED reservation that already ended → rejected (AFTER_END)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.5: unknown menu item → rejected, nothing ordered",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.6: an order without items → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.7: item marked as unavailable → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.8: unknown reservation → 404",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.9: a later price change does not alter an order already placed",
+          "status": "passed"
+        },
+        {
+          "name": "Tab (účet hosta) and order lifecycle V-06.10: placed order is unpaid, serving and paying move it to paid",
+          "status": "passed"
+        },
+        {
+          "name": "Tab (účet hosta) and order lifecycle V-06.11: an order cannot be paid before it is served",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spike/persistence.spike.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "C01 spike: persistence persists a reservation and reloads the same data from the database",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "file": "README.md",
+      "sha256": "beadced96b62f45b6f15e46284bcd6a93e64a8d91bca811b50a7a46427f0c4a9"
+    },
+    {
+      "file": "docs/architecture-and-decisions.md",
+      "sha256": "6012fbc4aa14a652a94c13dd95479d843a11e9bf3a5eadbbb2661315849873eb"
+    },
+    {
+      "file": "docs/c02-completion-impact.md",
+      "sha256": "8544d919ec97e07e38dab1a70459e0bf4f43bf57eb82ef0a67a67fc660f08298"
+    },
+    {
+      "file": "docs/c02-requirement-review.md",
+      "sha256": "b8c0e7c0eb99638d49339ede892087e3fedae64ec0794840366282e9ee63ff44"
+    },
+    {
+      "file": "docs/diagrams/activity-confirm-cancel.md",
+      "sha256": "327934790f13ef1ce47127ebee5ad7e2fc0914048078dff3f000e7d31c8fc9d0"
+    },
+    {
+      "file": "docs/diagrams/activity-create-and-availability.md",
+      "sha256": "2f226644bce3b3e885b8d8d71c095a0d44eb6effdc240abfa64e24c3780876a1"
+    },
+    {
+      "file": "docs/diagrams/activity-place-order.md",
+      "sha256": "12a6912f3df83ab85fb77562789dec27c2de7a98fad82171cf170c9ace309f41"
+    },
+    {
+      "file": "docs/diagrams/state-diagram.md",
+      "sha256": "61c35c6797661f0defcf20b72a2cccef033d985465c7b69976c4cef3fcff16ce"
+    },
+    {
+      "file": "docs/diagrams/use-case.md",
+      "sha256": "5e0441ac7b654595c8496a8333b11a6394f9512edf54689dbec91202a5ee2e71"
+    },
+    {
+      "file": "docs/specification.md",
+      "sha256": "38dc0779583258cd604ce5a4d2dab63bc547031dc25f1fc8fee50faa7dc72289"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "1da9c0e398acfab4e7f920c8a18aa128fa4c895a2ab7bc5d2bfbe2b895e1ff3a"
+    },
+    {
+      "file": "package.json",
+      "sha256": "ef593d95fe9407473cd548bdae66e2efb4a3604acad2148dc5fa639066f34a70"
+    },
+    {
+      "file": "prisma/migrations/20260916164406_init/migration.sql",
+      "sha256": "6843328c412b39d71dcc8171f7a602e9afdc017015c1e2355da706022a574384"
+    },
+    {
+      "file": "prisma/migrations/20260921130912_add_requires_approval/migration.sql",
+      "sha256": "3b98a43a506ceca8398ee5922caef8c63096a271c84e53722b8f24363efa7549"
+    },
+    {
+      "file": "prisma/migrations/20260921131639_add_orders/migration.sql",
+      "sha256": "2474e477487148588cbfbe2f0ab2ee0d9c8bb745765480e2baeb88085c99f6c4"
+    },
+    {
+      "file": "prisma/migrations/migration_lock.toml",
+      "sha256": "548ac23220b053c29ffc59657f12f3ac943030195731d33859f24d28b2f655a0"
+    },
+    {
+      "file": "prisma/schema.prisma",
+      "sha256": "e090ac40aa1756e9017b516c0a6672b7e9f52cd41030b66358449ab9bb6ce692"
+    },
+    {
+      "file": "prisma/seed.ts",
+      "sha256": "9297cf0b9eabd9aed53b1594fe20ab468bd0c37ebdb65c0356029cbe546a7b58"
+    },
+    {
+      "file": "public/app.js",
+      "sha256": "b9244a042bc8b9781ff7d86e0b3ea43437c11a97e80e512680ce86520a7eff2f"
+    },
+    {
+      "file": "public/index.html",
+      "sha256": "cf67fa8af89a33cc61d4c9ccd4569b828f4de0a9468f8cc489d0899b6bd811f6"
+    },
+    {
+      "file": "public/styles.css",
+      "sha256": "5ec9d12864db26efdb7afbef41ab0a1ce9171b2eb12a685466dfd0275a9fdcdb"
+    },
+    {
+      "file": "scripts/verify-c02.mjs",
+      "sha256": "6f8b9bfdb9a497b09271ac63863d153e386c54f98f2ca3338175ca81aa1e671c"
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "sha256": "2fdcacda6ad17205754b906e2a08ed74059cd3453da514c1a05466e367fd90dc"
+    },
+    {
+      "file": "src/domain/types.ts",
+      "sha256": "774e5f2e9003ea454b23eaf2fb46efce2f2d734b217b4e954affdaaf8830aa2a"
+    },
+    {
+      "file": "src/http/app.ts",
+      "sha256": "b4a89278bf0bd3e0da962b29f720cf43b725efe83ae2a0b64a943ef5d330704f"
+    },
+    {
+      "file": "src/index.ts",
+      "sha256": "7ba0cfd205a89b7298c154d80b6c5565e6fbe2bca7346946c77c2b1d7076adcd"
+    },
+    {
+      "file": "src/repositories/orderRepository.ts",
+      "sha256": "77342f6cbb2994f7b0ae424c31ad293c43cf44723e229f4248369cef5f30b447"
+    },
+    {
+      "file": "src/repositories/reservationRepository.ts",
+      "sha256": "93ed38681c91b9f13e54e685177010962ab662b5b90cd56618c32345a7e8b9dd"
+    },
+    {
+      "file": "src/services/orderService.ts",
+      "sha256": "5a201e3bab2df4974016902826a8ee8ec7d339e3e813edeb8ff500f3a466e2ea"
+    },
+    {
+      "file": "src/services/reservationService.ts",
+      "sha256": "1fb11dd1afad8a6fff0f207e9928dae04944469560a0f5a88c75ae1d0a0ed326"
+    },
+    {
+      "file": "tests/domain/ordering.test.ts",
+      "sha256": "d54134d7f6a564f11b8e40c366d81afc4e929da8ddc4a2463391c2cb963ecf93"
+    },
+    {
+      "file": "tests/domain/rules.test.ts",
+      "sha256": "c03fb32d51e00d1337d95a257ded7e5a2ccfda77fa985ca2e8b4dcaf8d3e298b"
+    },
+    {
+      "file": "tests/http/app.test.ts",
+      "sha256": "6df8bb33a6384b2e89c83f6a25a958e881a590dac5288936355949763fc79df8"
+    },
+    {
+      "file": "tests/services/concurrency.test.ts",
+      "sha256": "42b3f67c6f584e02b7025cfe338518bec8a43ba35e9cb12c7762dd5e016a7ccd"
+    },
+    {
+      "file": "tests/services/reservationService.test.ts",
+      "sha256": "a2678004291dd4e704cbc919d1e27b7e79dd34db9a726e68d9bc0cca0ef3cd76"
+    },
+    {
+      "file": "tests/spec/c02-completion.test.ts",
+      "sha256": "a015ffb53a2e45399c2a8af9a282b4c1097cb548dbb8ac462621f19f7625ba9c"
+    },
+    {
+      "file": "tests/spec/op01-op02.test.ts",
+      "sha256": "64e52dd5184e6ac15e4e0d7ac28e7afb3ff5f40b48f47675e99d51281deef3b0"
+    },
+    {
+      "file": "tests/spec/op06-orders.test.ts",
+      "sha256": "f46ebdecb50af5528ca163bac494bf4d3986dee08516243c616263bcb4469bf5"
+    },
+    {
+      "file": "tests/spike/persistence.spike.test.ts",
+      "sha256": "7108d052d1f11b9274fa4eacbdd7a2ef32a158367885068af4c01d2c02a5290e"
+    },
+    {
+      "file": "tsconfig.json",
+      "sha256": "dad61814b7c3a28285d842b180402174a1454f37714fd267246fc7cccd801ee7"
+    },
+    {
+      "file": "vitest.config.ts",
+      "sha256": "478d341319ae4caff7a099e4a8c08741ce086e5fd267d30686f2c906bb36c72c"
+    }
+  ]
+}

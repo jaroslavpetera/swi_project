@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import express, { Express, NextFunction, Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { ReservationRepository } from "../repositories/reservationRepository.js";
+import { ReservationRepository, ReservationConflictError } from "../repositories/reservationRepository.js";
 import { OrderRepository } from "../repositories/orderRepository.js";
 import {
   ReservationService,
@@ -52,7 +52,7 @@ const resourceInputSchema = z.object({
   capacity: z.coerce.number().int().positive(),
   // BR-05: whether Confirm routes this Resource's reservations through the
   // approval workflow (PENDING_APPROVAL) instead of straight to CONFIRMED.
-  requiresApproval: z.coerce.boolean().optional().default(false),
+  requiresApproval: z.boolean().optional().default(false),
 });
 
 const menuItemInputSchema = z.object({
@@ -280,6 +280,7 @@ export function createApp(prisma: PrismaClient): Express {
 
 // Jediné místo, kde se doménové a DB chyby překládají na HTTP status kódy.
 function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+  if (err instanceof ReservationConflictError) return res.status(409).json({ error: err.message });
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof OverlapError) return res.status(409).json({ error: err.message });
   if (err instanceof InvalidStateError) return res.status(409).json({ error: err.message });

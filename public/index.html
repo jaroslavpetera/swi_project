@@ -26,6 +26,7 @@
       <form id="resource-form">
         <input name="name" placeholder="Název (např. Stůl 3)" required />
         <input name="capacity" type="number" min="1" placeholder="Kapacita" required />
+        <label><input name="requiresApproval" type="checkbox" /> Vyžaduje schválení</label>
         <button type="submit">Přidat stůl</button>
       </form>
       <ul id="resource-list" class="entity-list"></ul>
@@ -75,6 +76,7 @@
       <select id="reservations-resource"></select>
     </label>
     <button id="refresh-reservations" type="button">Načíst rezervace</button>
+    <p id="reservation-action-result" class="result" aria-live="polite"></p>
     <table id="reservation-table">
       <thead>
         <tr>
@@ -91,7 +93,7 @@
   <section class="card">
     <h2>Objednávka k rezervaci</h2>
     <p class="hint">
-      Objednat jde jen k potvrzené rezervaci a jen v jejím čase (BR-05) — jinak server odpoví 409.
+      Objednat jde jen k potvrzené rezervaci a jen v jejím čase — jinak server odpoví 409.
     </p>
     <label>Rezervace
       <select id="order-reservation"></select>

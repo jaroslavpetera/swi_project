@@ -1,4 +1,4 @@
-# Hospoda Devs — rezervační systém (SWI, C01)
+# Hospoda Devs — rezervační systém (SWI, C02)
 
 *„Budete pracovat nebo dostanete bídu!!!!!“*
 
@@ -8,18 +8,27 @@
 | **Členové** | Jaroslav Petera, Michal Křižák, Jan Kovařčík |
 | **Repozitář** | https://github.com/jaroslavpetera/swi_project |
 
-## Plán
-- Rezervace stolů v hospodě s akutálním stavem dluhu na účtu k zaplacení
-- Možnost objednání piva na určitý čas
+## Rozsah
 
-Obojí je od C02 implementované: k potvrzené rezervaci lze **v jejím čase** objednat jídlo a pití
+Rezervace stolů v hospodě, objednávky jídla a pití a průběžný účet hosta.
+
+Od C02 lze k potvrzené rezervaci **v jejím čase** objednat jídlo a pití
 a průběžně vidět účet (zaplaceno / nezaplaceno). Podmínky jsou popsané ve
-[`docs/specification.md`](docs/specification.md) jako OP-06 a pravidla BR-05/BR-06.
+[`docs/specification.md`](docs/specification.md) jako OP-06 a pravidla BR-07/BR-08.
+Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsahu nejsou.
 
-Podrobný Project Frame (doména, business rules, future pressure) je v
-[`docs/intent-and-change.md`](docs/intent-and-change.md), zdůvodnění tech stacku v
-[`docs/architecture-and-decisions.md`](docs/architecture-and-decisions.md) a evidence
-provedeného engineering spike v [`docs/evidence-and-evolution.md`](docs/evidence-and-evolution.md).
+## Dokumentace
+
+| Dokument | Co v něm najdete |
+|---|---|
+| [Specifikace](docs/specification.md) | Aktuální kandidát v0.2: požadavky, operace, pravidla a odkazy na diagramy. |
+| [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, garance SQLite a drivery pro C03. |
+| [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a zbývající body issue #9. |
+| [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
+| [Analýza dopadu](docs/c02-completion-impact.md) | Podklad zapsaný před dokončovacími změnami C02. |
+| [Project Frame C01](docs/intent-and-change.md) | Původní vymezení domény a future pressure. |
+| [Historická evidence C01/C02](docs/evidence-and-evolution.md) a [běhy části A](docs/c02-verification-runs.md) | Spike, review a výsledky před integrovaným ověřením. |
+| [Archiv plánování](docs/archive/README.md) | Původní zadání, rozdělení práce a audit; nejsou aktuálním checklistem. |
 
 ## Tech stack
 
@@ -37,12 +46,27 @@ npm test        # spustí unit testy + C01 persistence spike + příklady ověř
 npm run dev      # spustí HTTP server na http://localhost:3000
 ```
 
-Na `http://localhost:3000` běží jednoduché testovací UI: uživatelé, stoly, rezervace, dostupnost
-a objednávky k rezervaci včetně účtu.
+Pro opakovatelnou kontrolu C02 po instalaci závislostí spusťte:
 
-Ověřeno z čistého checkoutu (21. 9. 2026): `npm install` → `npx prisma migrate dev` → `npm test`
-projde bez dalších kroků. Aktuální sada má **43 testů** (15 doménových, 1 persistence spike,
-6 HTTP, 21 příkladů ověření ze specifikace).
+```bash
+npm run verify:c02
+```
+
+Příkaz připraví **novou oddělenou SQLite databázi**, aplikuje migrace, seed, build
+a celou sadu testů. Nepoužije vývojovou databázi z `.env`. Zapíše výsledek a SHA-256
+ověřených souborů do [`docs/evidence/c02-verification.json`](docs/evidence/c02-verification.json).
+Dočasná databáze zůstane v systémovém temp adresáři pro případnou diagnostiku.
+
+Na `http://localhost:3000` běží jednoduché testovací UI: uživatelé, stoly, rezervace, dostupnost
+a objednávky k rezervaci včetně účtu. U stolu lze zapnout „Vyžaduje schválení“;
+Confirm pak vrátí PENDING_APPROVAL a zpřístupní Approve/Reject. Výsledek akce
+zobrazuje HTTP kód i tělo odpovědi.
+
+Historické ověření instalace z 21. 9. 2026 je v evidenci C01. Aktuální integrované
+ověření C02, počty testů a vazby na požadavky jsou v
+[`docs/c02-completion-evidence.md`](docs/c02-completion-evidence.md).
+Specifikace v0.2 je technicky dokončený kandidát; týmový podpis a křížové lidské
+review zůstávají explicitně otevřené.
 
 ## API
 
@@ -50,6 +74,7 @@ projde bez dalších kroků. Aktuální sada má **43 testů** (15 doménových,
 |---|---|
 | Create reservation | `POST /reservations` |
 | Confirm / cancel | `POST /reservations/:id/confirm`, `POST /reservations/:id/cancel` |
+| Approve / reject | `POST /reservations/:id/approve`, `POST /reservations/:id/reject` |
 | Check availability | `GET /resources/:id/availability?start=&end=` |
 | Jídelní lístek | `GET /menu-items`, `POST /menu-items` |
 | Objednávka k rezervaci | `POST /reservations/:id/orders`, `GET /reservations/:id/orders` |
@@ -58,7 +83,7 @@ projde bez dalších kroků. Aktuální sada má **43 testů** (15 doménových,
 
 ## CP1 walking skeleton
 
-Jedna end-to-end cesta, která bude skutečně runnable po C03 / před C04:
+End-to-end cesta definovaná v C01 pro CP1 (po C03 / před C04):
 
 ```
 POST /reservations
@@ -69,11 +94,11 @@ POST /reservations
 ```
 
 Základ této cesty (validate → persist → return ID) je již implementován v `src/http/app.ts` a
-ověřen v rámci C01 engineering spike (viz `docs/evidence-and-evolution.md`) — do CP1 zbývá
-doplnit zbytek operací nad plnou doménou (confirm/cancel/availability jsou navrženy a částečně
-implementovány, ale nejsou ještě předmětem povinného walking skeleton kroku).
+ověřen v rámci C01 engineering spike. V C02 běží i Confirm, Cancel, Availability,
+Approve/Reject a objednávky. Pro C03 zbývá zejména přenos garancí souběhu na cílovou
+databázi a rozhodnutí o aktivní expiraci; viz `docs/architecture-and-decisions.md`.
 
-## Definition of Done (C01) — kde co najdete
+## Historické splnění C01 — kde co najdete
 
 | # | Položka | Stav | Kde |
 |---|---|---|---|

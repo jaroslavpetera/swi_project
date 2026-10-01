@@ -1,3 +1,9 @@
+# C01 — původní zadání
+
+> **Archiv zadání C01.** Následuje původní text; nejde o aktuální seznam úkolů.
+> Výsledek C01 je doložen v [evidenci](../../evidence-and-evolution.md).
+> Cesty v zadání jsou od kořene repozitáře.
+
 Výsledek C01: společný repo, jasně vymezený rezervační systém, Project Frame, jedna review smyčka, jeden skutečně provedený engineering spike, evidence a definovaný walking skeleton pro CP1.
 
 Rozsah implementace v C01:

@@ -71,7 +71,7 @@ export class ReservationService {
     }
 
     if (isExpiredDraft(reservation, now)) {
-      await this.repository.updateState(id, ReservationState.CANCELLED);
+      await this.repository.transition(reservation, ReservationState.CANCELLED);
       throw new NoShowExpiredError();
     }
 
@@ -81,7 +81,7 @@ export class ReservationService {
     // against the state at decision time, not at request time.
     const resource = await this.repository.findResourceById(reservation.resourceId);
     if (resource?.requiresApproval) {
-      return this.repository.updateState(id, ReservationState.PENDING_APPROVAL);
+      return this.repository.transition(reservation, ReservationState.PENDING_APPROVAL);
     }
 
     const existing = await this.repository.findForResource(reservation.resourceId);
@@ -91,7 +91,7 @@ export class ReservationService {
     );
     if (conflict) throw new OverlapError(conflict.id);
 
-    return this.repository.updateState(id, ReservationState.CONFIRMED);
+    return this.repository.transition(reservation, ReservationState.CONFIRMED);
   }
 
   async approveReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
@@ -103,7 +103,7 @@ export class ReservationService {
     }
 
     if (isApprovalExpired(reservation, now)) {
-      await this.repository.updateState(id, ReservationState.EXPIRED);
+      await this.repository.transition(reservation, ReservationState.EXPIRED);
       throw new ApprovalExpiredError();
     }
 
@@ -116,7 +116,7 @@ export class ReservationService {
     );
     if (conflict) throw new OverlapError(conflict.id);
 
-    return this.repository.updateState(id, ReservationState.CONFIRMED);
+    return this.repository.transition(reservation, ReservationState.CONFIRMED);
   }
 
   async rejectReservation(id: string): Promise<ReservationRecord> {
@@ -127,7 +127,7 @@ export class ReservationService {
       throw new InvalidStateError(reservation.state, ReservationState.PENDING_APPROVAL);
     }
 
-    return this.repository.updateState(id, ReservationState.REJECTED);
+    return this.repository.transition(reservation, ReservationState.REJECTED);
   }
 
   async cancelReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
@@ -148,7 +148,7 @@ export class ReservationService {
       throw new CancellationWindowError(id);
     }
 
-    return this.repository.updateState(id, ReservationState.CANCELLED);
+    return this.repository.transition(reservation, ReservationState.CANCELLED);
   }
 
   async checkAvailability(resourceId: string, startsAt: Date, endsAt: Date): Promise<boolean> {

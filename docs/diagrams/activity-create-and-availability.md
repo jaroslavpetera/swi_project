@@ -1,4 +1,4 @@
-# Activity diagrams — OP-01 Create, OP-02 Check Availability (v0.1)
+# Activity diagrams — OP-01 Create, OP-02 Check Availability (v0.1 / v0.2)
 
 Owner: A. Each decision node corresponds to a stated precondition or failure outcome in
 `../specification.md`; there is no step here that the text does not describe.
@@ -21,9 +21,9 @@ flowchart TD
     out --> done
 ```
 
-**Note the missing branch.** There is deliberately **no** overlap check in this flow (D-02).
+There is no overlap check in this flow (R-2).
 A draft that conflicts with a confirmed reservation is created successfully and fails later, at
-confirmation. If a reviewer expects a conflict branch here, the disagreement is about D-01, not
+confirmation. If a reviewer expects a conflict branch here, the disagreement is about R-1, not
 about this diagram.
 
 ## OP-02 — Check Availability
@@ -46,9 +46,9 @@ flowchart TD
 
 **Two things this flow asserts:**
 
-1. Only CONFIRMED reservations are loaded — DRAFT ones are invisible here (D-01). This is the
-   single place where the meaning of "blocking" is decided for the query path; OP-03 must decide
-   it identically (check K-2).
+1. Only CONFIRMED reservations count as blocking under BR-02 (R-1). DRAFT,
+   PENDING_APPROVAL, CANCELLED, REJECTED and EXPIRED do not. The query never detects
+   expiry or changes state. OP-03 and OP-05 use the same authoritative BR-02.
 2. An invalid question is rejected, never answered with `available`. Reporting a free table
    because the question could not be parsed is the worst possible failure mode of this operation:
    it is wrong in the direction that causes double bookings.
