@@ -206,8 +206,7 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 ## Jarda
 
 ### JC1 — J: AS-IS → TO-BE delta
-- [ ] Tabulka *Oblast / AS-IS / TO-BE / Akce* v `architecture-and-decisions.md`. Základ je
-      v posledním návrhu v konverzaci / commit message `c2c9a7d`:
+- [ ] Tabulka *Oblast / AS-IS / TO-BE / Akce* v `architecture-and-decisions.md`. Návrh řádků:
   - rozhodnutí BR-02: služba + `none` predikát v repository → jen Lifecycle pod zámkem — CHANGE
   - transakce: žádná → `inResourceTransaction` — CHANGE
   - Confirm/Approve/Reject/Cancel mimo transakci → v transakci — CHANGE
