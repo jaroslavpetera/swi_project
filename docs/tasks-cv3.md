@@ -155,3 +155,137 @@ takže není potřeba brát OP-05 zvlášť.
 | Reference scénáře (scénář, REQ, BR, baseline) | A1 | Jarda | [x] |
 | Všechna tvrzení ověřena (AI pravidlo) — čeká na review Honzy | A9 | oba | [ ] |
 | Vše je v `docs/architecture-and-decisions.md` + odkaz z README | — | oba | [x] |
+
+---
+---
+
+# C03 hlavní část (Architecture) — zbývající práce
+
+Zadání: *SWI C03 — Architecture* (`SWI_C03_students_bilingual_v10.html`), postup
+AS-IS → drivers → … → ADR → TO-BE → realizace → delta → implementace → ověření.
+
+## Co už je hotové (5. 10. 2026)
+
+| Bod | Stav | Kde |
+|---|---|---|
+| B drivery (D1–D4) | hotovo | `architecture-and-decisions.md` → *C03 — Architecture* |
+| C1 doménový model, C2 odpovědnosti | hotovo | tamtéž |
+| D otázka, E1–E3 alternativy, F **ADR-03** (zvolena B: alokace v Reservation Lifecycle pod zámkem Resource) | hotovo | tamtéž |
+| G1–G4 pohledy, H1 sekvence, H2 třídní diagram, I cross-view | hotovo | tamtéž |
+| K implementace | **kód hotový**, commit `c2c9a7d`; zápis do dokumentace chybí (J, K) | `src/repositories/reservationRepository.ts`, `src/services/reservationService.ts`, `src/services/availabilityService.ts`, `tests/services/concurrency.test.ts` |
+
+Ověřeno: `tsc --noEmit` čisté; celá sada **89/89** na nové izolované SQLite DB, 3× po sobě.
+
+### Důležité nálezy, které musí projít do dokumentace
+
+1. **Na SQLite nelze zámek Resource testem odlišit.** Prisma otevírá interaktivní transakce
+   `BEGIN IMMEDIATE` (ověřeno logem SQL dotazů) → celé transakce jsou serializované už samy.
+   Mutační test (zámek zakomentován) prošel → ADR-03 mechanismus na PostgreSQL je **neověřený**.
+2. **Vývojová DB z `.env` nemá migraci `20260921131639_add_orders`** → `tests/spec/op06-orders.test.ts`
+   na ní padá (tabulka `MenuItem` neexistuje). Nesouvisí se změnou. Testy pouštět na izolované DB
+   (viz níže) nebo si lokálně spustit `npx prisma migrate dev`.
+3. **Zastaralý Prisma client** → `tsc` hlásil chyby v objednávkách; po `npx prisma generate` čisté.
+
+Jak pustit testy na čisté DB (bez zásahu do `dev.db`):
+
+```bash
+export DATABASE_URL="file:/tmp/c03verify/verify.db"; mkdir -p /tmp/c03verify
+npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsc --noEmit -p tsconfig.json && npx vitest run
+```
+
+## Rozdělení
+
+| | Jarda | Honza |
+|---|---|---|
+| Těžiště | **Delta, implementace, ověření chování** | **Architektonické pravidlo, evidence, review** |
+| Body | J, K (zápis), L1, ověření na PostgreSQL | L2, M, review B–K, finální checklist |
+| Reviewuje | L2, M | J, K, L1 + celý návrh B–I a kód |
+
+Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat paralelně.
+
+## Jarda
+
+### JC1 — J: AS-IS → TO-BE delta
+- [ ] Tabulka *Oblast / AS-IS / TO-BE / Akce* v `architecture-and-decisions.md`. Základ je
+      v posledním návrhu v konverzaci / commit message `c2c9a7d`:
+  - rozhodnutí BR-02: služba + `none` predikát v repository → jen Lifecycle pod zámkem — CHANGE
+  - transakce: žádná → `inResourceTransaction` — CHANGE
+  - Confirm/Approve/Reject/Cancel mimo transakci → v transakci — CHANGE
+  - chybová cesta konfliktu: `OverlapError` / `ReservationConflictError` → `OverlapError` (409) — CHANGE
+  - `checkAvailability` v `ReservationService` → `AvailabilityService` — CHANGE
+  - guard očekávaného stavu v UPDATE, `errorMiddleware`, `rules.ts` — KEEP
+  - zámek Resource na PostgreSQL — **VERIFY** (nález 1)
+  - „stav Reservation mění jen Lifecycle“ — VERIFY → L2 (Honza)
+- [ ] Do Části A (A2–A7) připsat poznámku, že popisuje stav **před** `c2c9a7d` (AS-IS zůstává AS-IS).
+
+### JC2 — K: zápis implementace
+- [ ] Krátká sekce *K. Implementace*: co se změnilo (4 soubory), proč se změnily testy souběhu
+      (poražený nyní rozhoduje nad commitnutým stavem → doménová chyba 409 místo
+      `ReservationConflictError`; V-04R.3 připouští serializované pořadí confirm → cancel), commit `c2c9a7d`.
+- [ ] Projít diff `git show c2c9a7d` a potvrdit, že sedí s H1/H2 (názvy metod `ReservationTx`, `ReservationStore`).
+- [ ] Doplnit do ADR-03 → *Přijaté negativní důsledky* nález 1 (`BEGIN IMMEDIATE`).
+- [ ] Na konci vytvořit tag, např. `c03-architecture`, a zapsat ho do M (spolu s Honzou).
+
+### JC3 — L1: ověření chování
+- [ ] Na izolované DB spustit relevantní C02 testy a vyplnit tabulku *Ověření / Výsledek / Doklad*:
+  - success path — `confirms a DRAFT reservation with no conflict` (`tests/http/app.test.ts`), runtime curl 200
+  - alternative/failure — overlap → 409 + DRAFT (`tests/http/app.test.ts`), BR-04 `V-03.3`
+  - boundary/concurrency — `V-04R.1`–`V-04R.8`, `V-04R.6` (dotyk intervalů)
+- [ ] Zapsat přesný příkaz, datum a počet testů (aktuálně 89/89).
+
+### JC4 — ověření ADR-03 na PostgreSQL (doporučeno, ne povinné zadáním)
+- [ ] Docker Desktop → *Settings → Resources → WSL Integration* → zapnout pro tuto distribuci.
+- [ ] `docker compose up -d db`; dočasně `provider = "postgresql"` + `DATABASE_URL` na compose DB;
+      `npx prisma db push`; spustit `tests/services/concurrency.test.ts` **se zámkem i bez něj**
+      (zakomentovat `$executeRaw` v `inResourceTransaction`). Očekávání: bez zámku spadne `V-04R.1`.
+- [ ] Vše vrátit (`git checkout prisma/schema.prisma`), výsledek zapsat do L1 a ADR-03.
+- [ ] Pokud nestihneme: v J nechat VERIFY a v M uvést jako zbývající riziko.
+
+## Honza
+
+### HC1 — L2: jedno architektonické pravidlo + opakovatelná kontrola
+- [ ] Pravidlo z ADR-03 / G2: **„Stav Reservation smí měnit pouze Reservation Lifecycle
+      (`ReservationService`) přes `ReservationTx.transition()` uvnitř `inResourceTransaction`.“**
+- [ ] Kontrola jako Vitest test, např. `tests/architecture/lifecycle-ownership.test.ts`, který projde
+      `src/**/*.ts` a selže, když:
+  - `.reservation.update` / `.reservation.updateMany` / `.reservation.upsert` je mimo
+    `src/repositories/reservationRepository.ts`;
+  - `.transition(` na rezervaci je volané mimo `src/services/reservationService.ts`
+    (pozor: `OrderService` má vlastní `transition` pro objednávky — odlišit);
+  - `src/http/**` importuje `repositories/` jinak než pro sestavení v `createApp`.
+- [ ] Ověřit, že kontrola **selže**, když pravidlo porušíte (dočasně přidat zakázané volání), a zapsat to.
+- [ ] Zapsat *Architektonické pravidlo / Kontrola / Výsledek*.
+
+### HC2 — M: evidence
+- [ ] Do `docs/evidence-and-evolution.md` přidat `## C03 — Architecture Evidence` přesně podle šablony
+      ze zadání (Baseline, Part A, Drivers, Decision question, Alternatives, Scenario walkthrough, ADR,
+      Views ×7, Cross-view issues, Delta, Implementation changes, Behaviour verification,
+      Architecture conformance rule + result, Remaining uncertainty / risk, Commit/tag).
+- [ ] Remaining uncertainty musí obsahovat nález 1 (PostgreSQL neověřeno, pokud JC4 neproběhne)
+      a lazy expiraci D3 (nevyřešeno, mimo ADR-03).
+- [ ] Odkazy vést do sekcí `architecture-and-decisions.md`, nic nekopírovat.
+
+### HC3 — review
+- [ ] Projít Část A (A1–A8) i C03 B–I a kód `c2c9a7d` — každé tvrzení musí mít doklad (A9: texty
+      psal AI, musí je ověřit člověk). Nalezené chyby opravit nebo zapsat.
+- [ ] Odškrtnout A9 v checklistu Části A výše.
+
+## Hotovo je, když (C03 hlavní část)
+
+| Kritérium zadání | Bod | Vlastník | ✔ |
+|---|---|---|---|
+| 3–5 driverů podložených požadavky/evidencí | B | hotovo | [x] |
+| Doménový model konzistentní s C02 | C1 | hotovo | [x] |
+| Odpovědnosti explicitní s ownership požadavky | C2 | hotovo | [x] |
+| Jedna decision question, dvě materiálně odlišné alternativy | D, E1 | hotovo | [x] |
+| Alternativy porovnané vůči driverům a prošlé stejným scénářem | E2, E3 | hotovo | [x] |
+| ADR s rozhodnutím, negativními důsledky a reconsider when | F | hotovo (doplnit nález 1) | [ ] |
+| Context, static, state ownership, runtime si neodporují | G1–G4 | hotovo | [x] |
+| Scénář realizovaný sequence diagramem | H1 | hotovo | [x] |
+| Design class diagram podporuje stejnou realizaci | H2 | hotovo | [x] |
+| Cross-view kontrola před změnou kódu | I | hotovo | [x] |
+| Delta CHANGE / KEEP / VERIFY | J | Jarda | [ ] |
+| Relevantní C02 verification po změně prochází | K, L1 | Jarda | [ ] |
+| Opakovatelná kontrola architektonického pravidla | L2 | Honza | [ ] |
+| Evidence a přesný commit/tag | M | Honza (+ Jarda tag) | [ ] |
+| Lidské review všech AI textů | HC3 | Honza | [ ] |
