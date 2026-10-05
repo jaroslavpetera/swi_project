@@ -180,7 +180,8 @@ Ověřeno: `tsc --noEmit` čisté; celá sada **89/89** na nové izolované SQLi
 
 1. **Na SQLite nelze zámek Resource testem odlišit.** Prisma otevírá interaktivní transakce
    `BEGIN IMMEDIATE` (ověřeno logem SQL dotazů) → celé transakce jsou serializované už samy.
-   Mutační test (zámek zakomentován) prošel → ADR-03 mechanismus na PostgreSQL je **neověřený**.
+   Mutační test (zámek zakomentován) prošel → na SQLite mechanismus nedokázán.
+   **Aktualizace:** ověřeno na PostgreSQL 18.4 ručním během (L1) — bez zámku 8/9 testů souběhu selže.
 2. **Vývojová DB z `.env` nemá migraci `20260921131639_add_orders`** → `tests/spec/op06-orders.test.ts`
    na ní padá (tabulka `MenuItem` neexistuje). Nesouvisí se změnou. Testy pouštět na izolované DB
    (viz níže) nebo si lokálně spustit `npx prisma migrate dev`.
@@ -206,7 +207,7 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 ## Jarda
 
 ### JC1 — J: AS-IS → TO-BE delta
-- [ ] Tabulka *Oblast / AS-IS / TO-BE / Akce* v `architecture-and-decisions.md`. Návrh řádků:
+- [x] Tabulka *Oblast / AS-IS / TO-BE / Akce* v `architecture-and-decisions.md`. Návrh řádků:
   - rozhodnutí BR-02: služba + `none` predikát v repository → jen Lifecycle pod zámkem — CHANGE
   - transakce: žádná → `inResourceTransaction` — CHANGE
   - Confirm/Approve/Reject/Cancel mimo transakci → v transakci — CHANGE
@@ -215,30 +216,30 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
   - guard očekávaného stavu v UPDATE, `errorMiddleware`, `rules.ts` — KEEP
   - zámek Resource na PostgreSQL — **VERIFY** (nález 1)
   - „stav Reservation mění jen Lifecycle“ — VERIFY → L2 (Honza)
-- [ ] Do Části A (A2–A7) připsat poznámku, že popisuje stav **před** `c2c9a7d` (AS-IS zůstává AS-IS).
+- [x] Do Části A (A2–A7) připsat poznámku, že popisuje stav **před** `c2c9a7d` (AS-IS zůstává AS-IS).
 
 ### JC2 — K: zápis implementace
-- [ ] Krátká sekce *K. Implementace*: co se změnilo (4 soubory), proč se změnily testy souběhu
+- [x] Krátká sekce *K. Implementace*: co se změnilo (4 soubory), proč se změnily testy souběhu
       (poražený nyní rozhoduje nad commitnutým stavem → doménová chyba 409 místo
       `ReservationConflictError`; V-04R.3 připouští serializované pořadí confirm → cancel), commit `c2c9a7d`.
-- [ ] Projít diff `git show c2c9a7d` a potvrdit, že sedí s H1/H2 (názvy metod `ReservationTx`, `ReservationStore`).
-- [ ] Doplnit do ADR-03 → *Přijaté negativní důsledky* nález 1 (`BEGIN IMMEDIATE`).
+- [x] Projít diff `git show c2c9a7d` a potvrdit, že sedí s H1/H2 (názvy metod `ReservationTx`, `ReservationStore`).
+- [x] Doplnit do ADR-03 → *Přijaté negativní důsledky* nález 1 (`BEGIN IMMEDIATE`).
 - [ ] Na konci vytvořit tag, např. `c03-architecture`, a zapsat ho do M (spolu s Honzou).
 
 ### JC3 — L1: ověření chování
-- [ ] Na izolované DB spustit relevantní C02 testy a vyplnit tabulku *Ověření / Výsledek / Doklad*:
+- [x] Na izolované DB spustit relevantní C02 testy a vyplnit tabulku *Ověření / Výsledek / Doklad*:
   - success path — `confirms a DRAFT reservation with no conflict` (`tests/http/app.test.ts`), runtime curl 200
   - alternative/failure — overlap → 409 + DRAFT (`tests/http/app.test.ts`), BR-04 `V-03.3`
   - boundary/concurrency — `V-04R.1`–`V-04R.8`, `V-04R.6` (dotyk intervalů)
-- [ ] Zapsat přesný příkaz, datum a počet testů (aktuálně 89/89).
+- [x] Zapsat přesný příkaz, datum a počet testů (aktuálně 89/89).
 
 ### JC4 — ověření ADR-03 na PostgreSQL (doporučeno, ne povinné zadáním)
-- [ ] Docker Desktop → *Settings → Resources → WSL Integration* → zapnout pro tuto distribuci.
-- [ ] `docker compose up -d db`; dočasně `provider = "postgresql"` + `DATABASE_URL` na compose DB;
+- [x] Docker Desktop → *Settings → Resources → WSL Integration* → zapnout pro tuto distribuci.
+- [x] `docker compose up -d db`; dočasně `provider = "postgresql"` + `DATABASE_URL` na compose DB;
       `npx prisma db push`; spustit `tests/services/concurrency.test.ts` **se zámkem i bez něj**
       (zakomentovat `$executeRaw` v `inResourceTransaction`). Očekávání: bez zámku spadne `V-04R.1`.
-- [ ] Vše vrátit (`git checkout prisma/schema.prisma`), výsledek zapsat do L1 a ADR-03.
-- [ ] Pokud nestihneme: v J nechat VERIFY a v M uvést jako zbývající riziko.
+- [x] Vše vrátit (`git checkout prisma/schema.prisma`), výsledek zapsat do L1 a ADR-03.
+- [x] ~~Pokud nestihneme~~ — nebylo třeba, ověřeno přes `embedded-postgres` (Docker ve WSL nedostupný): v J nechat VERIFY a v M uvést jako zbývající riziko.
 
 ## Honza
 
@@ -278,13 +279,13 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 | Odpovědnosti explicitní s ownership požadavky | C2 | hotovo | [x] |
 | Jedna decision question, dvě materiálně odlišné alternativy | D, E1 | hotovo | [x] |
 | Alternativy porovnané vůči driverům a prošlé stejným scénářem | E2, E3 | hotovo | [x] |
-| ADR s rozhodnutím, negativními důsledky a reconsider when | F | hotovo (doplnit nález 1) | [ ] |
+| ADR s rozhodnutím, negativními důsledky a reconsider when | F | hotovo (nález 1 doplněn) | [x] |
 | Context, static, state ownership, runtime si neodporují | G1–G4 | hotovo | [x] |
 | Scénář realizovaný sequence diagramem | H1 | hotovo | [x] |
 | Design class diagram podporuje stejnou realizaci | H2 | hotovo | [x] |
 | Cross-view kontrola před změnou kódu | I | hotovo | [x] |
-| Delta CHANGE / KEEP / VERIFY | J | Jarda | [ ] |
-| Relevantní C02 verification po změně prochází | K, L1 | Jarda | [ ] |
+| Delta CHANGE / KEEP / VERIFY | J | Jarda | [x] |
+| Relevantní C02 verification po změně prochází | K, L1 | Jarda | [x] |
 | Opakovatelná kontrola architektonického pravidla | L2 | Honza | [ ] |
 | Evidence a přesný commit/tag | M | Honza (+ Jarda tag) | [ ] |
 | Lidské review všech AI textů | HC3 | Honza | [ ] |

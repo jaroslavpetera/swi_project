@@ -79,6 +79,9 @@ Mapování současné realizace jednoho scénáře z baseline v0.2. Tvrzení jso
 v kódu (commit `b4f597c`, branch `c03`), testy a za běhu aplikace dne 5. 10. 2026.
 Řádky kódu odkazují na tento stav.
 
+> **AS-IS zůstává AS-IS:** Část A popisuje kód **před** změnou C03 K (commit `c2c9a7d`).
+> Odkazy na řádky v A2–A7 platí pro commit `b4f597c`. Současný stav popisují G2, H1, H2 a K.
+
 ### A1. Sledovaný scénář
 
 | Položka | Hodnota |
@@ -463,7 +466,9 @@ rozhoduje uvnitř transakce serializované podle Resource, kterou poskytuje pers
 - Rozhodnutí, které může alokovat (Confirm, Approve), probíhá v `inResourceTransaction(resourceId, …)`:
   zámek Resource → načtení aktuálního stavu → BR-04/05/06 + BR-02 → zápis → commit.
 - Persistence port skrývá DB-specifické serializační primitivum (SQLite: serializovaný zapisovatel;
-  PostgreSQL: `SELECT … FOR UPDATE` na řádku `Resource`).
+  PostgreSQL: řádkový zámek na `Resource`). *Implementace (K):* první příkaz transakce je
+  `UPDATE "Resource" SET "id" = "id" WHERE "id" = $1`, který na PostgreSQL bere řádkový zámek
+  stejně jako `SELECT … FOR UPDATE` a je přenositelný i na SQLite.
 - Podmínka očekávaného stavu v `UPDATE` zůstává jako druhá pojistka proti přepsání novějšího stavu.
 - Konflikt má jednu chybovou cestu (`OverlapError` → 409).
 
@@ -477,7 +482,10 @@ implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na so
 - Garance závisí na disciplíně: kdokoli, kdo změní stav Reservation mimo Lifecycle, ji obejde →
   nutná opakovatelná architektonická kontrola (L2).
 - Požadavky na stejný stůl se serializují; u velmi „horkého“ stolu roste latence.
-- Mechanismus na PostgreSQL (`FOR UPDATE`) je navržen, ale do migrace neověřen na PostgreSQL.
+- Na SQLite zámek Resource **nelze testem odlišit**: Prisma tam otevírá interaktivní transakce
+  `BEGIN IMMEDIATE` (ověřeno logem SQL), takže serializuje celé transakce nad celou DB — i pro
+  různé stoly. Testy na SQLite proto dokazují chování, ne mechanismus. Mechanismus je ověřen
+  jen na PostgreSQL mimo běžnou sadu (L1, ruční běh); projekt zatím na PostgreSQL neběží.
 
 **Rozhodnutí znovu otevřeme, když:**
 
@@ -722,3 +730,75 @@ a realizuje prvek Reservation Lifecycle.
 
 Mezi pohledy B–H nebyl nalezen rozpor, který by bylo nutné opravit. Nalezené rozdíly jsou mezi
 návrhem a současným kódem a přecházejí do J.
+
+### J. AS-IS → TO-BE delta
+
+Podklad: Část A (AS-IS, commit `b4f597c`) a přijaté pohledy G2, G3, H1, H2.
+
+| Oblast | AS-IS | TO-BE | Akce |
+|---|---|---|---|
+| rozhodnutí BR-02 | `ReservationService` (kontrola nad zastaralým čtením) **a** podmínka `none` v `ReservationRepository.transition()` | jen Reservation Lifecycle, nad stavem čteným pod zámkem Resource | CHANGE |
+| transakční hranice | žádná; čtení a zápis jsou samostatné dotazy | `ReservationStore.inResourceTransaction(resourceId, work)` | CHANGE |
+| Confirm / Approve / Reject / Cancel | čtou a zapisují mimo transakci | celé rozhodnutí uvnitř `inResourceTransaction` | CHANGE |
+| chybová cesta při konfliktu BR-02 | `OverlapError` nebo `ReservationConflictError` podle toho, kde se konflikt zachytí | jen `OverlapError` → 409 | CHANGE |
+| zápis CANCELLED / EXPIRED po deadline | zápis, pak výjimka | zápis se commitne, výjimka až po commitu (jinak by ji rollback zahodil) | CHANGE |
+| OP-02 dostupnost | `ReservationService.checkAvailability()` | samostatný prvek Availability (`AvailabilityService`) | CHANGE |
+| guard očekávaného stavu v `UPDATE` | ano | ano, jako druhá pojistka (`ReservationConflictError`) | KEEP |
+| HTTP mapování (`errorMiddleware`) | jedno místo | beze změny | KEEP |
+| `rules.ts` (BR-01/02/04/06) | čisté funkce | beze změny | KEEP |
+| OP-01 Create | `repository.create` | beze změny (nealokuje, R-2) | KEEP |
+| zámek Resource na PostgreSQL | — | řádkový zámek v `inResourceTransaction` | VERIFY → ověřeno v L1 (ruční běh) |
+| „stav Reservation mění jen Lifecycle“ | neověřeno | opakovatelná kontrola | VERIFY → L2 |
+
+### K. Implementace
+
+Commit **`c2c9a7d`** (branch `c03`). Změněné soubory:
+
+| Soubor | Změna | Realizuje |
+|---|---|---|
+| `src/repositories/reservationRepository.ts` | rozhraní `ReservationStore` a `ReservationTx`; `inResourceTransaction()` (Prisma interaktivní transakce, první příkaz zamkne řádek `Resource`); `transition()` už jen s guardem očekávaného stavu, bez `none` predikátu | G2 Persistence, H2 |
+| `src/services/reservationService.ts` | všechny přechody přes `decide()` → `inResourceTransaction`; BR-02 jen v `allocate()`; výsledek po deadline vrací transakce jako hodnotu a výjimka se vyhodí po commitu | G2 Lifecycle, G3, H1 |
+| `src/services/availabilityService.ts` | nový prvek Availability (OP-02) | G2 Availability |
+| `src/http/app.ts` | sestavení `AvailabilityService`; route dostupnosti ji používá | G2 API |
+
+Změny testů a proč:
+
+- `tests/services/concurrency.test.ts` — poražený souběhu teď rozhoduje nad stavem, který vítěz
+  už commitnul, a dostane doménovou chybu (`OverlapError` / `InvalidStateError`, obě HTTP 409)
+  místo `ReservationConflictError`. Vlastnost REQ-04 (právě jeden vítěz, žádné přepsání) se
+  testuje beze změny. V-04R.3 připouští serializované pořadí confirm → cancel (obě uspějí,
+  výsledek CANCELLED), protože Cancel už nevidí zastaralý stav. Přidána druhá bariéra po čtení
+  uvnitř transakce, která bez zámku vynutí souběh (na PostgreSQL ověřeno, viz L1).
+- `tests/services/reservationService.test.ts` — dostupnost přes `AvailabilityService`.
+
+Žádný C02 ověřovací příklad nebyl odstraněn ani oslaben v tom, co tvrdí o chování.
+
+### L1. Ověření chování
+
+Prostředí 5. 10. 2026: nová izolovaná SQLite DB (`prisma migrate deploy` + seed, mimo `dev.db`),
+`npx tsc --noEmit -p tsconfig.json` bez chyb, `npx vitest run`.
+
+| Ověření | Výsledek | Doklad |
+|---|---|---|
+| success path | DRAFT → CONFIRMED, 200 | `tests/http/app.test.ts` › *confirms a DRAFT reservation with no conflict*; `tests/services/reservationService.test.ts` › *confirms directly to CONFIRMED…* |
+| alternative / failure — overlap | 409, rezervace zůstává DRAFT | `tests/http/app.test.ts` › *rejects confirm when a CONFIRMED reservation already overlaps…* |
+| alternative / failure — BR-04 cutoff | 1 ms před termínem projde; v termínu CANCELLED uložen + 410 | `tests/spec/c02-completion.test.ts` › `V-03.3`, `V-01.5` |
+| approval větev | PENDING_APPROVAL (202), pozdější Approve CONFIRMED; po deadline EXPIRED + 410 | `tests/http/app.test.ts` (BR-05), `V-05.6`, `V-05.8` |
+| concurrency | právě jeden vítěz, žádné přepsání | `tests/services/concurrency.test.ts` › `V-04R.1`–`V-04R.7`; HTTP `V-04R.8` |
+| boundary | dotýkající se intervaly lze potvrdit souběžně | `V-04R.6` |
+| celá sada | **89/89, 9 souborů**, 3× po sobě | výstup `npx vitest run` |
+
+**Ověření mechanismu ADR-03 na PostgreSQL** (ruční běh, mimo běžnou sadu): kopie projektu ve
+scratch adresáři s `provider = "postgresql"`, `prisma db push`, PostgreSQL **18.4** spuštěný přes
+npm balíček `embedded-postgres` (Docker ve WSL nebyl dostupný; compose cíl je PostgreSQL 16),
+výchozí izolace `read committed`.
+
+| Běh | Výsledek |
+|---|---|
+| celá sada se zámkem | **89/89** |
+| `concurrency` + `c02-completion` se zámkem, 3× | 20/20 pokaždé |
+| totéž **bez zámku** (zakomentovaný `$executeRaw` v `inResourceTransaction`), 2× | **8 z 9 testů souběhu selže**; `V-04R.1`: obě souběžná potvrzení uspějí → dvě překrývající se CONFIRMED (porušení BR-02). `V-04R.6` a HTTP `V-04R.8` (bez bariér) projdou. |
+
+Závěr: na PostgreSQL pod READ COMMITTED BR-02 drží **právě díky** zámku Resource; bez něj ho
+stejný kód poruší. Na SQLite totéž testem odlišit nelze (`BEGIN IMMEDIATE`, viz ADR-03).
+Ověření není součástí opakovatelné sady — projekt stále běží na SQLite.
