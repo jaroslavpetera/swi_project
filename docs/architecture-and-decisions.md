@@ -749,6 +749,7 @@ Podklad: Část A (AS-IS, commit `b4f597c`) a přijaté pohledy G2, G3, H1, H2.
 | OP-01 Create | `repository.create` | beze změny (nealokuje, R-2) | KEEP |
 | zámek Resource na PostgreSQL | — | řádkový zámek v `inResourceTransaction` | VERIFY → ověřeno v L1 (ruční běh) |
 | „stav Reservation mění jen Lifecycle“ | neověřeno | opakovatelná kontrola | VERIFY → L2 |
+| čtení DB přímo z Reservation API | `app.ts` volá Prismu přímo: seznamy uživatelů/stolů/rezervací a kontrola existence Resource v route dostupnosti (`src/http/app.ts:202`) | API jen přes Lifecycle / Availability (G2) | CHANGE — **neprovedeno**, nalezeno až při L2; jen čtení, mimo scénář Confirm; zapsáno jako otevřený rozdíl v M |
 
 ### K. Implementace
 
@@ -802,3 +803,34 @@ výchozí izolace `read committed`.
 Závěr: na PostgreSQL pod READ COMMITTED BR-02 drží **právě díky** zámku Resource; bez něj ho
 stejný kód poruší. Na SQLite totéž testem odlišit nelze (`BEGIN IMMEDIATE`, viz ADR-03).
 Ověření není součástí opakovatelné sady — projekt stále běží na SQLite.
+
+### L2. Architektonické pravidlo
+
+**Architektonické pravidlo:** Stav Reservation smí měnit pouze Reservation Lifecycle
+(`ReservationService`), a to jen přes `ReservationTx.transition()` uvnitř `inResourceTransaction()`.
+Do tabulky `Reservation` zapisuje pouze Reservation Persistence (`ReservationRepository`).
+Plyne z ADR-03 a G2/G3.
+
+**Kontrola:** `tests/architecture/lifecycle-ownership.test.ts` — Vitest test, běží v `npm test`.
+Prochází všechny `src/**/*.ts` a selže, když:
+
+1. zápis do tabulky Reservation (`.reservation.update/updateMany/upsert/delete/deleteMany(` nebo
+   raw `UPDATE`/`DELETE FROM "Reservation"`) je mimo `src/repositories/reservationRepository.ts`;
+2. `.transition(` s `ReservationState.` je mimo `src/services/reservationService.ts`
+   (vlastní `transition` objednávek v `OrderService` s `OrderState` se nepočítá);
+3. `.inResourceTransaction(` volá kdokoli jiný než Lifecycle;
+4. v Lifecycle existuje `.transition(` jinak než přes `tx.` (tj. mimo transakci a zámek).
+
+**Výsledek (5. 10. 2026):** 4/4 prochází; celá sada 93/93 (10 souborů). Ověřeno, že kontrola
+pravidlo skutečně hlídá — každé úmyslné porušení ji shodí a po vrácení zase prochází:
+
+| Úmyslné porušení | Zachyceno |
+|---|---|
+| `prisma.reservation.updateMany(…)` v `src/http/app.ts` | ano — pravidlo 1 |
+| `repo.transition(r, ReservationState.CONFIRMED)` v `OrderService` | ano — pravidlo 2 |
+| `(this.repository as any).transition(…)` v Lifecycle (mimo transakci) | ano — pravidlo 4 (první verze kontroly toto **nezachytila**; zpřísněno na „každé `.transition(` musí být `tx.transition(`“) |
+| raw `UPDATE "Reservation" …` v `orderRepository.ts` | ano — pravidlo 1 |
+
+Hranice kontroly: je textová (regex nad zdrojáky), ne typová. Hlídá zápisy, ne čtení — přímé
+čtení DB z API (viz J) neodhalí. Přejmenování proměnné `tx` v Lifecycle ji shodí (falešný poplach
+je zde záměrně přísnější varianta).

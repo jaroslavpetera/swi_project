@@ -246,3 +246,70 @@ fázích podle harmonogramu z [původního plánu](archive/c02/plan.md) (sekce 1
 cancel) a v0.2 (approval workflow) jsou proto zdokumentované jako dvě jasně oddělené sekce v
 `docs/specification.md` a `docs/diagrams/`, ale v gitu existuje jen finální `v0.2` tag, ne
 samostatný `v0.1` tag na dřívějším commitu.
+
+---
+
+## C03 — Architecture Evidence
+
+Všechny body odkazují do [`architecture-and-decisions.md`](architecture-and-decisions.md);
+obsah se zde nekopíruje. Branch `c03`.
+
+**Baseline:** v0.2 (`specification.md`), scénář OP-03 Confirm Reservation s větví BR-05 → OP-05 Approve.
+
+**Part A:** [C03 Part A — AS-IS](architecture-and-decisions.md#c03-part-a--as-is-confirm-reservation)
+(A1–A8, stav kódu `b4f597c`). Klíčový nález: BR-02 rozhodovaly dvě místa (služba nad zastaralým
+čtením + podmínka v `UPDATE`) se dvěma různými chybami; garance stála na serializaci zápisů v SQLite.
+
+**Drivers:** D1 exkluzivní alokace při souběhu, D2 přechod na PostgreSQL a 10× zátěž, D3 pozdní
+approval, D4 jeden vlastník lifecycle přechodů — sekce *B*. Notifikace vědomě vynechány (R-15).
+
+**Decision question:** Kde má být provedeno autoritativní rozhodnutí o alokaci (BR-02), aby platilo
+při souběhu i po přechodu na PostgreSQL a při 10× zátěži? — sekce *D*.
+
+**Alternatives:** A — invariant v DB (PostgreSQL exclusion constraint); B — invariant v aplikačním
+Reservation Lifecycle, serializace podle Resource — sekce *E1*, porovnání *E2*.
+
+**Scenario walkthrough:** souběžný Confirm dvou překrývajících se rezervací + approval větev
+a pozdní Approve, obě alternativy — sekce *E3*.
+
+**ADR:** ADR-03 — zvolena B — sekce *F*.
+
+**Views:**
+- domain class — *C1* (Mermaid classDiagram)
+- context — *G1*
+- static architecture — *G2* (5 prvků, povolené závislosti)
+- state ownership — *G3* (7 přechodů, owner vždy Reservation Lifecycle)
+- runtime/deployment — *G4* (jeden proces, jedna DB)
+- design sequence — *H1* (Confirm pod zámkem Resource, alt BR-02)
+- focused design class — *H2* (`ReservationService`, `ReservationStore`, `ReservationTx`, …)
+
+**Cross-view issues found/resolved:** mezi pohledy B–H rozpor nenalezen (*I*). Rozdíly mezi
+návrhem a AS-IS kódem převedeny do delty (*J*). Při L2 nalezen dodatečný rozdíl G2 ↔ kód:
+Reservation API čte DB přímo (seznamy, kontrola existence Resource v OP-02) — **neopraveno**.
+
+**AS-IS → TO-BE delta:** *J* — 7× CHANGE (6 provedeno, 1 otevřené), 4× KEEP, 2× VERIFY.
+
+**Implementation changes:** commit `c2c9a7d` — `inResourceTransaction` + `ReservationTx`
+v persistence, všechny přechody v Lifecycle pod zámkem Resource, BR-02 jen v `allocate()`,
+`AvailabilityService`; úpravy testů souběhu zdůvodněny v *K*.
+
+**Behaviour verification:** *L1* — 89/89 na nové izolované SQLite DB (3×); success, overlap,
+BR-04, approval, `V-04R.1`–`8`. Mechanismus ADR-03 ověřen ručně na PostgreSQL 18.4 (READ COMMITTED):
+se zámkem 89/89, bez zámku 8 z 9 testů souběhu selže (dvě překrývající se CONFIRMED).
+
+**Architecture conformance rule + result:** *L2* — „stav Reservation mění jen Reservation Lifecycle
+přes `tx.transition()` uvnitř `inResourceTransaction`“; `tests/architecture/lifecycle-ownership.test.ts`
+4/4, celá sada 93/93; 4 úmyslná porušení zachycena.
+
+**Remaining uncertainty / risk:**
+- Projekt stále běží na SQLite. Na SQLite Prisma otevírá transakce `BEGIN IMMEDIATE`, takže zámek
+  Resource tam testem odlišit nelze a celé zápisy jsou serializované (i pro různé stoly).
+  PostgreSQL ověření je ruční běh na verzi 18.4 (compose cíl je 16), není v opakovatelné sadě.
+- Výkon zámku Resource při 10× zátěži neměřen (podmínka znovuotevření ADR-03).
+- D3: vypršení PENDING_APPROVAL zůstává lazy (R-16); aktivní expirace není předmětem ADR-03.
+- Reservation API čte DB přímo mimo G2 (viz *J*); pravidlo L2 hlídá jen zápisy.
+- Vývojová DB z `.env` nemá migraci `add_orders`; ověření proto běží na izolované DB.
+- Texty C03 i Části A připravila AI; **lidské review a týmové schválení zatím chybí** (A9).
+
+**Commit/tag:** implementace `c2c9a7d`; dokumentace a L2 test v commitu po něm na branch `c03`.
+Tag `c03-architecture` **zatím neexistuje** — vytvoří se po lidském review na finálním commitu.

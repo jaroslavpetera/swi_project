@@ -244,26 +244,29 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 ## Honza
 
 ### HC1 — L2: jedno architektonické pravidlo + opakovatelná kontrola
-- [ ] Pravidlo z ADR-03 / G2: **„Stav Reservation smí měnit pouze Reservation Lifecycle
+- [x] Pravidlo z ADR-03 / G2: **„Stav Reservation smí měnit pouze Reservation Lifecycle
       (`ReservationService`) přes `ReservationTx.transition()` uvnitř `inResourceTransaction`.“**
-- [ ] Kontrola jako Vitest test, např. `tests/architecture/lifecycle-ownership.test.ts`, který projde
+- [x] Kontrola jako Vitest test, např. `tests/architecture/lifecycle-ownership.test.ts`, který projde
       `src/**/*.ts` a selže, když:
   - `.reservation.update` / `.reservation.updateMany` / `.reservation.upsert` je mimo
     `src/repositories/reservationRepository.ts`;
   - `.transition(` na rezervaci je volané mimo `src/services/reservationService.ts`
     (pozor: `OrderService` má vlastní `transition` pro objednávky — odlišit);
   - `src/http/**` importuje `repositories/` jinak než pro sestavení v `createApp`.
-- [ ] Ověřit, že kontrola **selže**, když pravidlo porušíte (dočasně přidat zakázané volání), a zapsat to.
-- [ ] Zapsat *Architektonické pravidlo / Kontrola / Výsledek*.
+- [x] Ověřit, že kontrola **selže**, když pravidlo porušíte (dočasně přidat zakázané volání), a zapsat to.
+- [x] Zapsat *Architektonické pravidlo / Kontrola / Výsledek*.
 
 ### HC2 — M: evidence
-- [ ] Do `docs/evidence-and-evolution.md` přidat `## C03 — Architecture Evidence` přesně podle šablony
+- [x] Do `docs/evidence-and-evolution.md` přidat `## C03 — Architecture Evidence` přesně podle šablony
       ze zadání (Baseline, Part A, Drivers, Decision question, Alternatives, Scenario walkthrough, ADR,
       Views ×7, Cross-view issues, Delta, Implementation changes, Behaviour verification,
       Architecture conformance rule + result, Remaining uncertainty / risk, Commit/tag).
-- [ ] Remaining uncertainty musí obsahovat nález 1 (PostgreSQL neověřeno, pokud JC4 neproběhne)
+- [x] Remaining uncertainty musí obsahovat nález 1 (PostgreSQL neověřeno, pokud JC4 neproběhne)
       a lazy expiraci D3 (nevyřešeno, mimo ADR-03).
-- [ ] Odkazy vést do sekcí `architecture-and-decisions.md`, nic nekopírovat.
+- [x] Odkazy vést do sekcí `architecture-and-decisions.md`, nic nekopírovat.
+
+> **Stav:** HC1 a HC2 dopsal Jarda (s AI). HC3 musí udělat Honza sám — AI review nenahrazuje lidské (A9).
+> AI kontrola dokladů už našla jeden rozdíl (API čte DB přímo, viz J a M) — projít, zda je jich víc.
 
 ### HC3 — review
 - [ ] Projít Část A (A1–A8) i C03 B–I a kód `c2c9a7d` — každé tvrzení musí mít doklad (A9: texty
@@ -286,6 +289,6 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 | Cross-view kontrola před změnou kódu | I | hotovo | [x] |
 | Delta CHANGE / KEEP / VERIFY | J | Jarda | [x] |
 | Relevantní C02 verification po změně prochází | K, L1 | Jarda | [x] |
-| Opakovatelná kontrola architektonického pravidla | L2 | Honza | [ ] |
-| Evidence a přesný commit/tag | M | Honza (+ Jarda tag) | [ ] |
+| Opakovatelná kontrola architektonického pravidla | L2 | Honza | [x] |
+| Evidence a přesný commit/tag | M | Honza (+ Jarda tag) — evidence hotová, **tag chybí** | [ ] |
 | Lidské review všech AI textů | HC3 | Honza | [ ] |
