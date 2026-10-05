@@ -660,6 +660,7 @@ classDiagram
     }
     class ReservationStore {
         <<interface, Reservation Persistence port>>
+        +create(input) ReservationRecord
         +findById(id) ReservationRecord
         +inResourceTransaction(resourceId, work) T
     }
@@ -672,10 +673,12 @@ classDiagram
     }
     class ReservationRepository {
         <<Prisma adapter>>
+        +findForResource(resourceId) ReservationRecord[]
+        +findResourceById(resourceId) Resource
     }
     class AvailabilityService {
         <<Availability>>
-        +checkAvailability(resourceId, interval) boolean
+        +checkAvailability(resourceId, startsAt, endsAt) boolean
     }
     class ReservationRules {
         <<module, pure>>
@@ -705,7 +708,7 @@ classDiagram
     ReservationStore ..> ReservationTx : provides
     ReservationRepository ..|> ReservationStore
     ReservationRepository ..|> ReservationTx
-    AvailabilityService --> ReservationStore : reads
+    AvailabilityService --> ReservationRepository : reads (findForResource, findResourceById)
     AvailabilityService ..> ReservationRules : evaluates
     ReservationRecord *-- TimeInterval
 ```
@@ -714,7 +717,8 @@ Vlastníci operací z H1: `confirm` → `ReservationService.confirmReservation`;
 `inResourceTransaction` → `ReservationStore`; `tx.*` → `ReservationTx`; `isExpiredDraft`,
 `findOverlappingConfirmed` → `ReservationRules`; HTTP mapování 409 → Reservation API
 (`errorMiddleware`, není třída — modul `app.ts`). Třída `ReservationService` si ponechává jméno
-a realizuje prvek Reservation Lifecycle.
+a realizuje prvek Reservation Lifecycle. Availability čte přímo z adaptéru (jen čtení, mimo
+transakci) — port `ReservationStore` je určen pro rozhodování Lifecycle.
 
 ### I. Cross-view kontrola
 
@@ -749,18 +753,24 @@ Podklad: Část A (AS-IS, commit `b4f597c`) a přijaté pohledy G2, G3, H1, H2.
 | OP-01 Create | `repository.create` | beze změny (nealokuje, R-2) | KEEP |
 | zámek Resource na PostgreSQL | — | řádkový zámek v `inResourceTransaction` | VERIFY → ověřeno v L1 (ruční běh) |
 | „stav Reservation mění jen Lifecycle“ | neověřeno | opakovatelná kontrola | VERIFY → L2 |
-| čtení DB přímo z Reservation API | `app.ts` volá Prismu přímo: seznamy uživatelů/stolů/rezervací a kontrola existence Resource v route dostupnosti (`src/http/app.ts:202`) | API jen přes Lifecycle / Availability (G2) | CHANGE — **neprovedeno**, nalezeno až při L2; jen čtení, mimo scénář Confirm; zapsáno jako otevřený rozdíl v M |
+
+Mimo slice Confirm/Availability (G2 je nakreslen pro tento slice): administrační čtení a založení
+uživatelů, stolů a menu a výpis rezervací stolu volají v `app.ts` Prismu přímo. Stav Reservation
+nemění; ponecháno beze změny a uvedeno v M jako známý rozdíl mimo slice.
+| kontrola existence Resource v OP-02 | route dostupnosti v `app.ts` čte Prismu přímo (`prisma.resource.findUnique`) | Availability (`AvailabilityService` → `ResourceNotFoundError` → 404) | CHANGE (nalezeno při kontrole po L2) |
 
 ### K. Implementace
 
-Commit **`c2c9a7d`** (branch `c03`). Změněné soubory:
+Commity **`c2c9a7d`** (hlavní změna) a následný commit s přesunem kontroly existence Resource
+(branch `c03`; hash v M). Změněné soubory:
 
 | Soubor | Změna | Realizuje |
 |---|---|---|
 | `src/repositories/reservationRepository.ts` | rozhraní `ReservationStore` a `ReservationTx`; `inResourceTransaction()` (Prisma interaktivní transakce, první příkaz zamkne řádek `Resource`); `transition()` už jen s guardem očekávaného stavu, bez `none` predikátu | G2 Persistence, H2 |
 | `src/services/reservationService.ts` | všechny přechody přes `decide()` → `inResourceTransaction`; BR-02 jen v `allocate()`; výsledek po deadline vrací transakce jako hodnotu a výjimka se vyhodí po commitu | G2 Lifecycle, G3, H1 |
 | `src/services/availabilityService.ts` | nový prvek Availability (OP-02) | G2 Availability |
-| `src/http/app.ts` | sestavení `AvailabilityService`; route dostupnosti ji používá | G2 API |
+| `src/http/app.ts` | sestavení `AvailabilityService`; route dostupnosti ji používá; mapování `ResourceNotFoundError` → 404 | G2 API |
+| `src/services/availabilityService.ts`, `src/repositories/reservationRepository.ts` (2. commit) | kontrola existence Resource přesunuta z route do Availability (`findResourceById`) | J — kontrola existence Resource |
 
 Změny testů a proč:
 
@@ -787,7 +797,8 @@ Prostředí 5. 10. 2026: nová izolovaná SQLite DB (`prisma migrate deploy` + s
 | approval větev | PENDING_APPROVAL (202), pozdější Approve CONFIRMED; po deadline EXPIRED + 410 | `tests/http/app.test.ts` (BR-05), `V-05.6`, `V-05.8` |
 | concurrency | právě jeden vítěz, žádné přepsání | `tests/services/concurrency.test.ts` › `V-04R.1`–`V-04R.7`; HTTP `V-04R.8` |
 | boundary | dotýkající se intervaly lze potvrdit souběžně | `V-04R.6` |
-| celá sada | **89/89, 9 souborů**, 3× po sobě | výstup `npx vitest run` |
+| celá sada | **89/89, 9 souborů**, 3× po sobě (před L2); po L2 a přesunu kontroly Resource **93/93, 10 souborů** | výstup `npx vitest run` |
+| runtime po změně | aplikace spuštěna (`tsx src/index.ts`, izolovaná DB): Confirm 200 CONFIRMED; překryv 409 `Reservation overlaps with confirmed reservation …`; dostupnost před/po `true`/`false`; neznámý stůl 404; approval Confirm 202 → Approve 200; neznámá rezervace 404 | ruční `curl`, 5. 10. 2026 |
 
 **Ověření mechanismu ADR-03 na PostgreSQL** (ruční běh, mimo běžnou sadu): kopie projektu ve
 scratch adresáři s `provider = "postgresql"`, `prisma db push`, PostgreSQL **18.4** spuštěný přes
@@ -832,5 +843,5 @@ pravidlo skutečně hlídá — každé úmyslné porušení ji shodí a po vrá
 | raw `UPDATE "Reservation" …` v `orderRepository.ts` | ano — pravidlo 1 |
 
 Hranice kontroly: je textová (regex nad zdrojáky), ne typová. Hlídá zápisy, ne čtení — přímé
-čtení DB z API (viz J) neodhalí. Přejmenování proměnné `tx` v Lifecycle ji shodí (falešný poplach
+čtení DB z API mimo slice (viz J) neodhalí. Přejmenování proměnné `tx` v Lifecycle ji shodí (falešný poplach
 je zde záměrně přísnější varianta).

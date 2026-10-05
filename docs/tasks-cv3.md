@@ -266,7 +266,8 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 - [x] Odkazy vést do sekcí `architecture-and-decisions.md`, nic nekopírovat.
 
 > **Stav:** HC1 a HC2 dopsal Jarda (s AI). HC3 musí udělat Honza sám — AI review nenahrazuje lidské (A9).
-> AI kontrola dokladů už našla jeden rozdíl (API čte DB přímo, viz J a M) — projít, zda je jich víc.
+> AI kontrola proti oběma zadáním našla a opravila: H2 ↔ kód, kontrolu existence Resource v API (J, K)
+> a doplnila runtime ověření po změně (L1). Projít, zda je rozdílů víc.
 
 ### HC3 — review
 - [ ] Projít Část A (A1–A8) i C03 B–I a kód `c2c9a7d` — každé tvrzení musí mít doklad (A9: texty

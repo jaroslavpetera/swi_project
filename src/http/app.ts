@@ -15,7 +15,7 @@ import {
   CancellationWindowError,
   NotFoundError,
 } from "../services/reservationService.js";
-import { AvailabilityService } from "../services/availabilityService.js";
+import { AvailabilityService, ResourceNotFoundError } from "../services/availabilityService.js";
 import {
   OrderService,
   InvalidOrderStateError,
@@ -197,12 +197,6 @@ export function createApp(prisma: PrismaClient): Express {
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.flatten() });
       }
-      // OP-02 předpoklad: Resource existuje. Na neexistující stůl se neodpovídá
-      // „available“ — nezodpověditelná otázka nemá odpověď.
-      const resource = await prisma.resource.findUnique({ where: { id: req.params.id } });
-      if (!resource) {
-        return res.status(404).json({ error: `Resource ${req.params.id} not found` });
-      }
       const available = await availability.checkAvailability(
         req.params.id,
         parsed.data.start,
@@ -284,6 +278,7 @@ export function createApp(prisma: PrismaClient): Express {
 function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ReservationConflictError) return res.status(409).json({ error: err.message });
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
+  if (err instanceof ResourceNotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof OverlapError) return res.status(409).json({ error: err.message });
   if (err instanceof InvalidStateError) return res.status(409).json({ error: err.message });
   if (err instanceof NotCancellableError) return res.status(409).json({ error: err.message });

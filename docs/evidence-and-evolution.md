@@ -284,16 +284,20 @@ a pozdní Approve, obě alternativy — sekce *E3*.
 - focused design class — *H2* (`ReservationService`, `ReservationStore`, `ReservationTx`, …)
 
 **Cross-view issues found/resolved:** mezi pohledy B–H rozpor nenalezen (*I*). Rozdíly mezi
-návrhem a AS-IS kódem převedeny do delty (*J*). Při L2 nalezen dodatečný rozdíl G2 ↔ kód:
-Reservation API čte DB přímo (seznamy, kontrola existence Resource v OP-02) — **neopraveno**.
+návrhem a AS-IS kódem převedeny do delty (*J*). Závěrečná kontrola proti zadání našla dva další
+rozdíly a opravila je: H2 neodpovídal kódu (`AvailabilityService` čte z adaptéru, ne z portu;
+chybělo `create`) → H2 opraven; route dostupnosti četla Resource přímo z Prismy → přesunuto do
+Availability (J, K).
 
-**AS-IS → TO-BE delta:** *J* — 7× CHANGE (6 provedeno, 1 otevřené), 4× KEEP, 2× VERIFY.
+**AS-IS → TO-BE delta:** *J* — 7× CHANGE (všechny provedeny), 4× KEEP, 2× VERIFY (obě ověřeny: L1, L2).
 
 **Implementation changes:** commit `c2c9a7d` — `inResourceTransaction` + `ReservationTx`
 v persistence, všechny přechody v Lifecycle pod zámkem Resource, BR-02 jen v `allocate()`,
-`AvailabilityService`; úpravy testů souběhu zdůvodněny v *K*.
+`AvailabilityService`; úpravy testů souběhu zdůvodněny v *K*. Následně kontrola existence Resource
+v OP-02 přesunuta do Availability.
 
-**Behaviour verification:** *L1* — 89/89 na nové izolované SQLite DB (3×); success, overlap,
+**Behaviour verification:** *L1* — 89/89 na nové izolované SQLite DB (3×), po L2 93/93; runtime
+smoke test po změně (Confirm 200, překryv 409, dostupnost, 404, approval 202→200); success, overlap,
 BR-04, approval, `V-04R.1`–`8`. Mechanismus ADR-03 ověřen ručně na PostgreSQL 18.4 (READ COMMITTED):
 se zámkem 89/89, bez zámku 8 z 9 testů souběhu selže (dvě překrývající se CONFIRMED).
 
@@ -307,7 +311,8 @@ přes `tx.transition()` uvnitř `inResourceTransaction`“; `tests/architecture/
   PostgreSQL ověření je ruční běh na verzi 18.4 (compose cíl je 16), není v opakovatelné sadě.
 - Výkon zámku Resource při 10× zátěži neměřen (podmínka znovuotevření ADR-03).
 - D3: vypršení PENDING_APPROVAL zůstává lazy (R-16); aktivní expirace není předmětem ADR-03.
-- Reservation API čte DB přímo mimo G2 (viz *J*); pravidlo L2 hlídá jen zápisy.
+- Mimo slice čte Reservation API DB přímo (administrace uživatelů/stolů/menu, výpis rezervací
+  stolu); stav Reservation nemění. Pravidlo L2 hlídá jen zápisy.
 - Vývojová DB z `.env` nemá migraci `add_orders`; ověření proto běží na izolované DB.
 - Texty C03 i Části A připravila AI; **lidské review a týmové schválení zatím chybí** (A9).
 

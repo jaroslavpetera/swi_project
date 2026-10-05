@@ -99,6 +99,11 @@ export class ReservationRepository implements ReservationStore {
     return rows.map(toRecord);
   }
 
+  async findResourceById(resourceId: string): Promise<ResourceRecord | null> {
+    const row = await this.prisma.resource.findUnique({ where: { id: resourceId } });
+    return row ? { id: row.id, requiresApproval: row.requiresApproval } : null;
+  }
+
   async inResourceTransaction<T>(resourceId: string, work: (tx: ReservationTx) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (db) => {
       // Lock first, read afterwards. On PostgreSQL this no-op UPDATE takes a row
