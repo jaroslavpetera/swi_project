@@ -713,9 +713,12 @@ a realizuje prvek Reservation Lifecycle.
 | Kontrola | Otázka | Výsledek |
 |---|---|---|
 | C02 ↔ G2 | Umí architektura realizovat požadované chování a pravidla? | OK — OP-03/05 a BR-01/02/04/05/06 mají vlastníka (Lifecycle + Rules); OP-02 má Availability; REQ-04 pokrývá `inResourceTransaction` + podmínka stavu. |
-| C2 ↔ G2 | Má každá významná odpovědnost jednoho ownera? | OK — R1 API, R2/R3/R5 Lifecycle, R6 Rules, R7 Availability, R4/R8 Persistence. **Opraveno:** v prvním návrhu G2 rozhodoval BR-02 i Persistence (podmínka `none` v UPDATE jako dnes); v souladu s ADR-03 Persistence drží jen zámek a podmínku očekávaného stavu. |
+| C2 ↔ G2 | Má každá významná odpovědnost jednoho ownera? | OK — R1 API, R2/R3/R5 Lifecycle, R6 Rules, R7 Availability, R4/R8 Persistence. Rozdíl proti **AS-IS** (ne mezi pohledy): dnes BR-02 rozhoduje i Persistence (podmínka `none` v `UPDATE`) a `checkAvailability` je v `ReservationService` → řeší J. |
 | G2 ↔ H1 | Používá sekvence pouze existující/povolené závislosti? | OK — API→LC, LC→Rules, LC→P, P→DB. Žádná šipka API→Persistence. |
-| H1 ↔ H2 | Má každá zpráva strukturálního vlastníka? | OK — viz seznam pod H2. **Opraveno:** `findConfirmedForResource` a `findResource` přidány do `ReservationTx` (původně jen `findForResource` na repository mimo transakci). |
+| H1 ↔ H2 | Má každá zpráva strukturálního vlastníka? | OK — viz seznam pod H2. Rozdíl proti **AS-IS**: dnešní `ReservationRepository` nemá transakční rozhraní, čtení probíhá mimo transakci → řeší J. |
 | statechart ↔ G3/H1 | Rozhoduje přechod správný owner? | OK — všech 7 přechodů v G3 rozhoduje Lifecycle; H1 ukazuje DRAFT→CONFIRMED pod zámkem a alt BR-02. |
 | G2 ↔ G4 | Je každý prvek realisticky namapován do runtime? | OK — jeden proces, jedna DB. Zámek je v DB, takže i více instancí procesu by bylo korektní. |
 | ADR ↔ G2/G4 | Je rozhodnutí vidět v architektuře? | OK — `inResourceTransaction` v G2/H1/H2; Persistence bez pravidla; G4 drží zámek v DB, ne v procesu. |
+
+Mezi pohledy B–H nebyl nalezen rozpor, který by bylo nutné opravit. Nalezené rozdíly jsou mezi
+návrhem a současným kódem a přecházejí do J.
