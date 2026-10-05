@@ -488,3 +488,234 @@ implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na so
   zámek po Resource by pak nestačil;
 - přibude Notification Service nebo jiný externí krok v Confirm (dnes vyloučeno R-15) — nesmí
   běžet uvnitř zamčené transakce.
+
+### G1. Kontext systému
+
+```text
+ [Guest]                    [Staff]                       [Approver]
+    | create / cancel          | confirm / cancel             | approve / reject
+    | reservation,             | reservation,                 | pending reservation
+    | availability query       | availability query           |
+    v                          v                              v
+ +--------------------------------------------------------------------+
+ |                     Reservation System                             |
+ +--------------------------------------------------------------------+
+```
+
+- Aktéři jsou role z use-case pohledu v0.2. Systém je neautentizuje (R-7) — **IdP není** externí
+  systém tohoto projektu.
+- **Notification Service** není připojena (R-15, Část A — A6); v ADR-03 je jen podmínkou znovuotevření.
+- Databáze je součást systému (provozovaná týmem), proto v kontextu není; je v G4.
+
+### G2. TO-BE statická architektura
+
+```text
++------------------------------- Reservation System --------------------------------+
+|                                                                                    |
+|  [Reservation API]                         (module)                                |
+|  role: HTTP commands/queries -> use cases; one mapping result -> status            |
+|        | confirm / approve / reject / cancel                 | availability(query) |
+|        v                                                     v                     |
+|  [Reservation Lifecycle]                   (module)      [Availability]  (module)  |
+|  role: decides every Reservation transition              role: read-only answer    |
+|  owns: lifecycle transitions, BR-02 allocation decision      |                     |
+|        | evaluate BR-01/02/04/05/06          | uses rules     | find confirmed      |
+|        v                                     |               |                     |
+|  [Reservation Rules]  (module, pure) <-------+---------------+                     |
+|  role: definitions of interval, overlap, cutoffs                                   |
+|  owns: BR-01/02/04/06 definitions (no state)                                       |
+|                                                                                    |
+|  [Reservation Lifecycle] -- inResourceTransaction / load / transition -->          |
+|  [Availability]          -- findForResource (read) -->                             |
+|  [Reservation Persistence]                 (module, port + Prisma adapter)         |
+|  role: durable state, resource-scoped serialized transaction (ADR-03)              |
+|  owns: stored Reservation/Resource state, DB concurrency primitive                 |
+|                                                                                    |
++------------------------------------|-----------------------------------------------+
+                                     | SQL read / lock Resource / conditional UPDATE
+                                     v
+                         [Reservation DB]  (database: SQLite now, PostgreSQL target)
+```
+
+| Prvek | Hlavní odpovědnost | Odpovědnosti z C2 | Owns |
+|---|---|---|---|
+| Reservation API | přijetí příkazů, jedno mapování výsledku → HTTP | R1 | protokolový kontrakt |
+| Reservation Lifecycle | rozhodnutí o každém přechodu stavu a o alokaci | R2, R3, R5 | lifecycle přechody, rozhodnutí BR-02 |
+| Reservation Rules | čisté definice pravidel | R6, definice pro R3/R7 | definice BR-01/02/04/06 (bez stavu) |
+| Availability | odpověď na dostupnost | R7 | — (jen čte) |
+| Reservation Persistence | trvalý stav, transakce serializovaná podle Resource | R4, R8 | uložený stav, DB serializační primitivum |
+
+Povolené závislosti (jiné nejsou): API → Lifecycle, API → Availability; Lifecycle → Rules,
+Lifecycle → Persistence; Availability → Rules, Availability → Persistence (jen čtení);
+Persistence → DB. **Rozhodnutí ADR-03 je vidět:** BR-02 rozhoduje Lifecycle uvnitř
+`inResourceTransaction`; Persistence poskytuje zámek, ne pravidlo; žádná jiná cesta nemění stav.
+
+### G3. Ownership přechodů ve statechartu
+
+Statechart: [`diagrams/state-diagram.md`](diagrams/state-diagram.md) (v0.2). Owner = prvek z G2.
+
+| Přechod | Owner rozhodnutí | Kdo může přechod pouze vyžádat |
+|---|---|---|
+| DRAFT → CONFIRMED (confirm, BR-02/04/05) | Reservation Lifecycle (v `inResourceTransaction`) | Staff přes Reservation API |
+| DRAFT → PENDING_APPROVAL (confirm, BR-05) | Reservation Lifecycle | Staff přes Reservation API |
+| DRAFT → CANCELLED (confirm po cutoff, BR-04) | Reservation Lifecycle | Staff přes Reservation API (pokus o confirm) |
+| DRAFT / PENDING_APPROVAL / CONFIRMED → CANCELLED (cancel, BR-03) | Reservation Lifecycle | Guest, Staff přes Reservation API |
+| PENDING_APPROVAL → CONFIRMED (approve, BR-02/06) | Reservation Lifecycle (v `inResourceTransaction`) | Approver přes Reservation API |
+| PENDING_APPROVAL → REJECTED (reject) | Reservation Lifecycle | Approver přes Reservation API |
+| PENDING_APPROVAL → EXPIRED (approve po deadline, BR-06) | Reservation Lifecycle | Approver přes Reservation API (pokus o approve) |
+
+Reservation Persistence přechod **neprovádí z vlastního rozhodnutí** — zapíše jen to, co Lifecycle
+rozhodl, a odmítne zápis, pokud se očekávaný stav mezitím změnil. Availability ani Orders stav
+Reservation nemění (OP-06 jej jen čte pro BR-07).
+
+### G4. Runtime / deployment mapping
+
+```text
+[Reservation Application process]  (Node.js, Express; src/index.ts, jeden proces)
+contains:
+- Reservation API
+- Reservation Lifecycle
+- Reservation Rules
+- Availability
+- Reservation Persistence  (Prisma Client)
+        |
+        | read/write, resource-scoped transactions (Prisma)
+        v
+[Reservation DB]
+  now:    SQLite file (DATABASE_URL="file:./dev.db")
+  target: PostgreSQL 16 (docker-compose.yml, service "db")
+```
+
+Žádné další procesy ani externí runtime systémy. Zámek podle Resource drží databáze, ne paměť
+procesu → funguje i pro více instancí aplikace nad stejnou DB (ADR-03 nezavádí globální mutex v procesu).
+
+### H1. Návrhový sekvenční diagram — Confirm Reservation
+
+```mermaid
+sequenceDiagram
+    actor Staff
+    participant API as Reservation API
+    participant LC as Reservation Lifecycle
+    participant Rules as Reservation Rules
+    participant P as Reservation Persistence
+    participant DB as Reservation DB
+
+    Staff->>API: POST /reservations/{id}/confirm
+    API->>LC: confirm(id, now)
+    LC->>P: findById(id)
+    P->>DB: SELECT Reservation
+    P-->>LC: reservation (resourceId)
+    LC->>P: inResourceTransaction(resourceId, decide)
+    P->>DB: BEGIN + lock Resource row
+    Note over P,DB: concurrent Confirm/Approve on the same Resource waits here (ADR-03)
+    P->>LC: decide(tx)
+    LC->>P: tx.findById(id)
+    P-->>LC: current reservation
+    LC->>LC: require state = DRAFT
+    LC->>Rules: isExpiredDraft(reservation, now)
+    Rules-->>LC: false
+    LC->>P: tx.findResource(resourceId)
+    P-->>LC: requiresApproval = false
+    LC->>P: tx.findConfirmedForResource(resourceId)
+    P-->>LC: confirmed reservations (current, under lock)
+    LC->>Rules: findOverlappingConfirmed(reservation, confirmed)
+    alt no overlap
+        Rules-->>LC: none
+        LC->>P: tx.transition(reservation, CONFIRMED)
+        P->>DB: UPDATE state WHERE id AND state = DRAFT
+        P->>DB: COMMIT
+        LC-->>API: reservation CONFIRMED
+        API-->>Staff: 200 CONFIRMED
+    else overlap (BR-02)
+        Rules-->>LC: conflicting reservation
+        LC-->>P: throw OverlapError
+        P->>DB: ROLLBACK
+        LC-->>API: OverlapError
+        API-->>Staff: 409, reservation stays DRAFT
+    end
+```
+
+Všichni účastníci a závislosti odpovídají G2 (API → Lifecycle → Rules / Persistence → DB).
+První `findById` mimo transakci slouží jen ke zjištění `resourceId`; rozhoduje se výhradně nad
+stavem načteným **pod zámkem**.
+
+### H2. Návrhový třídní diagram
+
+```mermaid
+classDiagram
+    class ReservationService {
+        <<Reservation Lifecycle>>
+        +confirmReservation(id, now) ReservationRecord
+        +approveReservation(id, now) ReservationRecord
+        +rejectReservation(id) ReservationRecord
+        +cancelReservation(id, now) ReservationRecord
+    }
+    class ReservationStore {
+        <<interface, Reservation Persistence port>>
+        +findById(id) ReservationRecord
+        +inResourceTransaction(resourceId, work) T
+    }
+    class ReservationTx {
+        <<interface>>
+        +findById(id) ReservationRecord
+        +findResource(resourceId) Resource
+        +findConfirmedForResource(resourceId) ReservationRecord[]
+        +transition(reservation, state) ReservationRecord
+    }
+    class ReservationRepository {
+        <<Prisma adapter>>
+    }
+    class AvailabilityService {
+        <<Availability>>
+        +checkAvailability(resourceId, interval) boolean
+    }
+    class ReservationRules {
+        <<module, pure>>
+        +rangesOverlap(a, b) boolean
+        +findOverlappingConfirmed(candidate, confirmed) ReservationRecord
+        +isExpiredDraft(reservation, now) boolean
+        +isApprovalExpired(reservation, now) boolean
+    }
+    class ReservationRecord {
+        id
+        resourceId
+        state : ReservationState
+    }
+    class TimeInterval {
+        <<value object>>
+        startsAt
+        endsAt
+    }
+    class OverlapError {
+        conflictingReservationId
+    }
+
+    ReservationService --> ReservationStore : uses
+    ReservationService ..> ReservationTx : decides within
+    ReservationService ..> ReservationRules : evaluates
+    ReservationService ..> OverlapError : throws
+    ReservationStore ..> ReservationTx : provides
+    ReservationRepository ..|> ReservationStore
+    ReservationRepository ..|> ReservationTx
+    AvailabilityService --> ReservationStore : reads
+    AvailabilityService ..> ReservationRules : evaluates
+    ReservationRecord *-- TimeInterval
+```
+
+Vlastníci operací z H1: `confirm` → `ReservationService.confirmReservation`; `findById`,
+`inResourceTransaction` → `ReservationStore`; `tx.*` → `ReservationTx`; `isExpiredDraft`,
+`findOverlappingConfirmed` → `ReservationRules`; HTTP mapování 409 → Reservation API
+(`errorMiddleware`, není třída — modul `app.ts`). Třída `ReservationService` si ponechává jméno
+a realizuje prvek Reservation Lifecycle.
+
+### I. Cross-view kontrola
+
+| Kontrola | Otázka | Výsledek |
+|---|---|---|
+| C02 ↔ G2 | Umí architektura realizovat požadované chování a pravidla? | OK — OP-03/05 a BR-01/02/04/05/06 mají vlastníka (Lifecycle + Rules); OP-02 má Availability; REQ-04 pokrývá `inResourceTransaction` + podmínka stavu. |
+| C2 ↔ G2 | Má každá významná odpovědnost jednoho ownera? | OK — R1 API, R2/R3/R5 Lifecycle, R6 Rules, R7 Availability, R4/R8 Persistence. **Opraveno:** v prvním návrhu G2 rozhodoval BR-02 i Persistence (podmínka `none` v UPDATE jako dnes); v souladu s ADR-03 Persistence drží jen zámek a podmínku očekávaného stavu. |
+| G2 ↔ H1 | Používá sekvence pouze existující/povolené závislosti? | OK — API→LC, LC→Rules, LC→P, P→DB. Žádná šipka API→Persistence. |
+| H1 ↔ H2 | Má každá zpráva strukturálního vlastníka? | OK — viz seznam pod H2. **Opraveno:** `findConfirmedForResource` a `findResource` přidány do `ReservationTx` (původně jen `findForResource` na repository mimo transakci). |
+| statechart ↔ G3/H1 | Rozhoduje přechod správný owner? | OK — všech 7 přechodů v G3 rozhoduje Lifecycle; H1 ukazuje DRAFT→CONFIRMED pod zámkem a alt BR-02. |
+| G2 ↔ G4 | Je každý prvek realisticky namapován do runtime? | OK — jeden proces, jedna DB. Zámek je v DB, takže i více instancí procesu by bylo korektní. |
+| ADR ↔ G2/G4 | Je rozhodnutí vidět v architektuře? | OK — `inResourceTransaction` v G2/H1/H2; Persistence bez pravidla; G4 drží zámek v DB, ne v procesu. |
