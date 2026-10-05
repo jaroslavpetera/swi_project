@@ -371,3 +371,120 @@ Seskupení a oddělení:
 Napětí, které řeší krok D: R3 a R4 musí být nedělitelné (jinak D1 neplatí), ale R8 — technologie,
 která tu nedělitelnost poskytuje — se má měnit odděleně od pravidel (D2). Kde tedy autoritativní
 rozhodnutí o alokaci leží?
+
+### D. Hlavní rozhodovací otázka
+
+**Rozhodovací otázka:** Kde má být provedeno autoritativní rozhodnutí o alokaci (BR-02), aby
+platilo při souběhu i po přechodu na PostgreSQL a při 10× zátěži?
+
+- vychází z driverů D1 a D2, dotýká se D4 (kdo rozhoduje) a D3 (Approve alokuje taky);
+- mění ownership (kdo vlastní invariant), interakci (zámek / constraint) i runtime (transakce);
+- má dvě reálné varianty — níže.
+
+### E1. Alternativy
+
+**Alternativa A — invariant vlastní databáze.** PostgreSQL exclusion constraint nad
+`(resourceId, [startsAt, endsAt))` pro řádky ve stavu CONFIRMED odmítne konfliktní zápis při commitu.
+Aplikační kontrola zůstává jen pro čitelnou chybu.
+
+```text
+[Reservation Lifecycle]  -- transition(CONFIRMED) -->  [Reservation Persistence]
+                                                              |
+                                                              | UPDATE state
+                                                              v
+                                          [PostgreSQL: EXCLUDE USING gist
+                                           (resourceId WITH =, interval WITH &&)
+                                           WHERE state = 'CONFIRMED']   <- owns BR-02
+```
+
+**Alternativa B — invariant vlastní aplikační lifecycle owner, serializace podle Resource.**
+Jediný prvek Reservation Lifecycle provede celé rozhodnutí v jedné transakci: zamkne Resource,
+načte aktuální CONFIRMED rezervace, vyhodnotí BR-02 a zapíše přechod. Databáze poskytuje pouze
+serializační primitivum za rozhraním persistence.
+
+```text
+[Reservation Lifecycle]   <- owns BR-02 decision + lifecycle transitions
+   | inResourceTransaction(resourceId, decide)
+   v
+[Reservation Persistence port]
+   | SQLite: serializovaný zapisovatel
+   | PostgreSQL: SELECT ... FROM "Resource" WHERE id = $1 FOR UPDATE
+   v
+[Database]   <- provides lock, not the rule
+```
+
+### E2. Porovnání vůči driverům
+
+| Driver / kritérium | Alternativa A — DB constraint | Alternativa B — aplikace + zámek Resource |
+|---|---|---|
+| D1 konzistence při souběhu | Nejsilnější: invariant platí pro jakýkoli zápis včetně přímých SQL a administrátorských zásahů. | Platí pro všechny zápisy, které jdou přes Reservation Lifecycle. Přímý zápis do DB ho obejde. |
+| D2 přechod na PostgreSQL / 10× zátěž | Vyžaduje PostgreSQL (`btree_gist`, `tstzrange`); SQLite ekvivalent nemá → současnou sadu testů nelze použít jako důkaz, dokud neproběhne migrace. Prisma constraint neumí → ruční SQL migrace mimo schéma. Pod zátěží bez čekání: konflikt = okamžitá chyba. | Funguje na SQLite hned; PostgreSQL vyžaduje jen jinou implementaci portu (`FOR UPDATE`). Pod zátěží se serializují pouze požadavky na **tentýž stůl**; jiné stoly běží paralelně. Riziko: čekání na zámek u „horkého“ stolu. |
+| D4 jeden vlastník / změna pravidla | BR-02 je zapsané dvakrát (SQL constraint + TypeScript pro hlášku a OP-02) a musí se měnit synchronně. Volající dál může dostat dvě různé chyby (pre-check vs. constraint violation `23P01`). | BR-02 je v jednom místě (`rules.ts`), rozhoduje jeden prvek, jedna chyba. Odstraňuje dvojí rozhodování z Části A. |
+| D3 pozdní Approve | Approve je chráněn stejně jako Confirm (constraint je nezávislý na operaci). | Approve musí jít stejnou cestou `inResourceTransaction` — vynuceno tím, že Lifecycle je jediný vlastník přechodů. |
+| Ověřitelnost / provozní složitost | Test vyžaduje běžící PostgreSQL; migrace navíc mimo Prisma model. | Souběh testovatelný na SQLite dnešní sadou `V-04R.*`; architektonické pravidlo „jen Lifecycle mění stav“ lze kontrolovat staticky. |
+
+### E3. Průchod scénářem — souběžný Confirm dvou překrývajících se rezervací
+
+Komplikace: dvě rezervace R1 a R2 stejného stolu, překrývající se intervaly, Confirm přijde ve stejnou
+chvíli (V-04R.1 / V-04R.8). Druhá polovina tabulky sleduje větev s approval.
+
+| Krok / událost | Alternativa A — DB constraint | Alternativa B — aplikace + zámek Resource |
+|---|---|---|
+| Confirm R1 a R2 začnou souběžně | Oba requesty načtou stav, oba projdou aplikační pre-check (žádná CONFIRMED). | Oba požádají o `inResourceTransaction(table)`; první získá zámek, druhý čeká. |
+| vyhodnocení BR-02 | Pre-check je u obou zastaralý; rozhoduje až commit. | První vyhodnotí BR-02 nad aktuálním stavem → volno → zapíše CONFIRMED → commit, uvolní zámek. Druhý teprve teď čte — vidí CONFIRMED R1. |
+| výsledek | První commit projde; druhý selže na constraint (`23P01`) → persistence musí chybu přeložit na 409. | Druhý vyhodnotí konflikt v aplikaci → `OverlapError` → 409, R2 zůstává DRAFT. Žádná DB chyba. |
+| je potřeba approval (`requiresApproval = true`) | DRAFT → PENDING_APPROVAL; constraint se netýká (nealokuje). | DRAFT → PENDING_APPROVAL v transakci Resource; BR-02 se nevyhodnocuje (R-1). |
+| proces / request skončí | Stav PENDING_APPROVAL je v DB; žádný stav v paměti. | Totéž; zámek trvá jen po dobu transakce, ne po dobu čekání na schválení. |
+| approval přijde později | Approve → UPDATE CONFIRMED → constraint rozhodne při commitu. | Approve → `inResourceTransaction` → BR-06 deadline → BR-02 nad aktuálním stavem → CONFIRMED. |
+| souběžný Approve R2 a Confirm R3 (V-04R.7) | Jeden commit projde, druhý `23P01`. Aplikace musí obě chybové cesty sjednotit. | Serializováno zámkem stolu; druhý dostane `OverlapError`. Jedna chybová cesta. |
+| vypršení bez dalšího Approve (D3) | Neřešeno — obě varianty zachovávají lazy detekci (R-16). | Neřešeno stejně. Rozhodnutí o aktivní expiraci není předmětem tohoto ADR. |
+
+Obě varianty realizují požadované chování REQ-03/04 i OP-05. Liší se v tom, **kdo** rozhoduje a
+**kolik** chybových cest musí aplikace obsloužit.
+
+### F. ADR-03 — Kde se rozhoduje alokace (BR-02) při souběhu
+
+**Kontext:** Část A ukázala, že BR-02 dnes rozhoduje služba (zastaralá kontrola) i repository
+(podmínka v jediném `UPDATE`), s dvěma různými chybami. Garance stojí na serializaci zapisovatelů
+v SQLite. Produkční cíl je PostgreSQL pod READ COMMITTED a 10× zátěž, kde stejný dotaz garanci
+nedá (viz ADR *atomické přechody v SQLite pro REQ-04*).
+
+**Drivery:** D1, D2, D4; D3 (Approve alokuje stejnou cestou).
+
+**Alternativa A:** exclusion constraint v PostgreSQL vlastní BR-02; aplikace jen pre-check.
+
+**Alternativa B:** Reservation Lifecycle je jediný vlastník rozhodnutí o přechodu i o BR-02;
+rozhoduje uvnitř transakce serializované podle Resource, kterou poskytuje persistence port.
+
+**Rozhodnutí:** Alternativa B.
+
+- Všechny přechody stavu Reservation (Confirm, Approve, Reject, Cancel, expirace při Confirm/Approve)
+  prochází jedním prvkem **Reservation Lifecycle**.
+- Rozhodnutí, které může alokovat (Confirm, Approve), probíhá v `inResourceTransaction(resourceId, …)`:
+  zámek Resource → načtení aktuálního stavu → BR-04/05/06 + BR-02 → zápis → commit.
+- Persistence port skrývá DB-specifické serializační primitivum (SQLite: serializovaný zapisovatel;
+  PostgreSQL: `SELECT … FOR UPDATE` na řádku `Resource`).
+- Podmínka očekávaného stavu v `UPDATE` zůstává jako druhá pojistka proti přepsání novějšího stavu.
+- Konflikt má jednu chybovou cestu (`OverlapError` → 409).
+
+**Důvod:** jediná varianta, která řeší D4 (jeden vlastník, jedna chyba) a D1 zároveň; je
+ověřitelná na současné databázi dnešními testy `V-04R.*`; přechod na PostgreSQL mění jen
+implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na souběhy u stejného stolu.
+
+**Přijaté negativní důsledky:**
+
+- Invariant nechrání zápisy mimo aplikaci (ruční SQL, jiný systém nad stejnou DB).
+- Garance závisí na disciplíně: kdokoli, kdo změní stav Reservation mimo Lifecycle, ji obejde →
+  nutná opakovatelná architektonická kontrola (L2).
+- Požadavky na stejný stůl se serializují; u velmi „horkého“ stolu roste latence.
+- Mechanismus na PostgreSQL (`FOR UPDATE`) je navržen, ale do migrace neověřen na PostgreSQL.
+
+**Rozhodnutí znovu otevřeme, když:**
+
+- do stejné databáze začne zapisovat jiný systém nebo administrátorský nástroj → zvážit A
+  (DB constraint) jako doplněk;
+- měření po migraci na PostgreSQL ukáže čekání na zámek Resource jako úzké hrdlo při 10× zátěži;
+- rezervace přestane být vázaná na jeden konkrétní stůl (předpoklad v `intent-and-change.md`) —
+  zámek po Resource by pak nestačil;
+- přibude Notification Service nebo jiný externí krok v Confirm (dnes vyloučeno R-15) — nesmí
+  běžet uvnitř zamčené transakce.
