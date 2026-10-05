@@ -15,6 +15,7 @@ import {
   CancellationWindowError,
   NotFoundError,
 } from "../services/reservationService.js";
+import { AvailabilityService } from "../services/availabilityService.js";
 import {
   OrderService,
   InvalidOrderStateError,
@@ -84,6 +85,7 @@ function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>):
 export function createApp(prisma: PrismaClient): Express {
   const reservationRepository = new ReservationRepository(prisma);
   const service = new ReservationService(reservationRepository);
+  const availability = new AvailabilityService(reservationRepository);
   const orderService = new OrderService(new OrderRepository(prisma), reservationRepository);
   const app = express();
   app.use(express.json());
@@ -201,7 +203,7 @@ export function createApp(prisma: PrismaClient): Express {
       if (!resource) {
         return res.status(404).json({ error: `Resource ${req.params.id} not found` });
       }
-      const available = await service.checkAvailability(
+      const available = await availability.checkAvailability(
         req.params.id,
         parsed.data.start,
         parsed.data.end
