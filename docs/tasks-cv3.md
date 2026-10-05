@@ -1,5 +1,17 @@
 # C03 Část A — rozdělení práce (Jarda + Honza)
 
+> ## ⏳ Co ještě zbývá (stav 5. 10. 2026)
+>
+> Vše ostatní z obou zadání (Část A i C03 hlavní část) je hotové a ověřené — 93/93 testů.
+>
+> | # | Úkol | Kdo | Detail |
+> |---|---|---|---|
+> | 1 | **Lidské review** všech textů a kódu, které připravilo AI (zadání A9) | Honza | [HC3](#hc3--review) |
+> | 2 | Po review odškrtnout A9 v checklistu Části A | Honza | [checklist Části A](#hotovo-je-když-kontrola-na-s2) |
+> | 3 | **Tag `c03-architecture`** na finálním commitu + zapsat do M (`evidence-and-evolution.md` → *Commit/tag*) | Jarda + Honza | [JC2](#jc2--k-zápis-implementace) |
+> | 4 | PR `c03` → `main` (zadání nevyžaduje, tým to tak dělal u C01/C02) | Jarda | — |
+
+
 Zadání: *SWI C03 — Část A: Zmapujte současnou realizaci jednoho scénáře* (úterní předstih).
 Vstup: Specification Baseline v0.2 ([`specification.md`](specification.md)) a běžící aplikace z C02.
 **Jediný výstup:** nové sekce v [`architecture-and-decisions.md`](architecture-and-decisions.md).
@@ -270,7 +282,7 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 > a doplnila runtime ověření po změně (L1). Projít, zda je rozdílů víc.
 
 ### HC3 — review
-- [ ] Projít Část A (A1–A8) i C03 B–I a kód `c2c9a7d` — každé tvrzení musí mít doklad (A9: texty
+- [ ] Projít Část A (A1–A8), C03 B–M a kód `c2c9a7d`, `83c7319`, `f6fb771` — každé tvrzení musí mít doklad (A9: texty
       psal AI, musí je ověřit člověk). Nalezené chyby opravit nebo zapsat.
 - [ ] Odškrtnout A9 v checklistu Části A výše.
 
