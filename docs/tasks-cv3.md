@@ -13,6 +13,10 @@ Vstup: Specification Baseline v0.2 ([`specification.md`](specification.md)) a b�
 Společné: výběr scénáře (sync 0), sjednocení názvů bloků (sync 1), finální kontrola „Hotovo je, když“ (sync 2).
 A9 (pravidlo pro AI) platí pro oba a pro všechny body.
 
+> **Stav 5. 10. 2026:** části H1–H4 (A3, A5, A6, A8) nakonec dopsal Jarda místo Honzy.
+> Honza je proto **reviewuje** (místo psaní) a schvaluje celý výstup na S2; vzájemné review
+> A1–A8 tím zůstává zachované.
+
 ---
 
 ## Zvolený scénář (navrženo — potvrdit na sync 0)
@@ -71,7 +75,7 @@ takže není potřeba brát OP-05 zvlášť.
   - Persistence — `ReservationRepository` (+ Prisma client)
 - [x] Tabulka *Část / Typ-obsah / Role v tomto scénáři / Doklad*.
 - [x] U skupin vypsat, které třídy/funkce obsahují.
-- [ ] Na S1 předat Honzovi finální názvy bloků.
+- [x] Na S1 předat Honzovi finální názvy bloků.
 
 ### J4 — A7: AS-IS strukturální diagram
 - [x] Obdélník **Application code**, uvnitř 3–7 bloků z A4, každý s názvem a krátkou rolí.
@@ -82,48 +86,48 @@ takže není potřeba brát OP-05 zvlášť.
 - [x] Neslučovat jednu třídu s celou vrstvou bez vysvětlení; když jsou úrovně různé, označit typ bloku (class / module / database / external system).
 - [x] Pod diagram seznam tříd v každém bloku.
 - [x] Formát: ASCII v markdownu (jako v zadání), nebo Mermaid / soubor v `docs/diagrams/` s odkazem.
-- [ ] Zkontrolovat proti A6 od Honzy — v diagramu nesmí být závislost, která v A6 není (a naopak).
+- [x] Zkontrolovat proti A6 od Honzy — v diagramu nesmí být závislost, která v A6 není (a naopak).
 
 ---
 
 ## Honza — větve, stav, pravidla, závislosti
 
 ### H1 — A3: Alternativní / chybová větev
-- [ ] Vybrat **jednu** důležitou větev OP-03. Doporučení: **overlap při přímém Confirm → 409, rezervace zůstává DRAFT** (BR-02).
+- [x] Vybrat **jednu** důležitou větev OP-03. Doporučení: **overlap při přímém Confirm → 409, rezervace zůstává DRAFT** (BR-02).
       Alternativy: BR-04 expirace → CANCELLED + 410; souběžný loser → 409 (REQ-04).
-- [ ] Tabulka *Co říká v0.2 / Kde se podmínka zjistí / Kde se rozhodne výsledek / Co dostane volající*.
-- [ ] Co dostane volající ověřit v mapování chyb v `app.ts` (status + tělo) a testem.
-- [ ] **Rozdíly spec ↔ implementace** zapsat jako samostatnou tabulku *Specifikace / Implementace / Doklad*.
+- [x] Tabulka *Co říká v0.2 / Kde se podmínka zjistí / Kde se rozhodne výsledek / Co dostane volající*.
+- [x] Co dostane volající ověřit v mapování chyb v `app.ts` (status + tělo) a testem.
+- [x] **Rozdíly spec ↔ implementace** zapsat jako samostatnou tabulku *Specifikace / Implementace / Doklad*.
       Kandidáti k ověření (nic z toho nezapisovat bez kontroly v kódu/testu):
   - overlap se zjišťuje na dvou místech a vede na **dvě různé výjimky** (`OverlapError` ve službě, `ReservationConflictError` v repository) — vrací obě stejný status a tělo?
   - `resource?.requiresApproval` — co se stane, když Resource neexistuje (spadne to do přímého Confirm)?
   - BR-04: stav CANCELLED se **uloží před** vrácením chyby 410 — odpovídá spec?
   - pořadí kontrol (stav DRAFT → BR-04 → BR-05 → BR-02) vs. pořadí v Main scenario.
-- [ ] Pokud žádný rozdíl není, napsat to výslovně („rozdíl nenalezen, ověřeno …“).
+- [x] Pokud žádný rozdíl není, napsat to výslovně („rozdíl nenalezen, ověřeno …“).
 
 ### H2 — A5: Stav, změna stavu, jedno pravidlo
-- [ ] **Stav** — tabulka *Otázka / Odpověď / Doklad*:
+- [x] **Stav** — tabulka *Otázka / Odpověď / Doklad*:
   - kde je stav Reservation trvale uložen (tabulka `Reservation`, sloupec `state` String, SQLite — `schema.prisma`)
   - který kód **rozhoduje** a který **provádí** přechod DRAFT → CONFIRMED (rozlišit!)
-- [ ] **Pravidlo BR-02** (exkluzivní Resource) — tabulka:
+- [x] **Pravidlo BR-02** (exkluzivní Resource) — tabulka:
   - kde se zjistí podmínka
   - kde se podle výsledku rozhodne
   - kde se provede výsledná změna stavu
-- [ ] Zadání: *„Pokud stejné rozhodnutí dělá více míst, uveďte všechna.“* U nás BR-02 hlídá
+- [x] Zadání: *„Pokud stejné rozhodnutí dělá více míst, uveďte všechna.“* U nás BR-02 hlídá
       `findOverlappingConfirmed` ve službě **i** predikát v `ReservationRepository.transition()` (a totéž v `approveReservation`). Uvést všechna místa a která z nich je skutečná pojistka (viz ADR o atomických přechodech).
 
 ### H3 — A6: Relevantní závislosti
-- [ ] Tabulka *Závislost / Kde se napojuje / Která část zná technické API / Doklad*.
-- [ ] Databáze: SQLite přes Prisma — kde se vytváří `PrismaClient` (`src/index.ts`), kdo ho drží.
-- [ ] Notification Service, IdP: ověřit v kódu, zda existují. Pokud ne, uvést řádek s „v současné implementaci není“ + doklad (kde by se napojily / R-7 v spec), ať je jasné, že to není opomenutí.
-- [ ] Nevypisovat Express, Zod, Vitest ani jiné běžné knihovny.
+- [x] Tabulka *Závislost / Kde se napojuje / Která část zná technické API / Doklad*.
+- [x] Databáze: SQLite přes Prisma — kde se vytváří `PrismaClient` (`src/index.ts`), kdo ho drží.
+- [x] Notification Service, IdP: ověřit v kódu, zda existují. Pokud ne, uvést řádek s „v současné implementaci není“ + doklad (kde by se napojily / R-7 v spec), ať je jasné, že to není opomenutí.
+- [x] Nevypisovat Express, Zod, Vitest ani jiné běžné knihovny.
 
 ### H4 — A8: Otázka pro další C03
-- [ ] Jedna otázka vycházející z konkrétního nálezu v A2–A7, tabulka *Otázka / Doklad / Proč je důležitá*.
-- [ ] Kandidát: *Zachová se garance REQ-04/BR-02 po přechodu na PostgreSQL (READ COMMITTED), když dnes stojí na tom, že SQLite serializuje zápisy a overlap je v jednom `updateMany`?*
+- [x] Jedna otázka vycházející z konkrétního nálezu v A2–A7, tabulka *Otázka / Doklad / Proč je důležitá*.
+- [x] Kandidát: *Zachová se garance REQ-04/BR-02 po přechodu na PostgreSQL (READ COMMITTED), když dnes stojí na tom, že SQLite serializuje zápisy a overlap je v jednom `updateMany`?*
       Doklad: `ReservationRepository.transition()` + komentář v něm + ADR. Proč: C03 driver (změna DB, 10× zátěž).
-- [ ] Jiný kandidát podle nálezů z A3 (např. duplicitní kontrola BR-02 ve službě a repository) — vybrat jednu, nejsilněji podloženou.
-- [ ] Před zapsáním probrat s Jardou (S2).
+- [x] Jiný kandidát podle nálezů z A3 (např. duplicitní kontrola BR-02 ve službě a repository) — vybrat jednu, nejsilněji podloženou.
+- [x] Před zapsáním probrat s Jardou (S2).
 
 ---
 
@@ -141,13 +145,13 @@ takže není potřeba brát OP-05 zvlášť.
 | Kritérium zadání | Bod | Vlastník | ✔ |
 |---|---|---|---|
 | Hlavní kroky scénáře jsou namapované na konkrétní implementaci | A2 | Jarda | [x] |
-| Jedna důležitá alternative/failure větev je dohledaná | A3 | Honza | [ ] |
-| Případný rozdíl v0.2 ↔ implementace je zaznamenaný | A3 | Honza | [ ] |
+| Jedna důležitá alternative/failure větev je dohledaná | A3 | Honza | [x] |
+| Případný rozdíl v0.2 ↔ implementace je zaznamenaný | A3 | Honza | [x] |
 | Hlavní části jsou identifikované na srovnatelné úrovni detailu | A4 | Jarda | [x] |
-| Je jasné, kde je stav uložen, kde se mění a kde se vynucuje jedno pravidlo | A5 | Honza | [ ] |
-| Relevantní externí/perzistenční závislosti jsou dohledané | A6 | Honza | [ ] |
+| Je jasné, kde je stav uložen, kde se mění a kde se vynucuje jedno pravidlo | A5 | Honza | [x] |
+| Relevantní externí/perzistenční závislosti jsou dohledané | A6 | Honza | [x] |
 | AS-IS diagram odpovídá skutečnému kódu | A7 | Jarda | [x] |
-| Existuje jedna evidencí podložená otázka pro další C03 | A8 | Honza | [ ] |
+| Existuje jedna evidencí podložená otázka pro další C03 | A8 | Honza | [x] |
 | Reference scénáře (scénář, REQ, BR, baseline) | A1 | Jarda | [x] |
-| Všechna tvrzení ověřena (AI pravidlo) | A9 | oba | [ ] |
-| Vše je v `docs/architecture-and-decisions.md` + odkaz z README | — | oba | [ ] |
+| Všechna tvrzení ověřena (AI pravidlo) — čeká na review Honzy | A9 | oba | [ ] |
+| Vše je v `docs/architecture-and-decisions.md` + odkaz z README | — | oba | [x] |
