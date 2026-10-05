@@ -43,13 +43,13 @@ takže není potřeba brát OP-05 zvlášť.
 ## Jarda — hlavní průchod a struktura
 
 ### J1 — A1: Reference scénáře
-- [ ] Tabulka *Položka / Hodnota*: Scénář = OP-03 Confirm Reservation; Požadavky = REQ-03, REQ-04;
+- [x] Tabulka *Položka / Hodnota*: Scénář = OP-03 Confirm Reservation; Požadavky = REQ-03, REQ-04;
       Pravidla = BR-01, BR-02, BR-04, BR-05; Baseline = v0.2.
-- [ ] Jen reference s odkazem do `specification.md`, žádné přepisování spec.
+- [x] Jen reference s odkazem do `specification.md`, žádné přepisování spec.
 
 ### J2 — A2: Mapování hlavního úspěšného průchodu na kód
-- [ ] Vzít *Main scenario* z OP-03 („locate DRAFT; check BR-04; inspect BR-05; … check BR-02 and persist CONFIRMED“).
-- [ ] Tabulka *Krok scénáře / Realizace v kódu / Doklad* minimálně pro kroky:
+- [x] Vzít *Main scenario* z OP-03 („locate DRAFT; check BR-04; inspect BR-05; … check BR-02 and persist CONFIRMED“).
+- [x] Tabulka *Krok scénáře / Realizace v kódu / Doklad* minimálně pro kroky:
   - přijmout požadavek na potvrzení (route v `app.ts`)
   - načíst Reservation
   - ověřit, že přechod je povolený (stav DRAFT)
@@ -59,29 +59,29 @@ takže není potřeba brát OP-05 zvlášť.
   - změnit stav na CONFIRMED
   - uložit výsledek
   - vrátit odpověď (200)
-- [ ] Doklad = soubor + třída/metoda, ideálně i konkrétní test (název `it(...)`), nebo runtime výstup.
-- [ ] **Nedávat** gettery, `toRecord`, `asyncRoute`, Zod parsování apod., pokud nemají vliv na chování.
-- [ ] Pozor: „změnit stav“ a „uložit“ jsou u nás **jedna operace** (`transition()` = podmíněný `updateMany`) — zapsat to tak, jak to v kódu je, ne podle šablony.
+- [x] Doklad = soubor + třída/metoda, ideálně i konkrétní test (název `it(...)`), nebo runtime výstup.
+- [x] **Nedávat** gettery, `toRecord`, `asyncRoute`, Zod parsování apod., pokud nemají vliv na chování.
+- [x] Pozor: „změnit stav“ a „uložit“ jsou u nás **jedna operace** (`transition()` = podmíněný `updateMany`) — zapsat to tak, jak to v kódu je, ne podle šablony.
 
 ### J3 — A4: Hlavní části implementace
-- [ ] 3–7 částí na **stejné úrovni detailu** (u nás malá aplikace → konkrétní třídy/moduly). Návrh:
+- [x] 3–7 částí na **stejné úrovni detailu** (u nás malá aplikace → konkrétní třídy/moduly). Návrh:
   - Reservation API — `createApp` / route `POST /reservations/:id/confirm` + mapování chyb na HTTP
   - Reservation logic — `ReservationService`
   - Domain rules — `rules.ts` (`isExpiredDraft`, `findOverlappingConfirmed`)
   - Persistence — `ReservationRepository` (+ Prisma client)
-- [ ] Tabulka *Část / Typ-obsah / Role v tomto scénáři / Doklad*.
-- [ ] U skupin vypsat, které třídy/funkce obsahují.
+- [x] Tabulka *Část / Typ-obsah / Role v tomto scénáři / Doklad*.
+- [x] U skupin vypsat, které třídy/funkce obsahují.
 - [ ] Na S1 předat Honzovi finální názvy bloků.
 
 ### J4 — A7: AS-IS strukturální diagram
-- [ ] Obdélník **Application code**, uvnitř 3–7 bloků z A4, každý s názvem a krátkou rolí.
-- [ ] Databáze (SQLite přes Prisma) a případné externí systémy **mimo** Application code.
-- [ ] Jen vazby skutečně použité v Confirm; každá důležitá šipka popsaná operací
+- [x] Obdélník **Application code**, uvnitř 3–7 bloků z A4, každý s názvem a krátkou rolí.
+- [x] Databáze (SQLite přes Prisma) a případné externí systémy **mimo** Application code.
+- [x] Jen vazby skutečně použité v Confirm; každá důležitá šipka popsaná operací
       (`confirm(id)`, `findById`, `findResourceById`, `findForResource`, `transition(CONFIRMED)`, `read/write` …).
-- [ ] Směr šipky = směr volání/závislosti (ověřit podle importů a konstruktorů, `src/index.ts` → `createApp`).
-- [ ] Neslučovat jednu třídu s celou vrstvou bez vysvětlení; když jsou úrovně různé, označit typ bloku (class / module / database / external system).
-- [ ] Pod diagram seznam tříd v každém bloku.
-- [ ] Formát: ASCII v markdownu (jako v zadání), nebo Mermaid / soubor v `docs/diagrams/` s odkazem.
+- [x] Směr šipky = směr volání/závislosti (ověřit podle importů a konstruktorů, `src/index.ts` → `createApp`).
+- [x] Neslučovat jednu třídu s celou vrstvou bez vysvětlení; když jsou úrovně různé, označit typ bloku (class / module / database / external system).
+- [x] Pod diagram seznam tříd v každém bloku.
+- [x] Formát: ASCII v markdownu (jako v zadání), nebo Mermaid / soubor v `docs/diagrams/` s odkazem.
 - [ ] Zkontrolovat proti A6 od Honzy — v diagramu nesmí být závislost, která v A6 není (a naopak).
 
 ---
@@ -140,14 +140,14 @@ takže není potřeba brát OP-05 zvlášť.
 
 | Kritérium zadání | Bod | Vlastník | ✔ |
 |---|---|---|---|
-| Hlavní kroky scénáře jsou namapované na konkrétní implementaci | A2 | Jarda | [ ] |
+| Hlavní kroky scénáře jsou namapované na konkrétní implementaci | A2 | Jarda | [x] |
 | Jedna důležitá alternative/failure větev je dohledaná | A3 | Honza | [ ] |
 | Případný rozdíl v0.2 ↔ implementace je zaznamenaný | A3 | Honza | [ ] |
-| Hlavní části jsou identifikované na srovnatelné úrovni detailu | A4 | Jarda | [ ] |
+| Hlavní části jsou identifikované na srovnatelné úrovni detailu | A4 | Jarda | [x] |
 | Je jasné, kde je stav uložen, kde se mění a kde se vynucuje jedno pravidlo | A5 | Honza | [ ] |
 | Relevantní externí/perzistenční závislosti jsou dohledané | A6 | Honza | [ ] |
-| AS-IS diagram odpovídá skutečnému kódu | A7 | Jarda | [ ] |
+| AS-IS diagram odpovídá skutečnému kódu | A7 | Jarda | [x] |
 | Existuje jedna evidencí podložená otázka pro další C03 | A8 | Honza | [ ] |
-| Reference scénáře (scénář, REQ, BR, baseline) | A1 | Jarda | [ ] |
+| Reference scénáře (scénář, REQ, BR, baseline) | A1 | Jarda | [x] |
 | Všechna tvrzení ověřena (AI pravidlo) | A9 | oba | [ ] |
 | Vše je v `docs/architecture-and-decisions.md` + odkaz z README | — | oba | [ ] |
