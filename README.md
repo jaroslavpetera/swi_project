@@ -22,7 +22,7 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 | Dokument | Co v něm najdete |
 |---|---|
 | [Specifikace](docs/specification.md) | Aktuální kandidát v0.2: požadavky, operace, pravidla a odkazy na diagramy. |
-| [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, garance SQLite a drivery pro C03. |
+| [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, garance SQLite, drivery a AS-IS mapování Confirm Reservation (C03 část A). |
 | [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a zbývající body issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
 | [Analýza dopadu](docs/c02-completion-impact.md) | Podklad zapsaný před dokončovacími změnami C02. |
