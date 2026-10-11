@@ -111,7 +111,8 @@ export class ReservationRepository implements ReservationStore {
       // another and each one reads the state committed by its predecessor.
       // On SQLite Prisma opens interactive transactions with BEGIN IMMEDIATE,
       // which already serializes all writers; the statement is then redundant
-      // but harmless. The PostgreSQL behaviour is unverified until migration.
+      // but harmless. The PostgreSQL behaviour was verified only by a manual run
+      // (C03 L1); it is not part of the repeatable suite until migration.
       await db.$executeRaw`UPDATE "Resource" SET "id" = "id" WHERE "id" = ${resourceId}`;
       return work(new PrismaReservationTx(db));
     });

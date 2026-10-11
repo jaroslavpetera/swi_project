@@ -753,11 +753,11 @@ Podklad: Část A (AS-IS, commit `b4f597c`) a přijaté pohledy G2, G3, H1, H2.
 | OP-01 Create | `repository.create` | beze změny (nealokuje, R-2) | KEEP |
 | zámek Resource na PostgreSQL | — | řádkový zámek v `inResourceTransaction` | VERIFY → ověřeno v L1 (ruční běh) |
 | „stav Reservation mění jen Lifecycle“ | neověřeno | opakovatelná kontrola | VERIFY → L2 |
+| kontrola existence Resource v OP-02 | route dostupnosti v `app.ts` čte Prismu přímo (`prisma.resource.findUnique`) | Availability (`AvailabilityService` → `ResourceNotFoundError` → 404) | CHANGE (nalezeno při kontrole po L2) |
 
 Mimo slice Confirm/Availability (G2 je nakreslen pro tento slice): administrační čtení a založení
 uživatelů, stolů a menu a výpis rezervací stolu volají v `app.ts` Prismu přímo. Stav Reservation
 nemění; ponecháno beze změny a uvedeno v M jako známý rozdíl mimo slice.
-| kontrola existence Resource v OP-02 | route dostupnosti v `app.ts` čte Prismu přímo (`prisma.resource.findUnique`) | Availability (`AvailabilityService` → `ResourceNotFoundError` → 404) | CHANGE (nalezeno při kontrole po L2) |
 
 ### K. Implementace
 
