@@ -13,10 +13,12 @@ import {
   CancellationWindowError,
   InvalidStateError,
 } from "../../src/services/reservationService.js";
+import { AvailabilityService } from "../../src/services/availabilityService.js";
 import { ReservationState } from "../../src/domain/types.js";
 
 const prisma = new PrismaClient();
 const service = new ReservationService(new ReservationRepository(prisma));
+const availability = new AvailabilityService(new ReservationRepository(prisma));
 
 let userId: string;
 let openResourceId: string;
@@ -168,7 +170,7 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
     const cancelled = await service.cancelReservation(reservation.id, new Date("2027-05-07T10:05:00Z"));
     expect(cancelled.state).toBe(ReservationState.CANCELLED);
 
-    const available = await service.checkAvailability(
+    const available = await availability.checkAvailability(
       openResourceId,
       new Date("2027-05-07T18:00:00Z"),
       new Date("2027-05-07T19:00:00Z")
