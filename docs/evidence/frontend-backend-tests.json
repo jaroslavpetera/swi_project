@@ -1,0 +1,19 @@
+{
+  "completedAt": "2026-10-11T17:06:33.425Z",
+  "status": "passed",
+  "provider": "postgresql",
+  "command": "npm test",
+  "tests": {
+    "passed": 95,
+    "failed": 0,
+    "total": 95,
+    "skipped": 0
+  },
+  "steps": [
+    "Non-empty SQLite transfer: all six models, identical retry, refusal of differing target",
+    "PostgreSQL migrations deployed to a new database",
+    {
+      "migrationDrift": 0
+    }
+  ]
+}

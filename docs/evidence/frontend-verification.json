@@ -1,0 +1,22 @@
+{
+  "completedAt": "2026-10-11T17:24:48.119Z",
+  "status": "passed",
+  "provider": "postgresql",
+  "browser": "151.0.7922.34",
+  "checks": [
+    "Empty database, disabled actions, navigation and deep links",
+    "Initial network failure recovers using the data refresh button",
+    "Create guests and tables through the UI; safely render user input",
+    "Create and confirm reservation, validate interval, filter, and check availability",
+    "Approval, rejection, cancellation and conflict responses",
+    "Order totals, unavailable items, serving, payment and bill reset",
+    "Failed requests recover with inline feedback; stale bill responses are ignored",
+    "Desktop and mobile layouts, accessible form labels and keyboard focus"
+  ],
+  "browserErrors": [],
+  "screenshots": [
+    "frontend/reservations-desktop.png",
+    "frontend/orders-desktop.png",
+    "frontend/reservations-mobile.png"
+  ]
+}

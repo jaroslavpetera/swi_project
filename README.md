@@ -77,10 +77,30 @@ specifické testy v tomto profilu výslovně přeskočí. Výsledky jsou v
 Historické reporty C02 se nepřepisují. Ověření nepoužívá vývojovou DB z `.env`;
 dočasné databáze zůstanou v systémovém temp adresáři pro diagnostiku a servery se ukončí.
 
-Na `http://localhost:3000` běží jednoduché testovací UI: uživatelé, stoly, rezervace, dostupnost
-a objednávky k rezervaci včetně účtu. U stolu lze zapnout „Vyžaduje schválení“;
-Confirm pak vrátí PENDING_APPROVAL a zpřístupní Approve/Reject. Výsledek akce
-zobrazuje HTTP kód i tělo odpovědi.
+Na `http://localhost:3000` běží responzivní rozhraní pro obsluhu hospody:
+rezervace s hledáním hosta a filtrem stavů, ověření dostupnosti, objednávky
+a průběžný účet, správa hostů a stolů. Nejdříve přidej hosta a stůl v sekci
+**Hosté a stoly**, potom vytvoř rezervaci a potvrď ji v přehledu.
+Potvrzení i případné schválení musí proběhnout dříve než 30 minut před návštěvou.
+U stolu lze zapnout „Rezervace vyžadují schválení obsluhou“; potvrzení pak
+zpřístupní **Schválit / Zamítnout**. Objednávat lze jen během potvrzené návštěvy.
+Účet rozlišuje objednáno, podáno a zaplaceno; označení zaplacení eviduje stav,
+neprovádí skutečnou platbu. Tlačítko **Načíst data** obnoví data ze serveru.
+
+Frontend zůstává statické HTML/CSS/JavaScript nad stávajícím REST API, bez
+nového frameworku nebo samostatného buildu. Návrh, snímky obrazovek a ověření
+jsou v [dokumentaci frontendu](docs/frontend.md).
+
+Opakovatelné ověření frontendu ve skutečném prohlížeči:
+
+```bash
+npx playwright install chromium --only-shell  # jednorázové stažení prohlížeče
+npm run test:frontend
+```
+
+Test spustí izolovanou PostgreSQL databázi a HTTP server, projde rezervace,
+schvalování a objednávky, ověří rozložení od 320 do 1440 px a uloží snímky
+do `docs/evidence/frontend/`. Vývojovou databázi z `.env` nepoužívá.
 
 Historické ověření instalace z 21. 9. 2026 je v evidenci C01. Aktuální integrované
 ověření C02, počty testů a vazby na požadavky jsou v

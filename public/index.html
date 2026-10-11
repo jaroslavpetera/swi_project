@@ -1,124 +1,401 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hospoda rezervace — manuální test</title>
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-  <h1>Hospoda rezervace — manuální test UI</h1>
-  <p class="hint">Jednoduché rozhraní nad REST API pro ruční testování. Není a nemá být produkční UI.</p>
-
-  <div class="grid">
-    <section class="card">
-      <h2>Uživatelé</h2>
-      <form id="user-form">
-        <input name="name" placeholder="Jméno" required />
-        <input name="email" type="email" placeholder="Email" required />
-        <button type="submit">Přidat uživatele</button>
-      </form>
-      <ul id="user-list" class="entity-list"></ul>
-    </section>
-
-    <section class="card">
-      <h2>Stoly / resources</h2>
-      <form id="resource-form">
-        <input name="name" placeholder="Název (např. Stůl 3)" required />
-        <input name="capacity" type="number" min="1" placeholder="Kapacita" required />
-        <label><input name="requiresApproval" type="checkbox" /> Vyžaduje schválení</label>
-        <button type="submit">Přidat stůl</button>
-      </form>
-      <ul id="resource-list" class="entity-list"></ul>
-    </section>
-  </div>
-
-  <section class="card">
-    <h2>Vytvořit rezervaci</h2>
-    <form id="reservation-form">
-      <label>Stůl
-        <select name="resourceId" id="reservation-resource" required></select>
-      </label>
-      <label>Uživatel
-        <select name="userId" id="reservation-user" required></select>
-      </label>
-      <label>Od
-        <input name="startsAt" type="datetime-local" required />
-      </label>
-      <label>Do
-        <input name="endsAt" type="datetime-local" required />
-      </label>
-      <button type="submit">Vytvořit rezervaci (DRAFT)</button>
-    </form>
-    <p id="reservation-result" class="result"></p>
-  </section>
-
-  <section class="card">
-    <h2>Dostupnost stolu</h2>
-    <form id="availability-form">
-      <label>Stůl
-        <select name="resourceId" id="availability-resource" required></select>
-      </label>
-      <label>Od
-        <input name="start" type="datetime-local" required />
-      </label>
-      <label>Do
-        <input name="end" type="datetime-local" required />
-      </label>
-      <button type="submit">Zkontrolovat dostupnost</button>
-    </form>
-    <p id="availability-result" class="result"></p>
-  </section>
-
-  <section class="card">
-    <h2>Rezervace pro vybraný stůl</h2>
-    <label>Stůl
-      <select id="reservations-resource"></select>
-    </label>
-    <button id="refresh-reservations" type="button">Načíst rezervace</button>
-    <p id="reservation-action-result" class="result" aria-live="polite"></p>
-    <table id="reservation-table">
-      <thead>
-        <tr>
-          <th>Od</th>
-          <th>Do</th>
-          <th>Stav</th>
-          <th>Akce</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <section class="card">
-    <h2>Objednávka k rezervaci</h2>
-    <p class="hint">
-      Objednat jde jen k potvrzené rezervaci a jen v jejím čase — jinak server odpoví 409.
-    </p>
-    <label>Rezervace
-      <select id="order-reservation"></select>
-    </label>
-    <div id="menu-list" class="menu"></div>
-    <button id="place-order" type="button">Objednat</button>
-    <p id="order-result" class="result"></p>
-
-    <h3>Účet (tab)</h3>
-    <button id="refresh-tab" type="button">Načíst účet</button>
-    <table id="tab-table">
-      <thead>
-        <tr>
-          <th>Objednávka</th>
-          <th>Položky</th>
-          <th>Částka</th>
-          <th>Stav</th>
-          <th>Akce</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <p id="tab-summary" class="result"></p>
-  </section>
-
-  <script src="/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#572c36" />
+    <meta
+      name="description"
+      content="Hospoda Devs — správa rezervací, hostů a objednávek."
+    />
+    <title>Hospoda Devs · Rezervace</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Přejít na obsah</a>
+    <aside class="sidebar">
+      <a class="brand" href="#reservations"
+        ><span class="brand-mark" aria-hidden="true">h.</span
+        ><span>Hospoda <b>Devs</b><small>U jednoho stolu.</small></span></a
+      >
+      <div class="nav-label">PRACOVNÍ PROSTOR</div>
+      <nav aria-label="Hlavní navigace">
+        <a href="#reservations" class="nav-link active" aria-current="page"
+          ><span aria-hidden="true">▦</span> Rezervace</a
+        ><a href="#orders" class="nav-link"
+          ><span aria-hidden="true">☷</span> Objednávky a účet</a
+        ><a href="#manage" class="nav-link"
+          ><span aria-hidden="true">♧</span> Hosté a stoly</a
+        >
+      </nav>
+      <div class="sidebar-note">
+        <span class="note-dot"></span
+        ><strong>Dobrá obsluha začíná přehledem.</strong>
+        <p>Rezervace, objednávky i účet na jednom místě.</p>
+      </div>
+      <div class="sidebar-footer">
+        <span class="avatar">HD</span
+        ><span>Hospoda Devs<small>Pracovní prostor obsluhy</small></span>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span
+          >Hospoda Devs <span class="separator">/</span>
+          <strong id="page-label">Rezervace</strong></span
+        >
+        <div class="topbar-tools">
+          <button id="refresh-data" type="button" class="secondary small">
+            ↻ Načíst data</button
+          ><time id="today"></time>
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div
+          id="notice"
+          class="notice"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+        <section
+          id="reservations"
+          class="view"
+          aria-labelledby="reservations-title"
+        >
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">VŠECHNO MÁ SVÉ MÍSTO</p>
+              <h1 id="reservations-title">Rezervace</h1>
+              <p class="muted">Méně organizování. Více času pro vaše hosty.</p>
+            </div>
+            <a href="#reservation-form" class="button primary"
+              >+ Nová rezervace</a
+            >
+          </div>
+          <div class="welcome">
+            <div>
+              <span class="welcome-label">VÍTEJTE V HOSPODĚ DEVS</span>
+              <h2>Pro každého hosta<br />místo u stolu.</h2>
+              <p>
+                Naplánujte návštěvu, ověřte volný stůl<br />a připravte se na
+                příjemný večer.
+              </p>
+            </div>
+            <svg class="table-art" viewBox="0 0 320 180" aria-hidden="true">
+              <ellipse cx="165" cy="160" rx="122" ry="13" fill="#ffffff08" />
+              <g fill="none" stroke="#d6ab86" stroke-width="2">
+                <path d="M58 63 159 22 272 66 166 112Z" fill="#74434c" />
+                <path
+                  d="M58 63v22l108 49 106-48V66M166 112v22M77 94v51m171-48v49m-82-12v26"
+                />
+                <path
+                  d="m46 91-20 8v27l28 12 25-12M26 99l28 12 25-10M54 111v43M26 126v20m53-20v18M275 99l22 9v27l-29 11-20-9M297 108l-29 11-20-8m20 8v40m29-24v18"
+                />
+                <ellipse cx="162" cy="67" rx="28" ry="12" />
+                <ellipse cx="162" cy="67" rx="20" ry="8" />
+                <path
+                  d="m111 59 9 4m-11-1 9 4m87-22v20m-6-20v20M192 34v-8h11v8c0 9-11 9-11 0Zm5 6v9m-5 0h10M126 32v-8h11v8c0 9-11 9-11 0Zm5 6v9m-5 0h10"
+                />
+              </g>
+            </svg>
+          </div>
+          <div class="stats" aria-label="Přehled vybraného stolu">
+            <div class="stat">
+              <span>Celkem rezervací</span><strong id="stat-total">—</strong
+              ><small>U vybraného stolu</small>
+            </div>
+            <div class="stat">
+              <span>Potvrzené</span><strong id="stat-confirmed">—</strong
+              ><small>Připraveno pro hosty</small>
+            </div>
+            <div class="stat">
+              <span>Čekají na schválení</span
+              ><strong id="stat-pending">—</strong
+              ><small>Vyžadují vaši pozornost</small>
+            </div>
+            <div class="stat">
+              <span>Míst k sezení</span><strong id="stat-capacity">—</strong
+              ><small>Kapacita vybraného stolu</small>
+            </div>
+          </div>
+          <div class="booking-grid">
+            <section class="card" aria-labelledby="create-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">NAPLÁNUJTE NÁVŠTĚVU</p>
+                  <h2 id="create-title">Nová rezervace</h2>
+                </div>
+                <span class="step-mark">01</span>
+              </div>
+              <form id="reservation-form" class="form-grid">
+                <label
+                  >Stůl<select
+                    name="resourceId"
+                    id="reservation-resource"
+                    required
+                  ></select></label
+                ><label
+                  >Host<select
+                    name="userId"
+                    id="reservation-user"
+                    required
+                  ></select></label
+                ><label
+                  >Začátek návštěvy<input
+                    name="startsAt"
+                    type="datetime-local"
+                    required /></label
+                ><label
+                  >Konec návštěvy<input
+                    name="endsAt"
+                    type="datetime-local"
+                    required
+                /></label>
+                <div class="form-footer">
+                  <span class="muted"
+                    >Potvrďte v přehledu nejpozději 30 minut před
+                    návštěvou.</span
+                  ><button type="submit" class="primary">
+                    Vytvořit rezervaci →
+                  </button>
+                </div>
+              </form>
+            </section>
+            <section
+              class="card availability-card"
+              aria-labelledby="availability-title"
+            >
+              <p class="eyebrow">NEŽ SE POSADÍTE</p>
+              <h2 id="availability-title">Je tu volno?</h2>
+              <form id="availability-form" class="form-grid">
+                <label class="full"
+                  >Stůl<select
+                    name="resourceId"
+                    id="availability-resource"
+                    required
+                  ></select></label
+                ><label
+                  >Od<input
+                    name="start"
+                    type="datetime-local"
+                    required /></label
+                ><label
+                  >Do<input name="end" type="datetime-local" required /></label
+                ><button type="submit" class="full secondary">
+                  Ověřit dostupnost
+                </button>
+              </form>
+              <p
+                id="availability-result"
+                class="availability-result"
+                role="status"
+              >
+                Vyberte stůl a termín návštěvy.
+              </p>
+            </section>
+          </div>
+          <section class="card" aria-labelledby="overview-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">PŘEHLED NÁVŠTĚV</p>
+                <h2 id="overview-title">Rezervace u stolu</h2>
+              </div>
+              <button id="refresh-reservations" class="secondary" type="button">
+                ↻ Obnovit
+              </button>
+            </div>
+            <div class="filters">
+              <label>Stůl<select id="reservations-resource"></select></label
+              ><label
+                >Hledat hosta<input
+                  id="reservation-search"
+                  type="search"
+                  placeholder="Jméno nebo e-mail…" /></label
+              ><label
+                >Stav<select id="reservation-filter">
+                  <option value="">Všechny stavy</option>
+                  <option value="DRAFT">Rozpracované</option>
+                  <option value="PENDING_APPROVAL">Čekají na schválení</option>
+                  <option value="CONFIRMED">Potvrzené</option>
+                  <option value="CANCELLED">Zrušené</option>
+                  <option value="REJECTED">Zamítnuté</option>
+                  <option value="EXPIRED">Vypršené</option>
+                </select></label
+              >
+            </div>
+            <div class="table-scroll">
+              <table id="reservation-table">
+                <caption class="sr-only">
+                  Rezervace vybraného stolu
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Host</th>
+                    <th scope="col">Termín návštěvy</th>
+                    <th scope="col">Stav</th>
+                    <th scope="col">Akce</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p id="reservation-count" class="table-footer">
+              Načítání rezervací…
+            </p>
+          </section>
+        </section>
+        <section id="orders" class="view" aria-labelledby="orders-title" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">NĚCO DOBRÉHO NA STŮL</p>
+              <h1 id="orders-title">Objednávky a účet</h1>
+              <p class="muted">
+                Od prvního přípitku až po poslední položku na účtu.
+              </p>
+            </div>
+          </div>
+          <section class="card">
+            <div class="section-heading"><h2>Vyberte návštěvu</h2></div>
+            <div class="filters">
+              <label>Stůl<select id="orders-resource"></select></label
+              ><label class="grow"
+                >Rezervace<select id="order-reservation"></select
+              ></label>
+            </div>
+            <p id="ordering-hint" class="muted">
+              Objednávat lze v čase potvrzené rezervace.
+            </p>
+          </section>
+          <div class="order-grid">
+            <section class="card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">JÍDLO A PITÍ</p>
+                  <h2>Jídelní lístek</h2>
+                </div>
+                <span class="pill">CZK</span>
+              </div>
+              <form id="order-form">
+                <div id="menu-list" class="menu"></div>
+                <div class="form-footer">
+                  <span>Vybráno <strong id="cart-total">0 Kč</strong></span
+                  ><button id="place-order" class="primary" type="submit">
+                    Objednat →
+                  </button>
+                </div>
+              </form>
+            </section>
+            <section class="card bill">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">ÚČET HOSTA</p>
+                  <h2>Vše na jednom účtu</h2>
+                </div>
+                <button id="refresh-tab" class="secondary" type="button">
+                  ↻ Obnovit
+                </button>
+              </div>
+              <div id="tab-summary" class="bill-summary">
+                <span>Zbývá zaplatit</span><strong id="tab-unpaid">—</strong>
+                <div>
+                  <span>Zaplaceno <b id="tab-paid">—</b></span
+                  ><span>Celkem <b id="tab-total">—</b></span>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table id="tab-table">
+                  <caption class="sr-only">
+                    Objednávky vybrané rezervace
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Položky</th>
+                      <th scope="col">Částka</th>
+                      <th scope="col">Stav a akce</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section id="manage" class="view" aria-labelledby="manage-title" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ZÁZEMÍ VAŠÍ HOSPODY</p>
+              <h1 id="manage-title">Hosté a stoly</h1>
+              <p class="muted">
+                Přidejte hosty a připravte stoly pro další návštěvu.
+              </p>
+            </div>
+          </div>
+          <div class="manage-grid">
+            <section class="card">
+              <div class="section-heading">
+                <h2>Hosté</h2>
+                <span id="user-count" class="pill">—</span>
+              </div>
+              <form id="user-form" class="form-grid">
+                <label
+                  >Jméno<input
+                    name="name"
+                    placeholder="Jan Novák"
+                    autocomplete="name"
+                    maxlength="120"
+                    required /></label
+                ><label
+                  >E-mail<input
+                    name="email"
+                    type="email"
+                    placeholder="jan@example.cz"
+                    autocomplete="email"
+                    required /></label
+                ><button type="submit" class="primary full">
+                  + Přidat hosta
+                </button>
+              </form>
+              <ul id="user-list" class="entity-list"></ul>
+            </section>
+            <section class="card">
+              <div class="section-heading">
+                <h2>Stoly</h2>
+                <span id="resource-count" class="pill">—</span>
+              </div>
+              <form id="resource-form" class="form-grid">
+                <label
+                  >Název stolu<input
+                    name="name"
+                    placeholder="Stůl u okna"
+                    maxlength="120"
+                    required /></label
+                ><label
+                  >Počet míst<input
+                    name="capacity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="4"
+                    required /></label
+                ><label class="checkbox full"
+                  ><input name="requiresApproval" type="checkbox" /> Rezervace
+                  vyžadují schválení obsluhou</label
+                ><button type="submit" class="primary full">
+                  + Přidat stůl
+                </button>
+              </form>
+              <ul id="resource-list" class="entity-list"></ul>
+            </section>
+          </div>
+        </section>
+        <footer class="page-footer">
+          <span>Hospoda Devs</span
+          ><span>Dobré večery začínají u jednoho stolu.</span>
+        </footer>
+      </main>
+    </div>
+  </body>
 </html>
