@@ -1,6 +1,6 @@
 # C03 Část A — rozdělení práce (Jarda + Honza)
 
-> ## ⏳ Co ještě zbývá (stav 5. 10. 2026)
+> ## ⏳ Co ještě zbývá (stav 11. 10. 2026)
 >
 > Vše ostatní z obou zadání (Část A i C03 hlavní část) je hotové a ověřené — 93/93 testů.
 >
@@ -8,8 +8,8 @@
 > |---|---|---|---|
 > | 1 | **Lidské review** všech textů a kódu, které připravilo AI (zadání A9) | Honza | [HC3](#hc3--review) |
 > | 2 | Po review odškrtnout A9 v checklistu Části A | Honza | [checklist Části A](#hotovo-je-když-kontrola-na-s2) |
-> | 3 | **Tag `c03-architecture`** na finálním commitu + zapsat do M (`evidence-and-evolution.md` → *Commit/tag*) | Jarda + Honza | [JC2](#jc2--k-zápis-implementace) |
-> | 4 | PR `c03` → `main` (zadání nevyžaduje, tým to tak dělal u C01/C02) | Jarda | — |
+> | 3 | ~~**Tag `c03-architecture`** na finálním commitu + zapsat do M~~ — hotovo: tag na merge commitu `a04be34` | Michal | [JC2](#jc2--k-zápis-implementace) |
+> | 4 | ~~PR `c03` → `main`~~ — hotovo: PR #15 mergnut 11. 10. 2026 | Michal | — |
 
 
 Zadání: *SWI C03 — Část A: Zmapujte současnou realizaci jednoho scénáře* (úterní předstih).
@@ -236,7 +236,7 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
       `ReservationConflictError`; V-04R.3 připouští serializované pořadí confirm → cancel), commit `c2c9a7d`.
 - [x] Projít diff `git show c2c9a7d` a potvrdit, že sedí s H1/H2 (názvy metod `ReservationTx`, `ReservationStore`).
 - [x] Doplnit do ADR-03 → *Přijaté negativní důsledky* nález 1 (`BEGIN IMMEDIATE`).
-- [ ] Na konci vytvořit tag, např. `c03-architecture`, a zapsat ho do M (spolu s Honzou).
+- [x] Na konci vytvořit tag, např. `c03-architecture`, a zapsat ho do M — `c03-architecture` = `a04be34`.
 
 ### JC3 — L1: ověření chování
 - [x] Na izolované DB spustit relevantní C02 testy a vyplnit tabulku *Ověření / Výsledek / Doklad*:
@@ -303,5 +303,5 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 | Delta CHANGE / KEEP / VERIFY | J | Jarda | [x] |
 | Relevantní C02 verification po změně prochází | K, L1 | Jarda | [x] |
 | Opakovatelná kontrola architektonického pravidla | L2 | Honza | [x] |
-| Evidence a přesný commit/tag | M | Honza (+ Jarda tag) — evidence hotová, **tag chybí** | [ ] |
+| Evidence a přesný commit/tag | M | Honza (+ Jarda tag) — evidence hotová, tag `c03-architecture` = `a04be34` | [x] |
 | Lidské review všech AI textů | HC3 | Honza | [ ] |

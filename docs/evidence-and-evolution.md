@@ -316,5 +316,6 @@ přes `tx.transition()` uvnitř `inResourceTransaction`“; `tests/architecture/
 - Vývojová DB z `.env` nemá migraci `add_orders`; ověření proto běží na izolované DB.
 - Texty C03 i Části A připravila AI; **lidské review a týmové schválení zatím chybí** (A9).
 
-**Commit/tag:** implementace `c2c9a7d` + `f6fb771` (kontrola existence Resource v Availability); L2 test `83c7319`; branch `c03`.
-Tag `c03-architecture` **zatím neexistuje** — vytvoří se po lidském review na finálním commitu.
+**Commit/tag:** implementace `c2c9a7d` + `f6fb771` (kontrola existence Resource v Availability); L2 test `83c7319`;
+oprava tabulky J `013795c`. Branch `c03` sloučena do `main` přes PR #15, merge commit **`a04be34`**
+= tag **`c03-architecture`**.
