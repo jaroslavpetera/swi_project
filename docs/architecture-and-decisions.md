@@ -8,11 +8,14 @@
 | HTTP framework | Express | Nejrozšířenější, minimum boilerplate pro malé REST API. |
 | Validace vstupu | Zod | Deklarativní validace + inference TS typů ze schémat. |
 | ORM / DB přístup | Prisma | Typový bezpečný přístup k DB, snadné migrace, jeden zdroj pravdy (schema.prisma) pro model domény. |
-| Databáze (cíl) | PostgreSQL | Zvoleno jako produkční cíl (podporovaný stack ze zadání), reálná relační DB s constraints. |
-| Databáze (aktuální dev/spike) | SQLite | Viz ADR níže — v aktuálním vývojovém prostředí není dostupný Docker/PostgreSQL. |
+| Databáze (aktuální dev / cíl) | PostgreSQL 16 | Výchozí `prisma/schema.prisma`, samostatná SQL migrace; lokálně připnutý embedded PostgreSQL 16.14 nebo Docker Compose. |
+| Databáze (historický spike / regrese) | SQLite | `prisma/sqlite/schema.prisma` a původní migrace pro opakování C01/C02. |
 | Testy | Vitest | Rychlé, nativní ESM/TS podpora, bez extra transpilační konfigurace. |
 
 ## ADR: SQLite pro C01 spike, PostgreSQL jako produkční cíl
+
+> Historické rozhodnutí C01. Přechod je technicky dokončen 11. 10. 2026;
+> aktuální setup a výsledky jsou v [technickém dokončení](c03-technical-completion.md).
 
 **Kontext:** Zvolený tech stack (viz výše) počítá s PostgreSQL. Ve vývojovém prostředí, kde byl
 prováděn C01 engineering spike, ale nebyl dostupný Docker ani lokální instalace PostgreSQL
@@ -22,14 +25,14 @@ prováděn C01 engineering spike, ale nebyl dostupný Docker ani lokální insta
 s PostgreSQL je připraven v repu pro každého, kdo má lokálně Docker.
 
 **Důsledky:**
-- Prisma schéma (`prisma/schema.prisma`) používá `datasource provider = "sqlite"`. Přechod na
-  Postgres = změna `provider` na `"postgresql"`, nastavení `DATABASE_URL` na connection string
-  z `docker-compose.yml` a spuštění `prisma migrate dev` znovu (Prisma migrace pro SQLite a
-  Postgres nejsou binárně kompatibilní, musí se vygenerovat nové).
+- Původní spike používal SQLite. Od 11. 10. je výchozí schéma PostgreSQL;
+  SQLite schéma i migrační historie zůstávají samostatně v `prisma/sqlite/`.
+  Import existujících lokálních dat provádí `npm run db:import-sqlite` se zálohou
+  a kontrolou shody řádků. Migrace různých providerů se nemíchají.
 - Doménová pravidla se změnou providera nemění. Garance souběhu v repository je ale
   závislá na izolačním chování databáze; od dokončení C02 nestačí pouze přepnout provider.
-- Tým by měl přechod na Postgres provést nejpozději před CP1 walking skeleton (C03/C04), protože
-  SQLite nemá stejné chování při souběžném zápisu (relevantní pro future pressure Q níže).
+- Přechod byl požadován před CP1 (C03/C04); dokončení a opakovatelné ověření
+  PostgreSQL jsou doloženy v aktuální evidenci.
 
 ## Future pressure: Q — Quality / Scale
 
@@ -41,6 +44,9 @@ DB transakce s `SELECT ... FOR UPDATE` / unique constraint na (resource, confirm
 což u SQLite navíc není 1:1 přenositelné — další důvod pro včasný přechod na Postgres).
 
 ## ADR: atomické přechody v SQLite pro REQ-04 (22. 9. 2026)
+
+> Historický mechanismus C02. C03 ADR-03 níže ho nahrazuje rozhodnutím
+> v Lifecycle pod zámkem Resource; následující text zachovává původní evidenci.
 
 **Problém:** samostatné čtení overlapu a následný bezpodmínečný zápis dovolovaly dvěma
 Confirm/Approve alokovat stejný slot; staré čtení také mohlo přepsat Cancel/Reject.
@@ -267,6 +273,10 @@ Obsah bloků:
 Navazuje na [Část A](#c03-part-a--as-is-confirm-reservation). Scénář zůstává
 OP-03 Confirm Reservation (s větví BR-05 do OP-05 Approve), baseline v0.2.
 
+Sekce B–I zachovávají návrh před implementací K; slova „dnes“ a „současný kód“
+v jejich srovnáních označují AS-IS `b4f597c`. Realizaci popisují K/L a technické
+dokončení z 11. 10. 2026; aktuální výchozí databáze je PostgreSQL 16.
+
 ### B. Architektonické drivery
 
 | Driver | Podklad / zdroj | Proč ovlivňuje architekturu | Otázka, kterou musí architektura vyřešit |
@@ -387,7 +397,8 @@ platilo při souběhu i po přechodu na PostgreSQL a při 10× zátěži?
 ### E1. Alternativy
 
 **Alternativa A — invariant vlastní databáze.** PostgreSQL exclusion constraint nad
-`(resourceId, [startsAt, endsAt))` pro řádky ve stavu CONFIRMED odmítne konfliktní zápis při commitu.
+`(resourceId, [startsAt, endsAt))` pro řádky ve stavu CONFIRMED odmítne konfliktní zápis
+při kontrole constraintu (standardně během příkazu; při odložené kontrole později).
 Aplikační kontrola zůstává jen pro čitelnou chybu.
 
 ```text
@@ -421,10 +432,15 @@ serializační primitivum za rozhraním persistence.
 | Driver / kritérium | Alternativa A — DB constraint | Alternativa B — aplikace + zámek Resource |
 |---|---|---|
 | D1 konzistence při souběhu | Nejsilnější: invariant platí pro jakýkoli zápis včetně přímých SQL a administrátorských zásahů. | Platí pro všechny zápisy, které jdou přes Reservation Lifecycle. Přímý zápis do DB ho obejde. |
-| D2 přechod na PostgreSQL / 10× zátěž | Vyžaduje PostgreSQL (`btree_gist`, `tstzrange`); SQLite ekvivalent nemá → současnou sadu testů nelze použít jako důkaz, dokud neproběhne migrace. Prisma constraint neumí → ruční SQL migrace mimo schéma. Pod zátěží bez čekání: konflikt = okamžitá chyba. | Funguje na SQLite hned; PostgreSQL vyžaduje jen jinou implementaci portu (`FOR UPDATE`). Pod zátěží se serializují pouze požadavky na **tentýž stůl**; jiné stoly běží paralelně. Riziko: čekání na zámek u „horkého“ stolu. |
+| D2 přechod na PostgreSQL / 10× zátěž | Vyžaduje PostgreSQL (`btree_gist`, `tstzrange`); SQLite ekvivalent nemá → současnou sadu testů nelze použít jako důkaz, dokud neproběhne migrace. Prisma constraint neumí → ruční SQL migrace mimo schéma. Konflikt s neukončenou transakcí může čekat na její výsledek; tato varianta negarantuje okamžité odmítnutí bez čekání. | Funguje na SQLite hned; PostgreSQL vyžaduje jen jinou implementaci portu (`FOR UPDATE`). Pod zátěží se serializují pouze požadavky na **tentýž stůl**; jiné stoly běží paralelně. Riziko: čekání na zámek u „horkého“ stolu. |
 | D4 jeden vlastník / změna pravidla | BR-02 je zapsané dvakrát (SQL constraint + TypeScript pro hlášku a OP-02) a musí se měnit synchronně. Volající dál může dostat dvě různé chyby (pre-check vs. constraint violation `23P01`). | BR-02 je v jednom místě (`rules.ts`), rozhoduje jeden prvek, jedna chyba. Odstraňuje dvojí rozhodování z Části A. |
 | D3 pozdní Approve | Approve je chráněn stejně jako Confirm (constraint je nezávislý na operaci). | Approve musí jít stejnou cestou `inResourceTransaction` — vynuceno tím, že Lifecycle je jediný vlastník přechodů. |
 | Ověřitelnost / provozní složitost | Test vyžaduje běžící PostgreSQL; migrace navíc mimo Prisma model. | Souběh testovatelný na SQLite dnešní sadou `V-04R.*`; architektonické pravidlo „jen Lifecycle mění stav“ lze kontrolovat staticky. |
+
+Upřesnění alternativy A při AI review 11. 10. 2026: kontrola exclusion constraintu
+může čekat na dokončení konfliktní transakce; také může vzniknout deadlock.
+Doklad: [implementace PostgreSQL 16 — execIndexing.c, Exclusion Constraints](https://github.com/postgres/postgres/blob/REL_16_STABLE/src/backend/executor/execIndexing.c#L27-L50).
+Alternativa A není implementovaná a toto review pro ni neprovedlo runtime benchmark.
 
 ### E3. Průchod scénářem — souběžný Confirm dvou překrývajících se rezervací
 
@@ -435,10 +451,10 @@ chvíli (V-04R.1 / V-04R.8). Druhá polovina tabulky sleduje větev s approval.
 |---|---|---|
 | Confirm R1 a R2 začnou souběžně | Oba requesty načtou stav, oba projdou aplikační pre-check (žádná CONFIRMED). | Oba požádají o `inResourceTransaction(table)`; první získá zámek, druhý čeká. |
 | vyhodnocení BR-02 | Pre-check je u obou zastaralý; rozhoduje až commit. | První vyhodnotí BR-02 nad aktuálním stavem → volno → zapíše CONFIRMED → commit, uvolní zámek. Druhý teprve teď čte — vidí CONFIRMED R1. |
-| výsledek | První commit projde; druhý selže na constraint (`23P01`) → persistence musí chybu přeložit na 409. | Druhý vyhodnotí konflikt v aplikaci → `OverlapError` → 409, R2 zůstává DRAFT. Žádná DB chyba. |
+| výsledek | Vítězná transakce commitne; konfliktní zápis druhé je odmítnut při kontrole constraintu (`23P01`), případně po čekání na vítěze. Persistence musí chybu přeložit na 409; při deadlocku potřebuje samostatnou obsluhu chyby. | Druhý vyhodnotí konflikt v aplikaci → `OverlapError` → 409, R2 zůstává DRAFT. Žádná DB chyba. |
 | je potřeba approval (`requiresApproval = true`) | DRAFT → PENDING_APPROVAL; constraint se netýká (nealokuje). | DRAFT → PENDING_APPROVAL v transakci Resource; BR-02 se nevyhodnocuje (R-1). |
 | proces / request skončí | Stav PENDING_APPROVAL je v DB; žádný stav v paměti. | Totéž; zámek trvá jen po dobu transakce, ne po dobu čekání na schválení. |
-| approval přijde později | Approve → UPDATE CONFIRMED → constraint rozhodne při commitu. | Approve → `inResourceTransaction` → BR-06 deadline → BR-02 nad aktuálním stavem → CONFIRMED. |
+| approval přijde později | Approve → UPDATE CONFIRMED → kontrola constraintu (standardně během příkazu, při odložené kontrole později). | Approve → `inResourceTransaction` → BR-06 deadline → BR-02 nad aktuálním stavem → CONFIRMED. |
 | souběžný Approve R2 a Confirm R3 (V-04R.7) | Jeden commit projde, druhý `23P01`. Aplikace musí obě chybové cesty sjednotit. | Serializováno zámkem stolu; druhý dostane `OverlapError`. Jedna chybová cesta. |
 | vypršení bez dalšího Approve (D3) | Neřešeno — obě varianty zachovávají lazy detekci (R-16). | Neřešeno stejně. Rozhodnutí o aktivní expiraci není předmětem tohoto ADR. |
 
@@ -485,7 +501,8 @@ implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na so
 - Na SQLite zámek Resource **nelze testem odlišit**: Prisma tam otevírá interaktivní transakce
   `BEGIN IMMEDIATE` (ověřeno logem SQL), takže serializuje celé transakce nad celou DB — i pro
   různé stoly. Testy na SQLite proto dokazují chování, ne mechanismus. Mechanismus je ověřen
-  jen na PostgreSQL mimo běžnou sadu (L1, ruční běh); projekt zatím na PostgreSQL neběží.
+  v aktuální opakovatelné sadě na PostgreSQL 16.14 (`tests/postgres/lock-mechanism.test.ts`);
+  historický ruční běh je zachován v L1. PostgreSQL je nyní výchozí provider.
 
 **Rozhodnutí znovu otevřeme, když:**
 
@@ -542,7 +559,7 @@ implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na so
 +------------------------------------|-----------------------------------------------+
                                      | SQL read / lock Resource / conditional UPDATE
                                      v
-                         [Reservation DB]  (database: SQLite now, PostgreSQL target)
+                         [Reservation DB]  (database: PostgreSQL 16; SQLite regression profile)
 ```
 
 | Prvek | Hlavní odpovědnost | Odpovědnosti z C2 | Owns |
@@ -590,8 +607,8 @@ contains:
         | read/write, resource-scoped transactions (Prisma)
         v
 [Reservation DB]
-  now:    SQLite file (DATABASE_URL="file:./dev.db")
-  target: PostgreSQL 16 (docker-compose.yml, service "db")
+  now: PostgreSQL 16 (local managed cluster or docker-compose.yml, service "db")
+  historical regression: isolated SQLite file (prisma/sqlite/schema.prisma)
 ```
 
 Žádné další procesy ani externí runtime systémy. Zámek podle Resource drží databáze, ne paměť
@@ -676,6 +693,9 @@ classDiagram
         +findForResource(resourceId) ReservationRecord[]
         +findResourceById(resourceId) Resource
     }
+    class PrismaReservationTx {
+        <<Prisma transaction adapter>>
+    }
     class AvailabilityService {
         <<Availability>>
         +checkAvailability(resourceId, startsAt, endsAt) boolean
@@ -707,7 +727,8 @@ classDiagram
     ReservationService ..> OverlapError : throws
     ReservationStore ..> ReservationTx : provides
     ReservationRepository ..|> ReservationStore
-    ReservationRepository ..|> ReservationTx
+    ReservationRepository ..> PrismaReservationTx : creates within transaction
+    PrismaReservationTx ..|> ReservationTx
     AvailabilityService --> ReservationRepository : reads (findForResource, findResourceById)
     AvailabilityService ..> ReservationRules : evaluates
     ReservationRecord *-- TimeInterval
@@ -815,6 +836,28 @@ Závěr: na PostgreSQL pod READ COMMITTED BR-02 drží **právě díky** zámku 
 stejný kód poruší. Na SQLite totéž testem odlišit nelze (`BEGIN IMMEDIATE`, viz ADR-03).
 Ověření není součástí opakovatelné sady — projekt stále běží na SQLite.
 
+**Aktualizace 11. 10. 2026:** předchozí odstavec popisuje pouze historický běh.
+`npm run verify:postgres` nyní opakuje migrace, kontrolu driftu, build, celou sadu,
+test se zámkem i s jeho úmyslným vynecháním a 10× HTTP zátěž na PostgreSQL 16.14.
+Přesné výsledky a meze jsou v [technickém dokončení](c03-technical-completion.md).
+
+### ADR-04 — Trigger expirace v aktuální baseline
+
+**Kontext:** R-16 a V-05.7 vyžadují, aby čtení neměnilo stav a opožděný Reject mohl
+ukončit dosud čekající žádost. Automatický worker by změnil tyto pozorovatelné výsledky.
+
+**Rozhodnutí:** aktuální baseline zachovává detekci EXPIRED při Approve. Aktivní
+expiraci do tohoto technického dokončení nepřidáváme. Obě cesty BR-04/06 stále
+zapíší terminální stav a commitnou ho před odpovědí 410.
+
+**Důsledky:** PENDING_APPROVAL může zůstat uložen po deadline; nikdy neblokuje stůl.
+Technická regrese triggeru běží na obou providerech. Lidské schválení baseline
+zůstává samostatný otevřený procesní bod.
+
+**Znovu otevřít:** pokud tým schválí automatický přechod podle času. Před workerem
+pak změnit R-16, BR-06, OP-05, diagramy a V-05.7; určit retry, metriku backlogu a
+chování souběžného Reject/Approve/Cancel. Notifikace jsou nadále mimo R-15.
+
 ### L2. Architektonické pravidlo
 
 **Architektonické pravidlo:** Stav Reservation smí měnit pouze Reservation Lifecycle
@@ -845,3 +888,78 @@ pravidlo skutečně hlídá — každé úmyslné porušení ji shodí a po vrá
 Hranice kontroly: je textová (regex nad zdrojáky), ne typová. Hlídá zápisy, ne čtení — přímé
 čtení DB z API mimo slice (viz J) neodhalí. Přejmenování proměnné `tx` v Lifecycle ji shodí (falešný poplach
 je zde záměrně přísnější varianta).
+
+## Review A9 / HC3 — technická kontrola
+
+**Reviewer:** Jan Kovařčík (Honza).
+**Datum:** 11. 10. 2026 (Europe/Prague).
+**Typ review:** lidské review dokumentace, kódu a testové evidence A9/HC3.
+Honza v chatu potvrdil, že review provedl a tento záznam převzal a upravil.
+Níže uvedené automatizované běhy a opravy R1–R4 provedl před lidským review
+AI agent; jejich výsledky jsou podklady pro review, nikoli tvrzení, že je spustil Honza.
+
+**Rozsah:** Část A A1–A8, C03 B–L2 a ADR-04 v tomto dokumentu; evidence M v
+[evidence-and-evolution.md](evidence-and-evolution.md); související OP-03/04/05,
+BR-01/02/03/04/05/06 a REQ-04; nové databázové a ověřovací změny popsané v
+[technickém dokončení](c03-technical-completion.md).
+
+**Historická Část A ověřena proti:** `b4f597c`. Příkazy `git show` zobrazily původní
+ReservationService, ReservationRepository, HTTP route/mapování chyb a SQLite schéma.
+AS-IS správně popisuje dvě kontroly překryvu, podmíněný zápis a SQLite; tento popis
+se nepřepisuje podle současné PostgreSQL implementace.
+
+**Aktuální stav:** větev `c03-technical-completion`, HEAD/výchozí commit
+`b315e87b4c946e787c487f30d78ab8ee22a51d86` + necommitnuté pracovní změny, včetně
+nových souborů. Tento commit sám nové změny neobsahuje; tag `c03-architecture`
+nadále označuje historický merge `a04be34`.
+Ověřený snapshot zdrojů/testů/migrací/skriptů a konfigurace z PostgreSQL běhu:
+`9655d43d21b6cb747dcce7f62ce23ebb53780bbfb4c13e21e565dbb6d67adb6b`.
+Manifest souborů je v [PostgreSQL reportu](evidence/c03-postgres-verification.json).
+Tento manifest nehashuje Markdown dokumentaci; záznam review byl doplněn po testech.
+SQLite report navíc hashoval dokumentaci ve stavu před přidáním tohoto bloku.
+
+### Ověřené podklady a závěry
+
+| Oblast | Kontrolované podklady / doklad | Závěr |
+|---|---|---|
+| A1–A8 | Tabulky a AS-IS diagram porovnány s historickými metodami `confirmReservation`, `transition`, `findForResource`, HTTP Confirm a `errorMiddleware` v `b4f597c`; pravidla porovnána s OP-03 a BR. | Základní průchod, chybová větev a oddělení historického stavu odpovídají podkladům. Historické runtime logy nebyly znovu přehrány. |
+| B–F | Drivery, odpovědnosti, obě alternativy a ADR-03 porovnány s REQ-04 a implementovanou variantou B. | Ownership a zámek odpovídají kódu; popis čekání u neimplementované varianty A potřeboval opravu (R3). |
+| G–I | Sekvence H1 a vztahy H2 porovnány s `ReservationService.decide/allocate`, `ReservationRepository.inResourceTransaction`, `PrismaReservationTx` a `AvailabilityService`; G3 porovnáno se statechartem a OP-04/05. | Rozhodnutí se provádí nad nově načteným stavem pod zámkem; `PrismaReservationTx` realizuje transakční rozhraní, Availability jen čte. |
+| J/K | Aktuální kód služby, repository a HTTP mapování porovnán s deltou; PostgreSQL schéma a SQL migrace prohlédnuty. | Překryv rozhoduje `allocate`; `transition` má guard očekávaného stavu. Migrační SQL neobsahuje exclusion constraint (R2). |
+| L1 / ADR-04 | Přečteny testy souběhu, HTTP 200/409, V-03.3, V-05.6/7/8 a test mechanismu zámku; znovu spuštěny obě providerové sady. | Terminální stav po cutoff se commitne před 410; čtení neexpiruje a pozdní Reject zůstává povolen. Se zámkem jeden vítěz, bez zámku mechanismový test reprodukuje dva. |
+| L2 / M | Přečtena regex kontrola ownership, nová evidence a její manifesty; projity skripty generování klientů, správy PostgreSQL, přenosu dat, verifikace a HTTP zátěže. | Kontrola ownership prochází; její textové omezení je uvedené. Snapshot identifikuje pracovní soubory, nikoli pouze HEAD. Přenos kontroluje celé řádky a odmítá lišící se neprázdný cíl. |
+
+### Spuštěné kontroly a výsledky
+
+
+| Příkaz / kontrola | Datum a skutečný výsledek | Doklad |
+|---|---|---|
+| `node scripts/verify-postgres.mjs` | 11. 10., 18:17:57–18:18:21 CEST: PostgreSQL 16.14, READ COMMITTED, **95 passed / 0 failed**, migrace, drift 0, build a typecheck; neprázdný převod všech 6 modelů včetně bezpečného retry a odmítnutí odlišného cíle. | [PostgreSQL report](evidence/c03-postgres-verification.json), [přenos dat](evidence/c03-data-transfer-verification.json) |
+| HTTP zátěž v témže PostgreSQL příkazu | **495 požadavků / 18 dávek**, souběh 5 → 50, 3 scénáře × 3 opakování; **0 neočekávaných chyb, 0 překryvů**. | Pole `load.results` v PostgreSQL reportu |
+| `node scripts/verify-c02.mjs` | 11. 10., 18:18:45–18:18:59 CEST: **93 passed / 0 failed / 2 PostgreSQL-only skipped**, nové SQLite migrace, seed, build/typecheck a syntaxe UI. | [SQLite report](evidence/c03-sqlite-verification.json) |
+| `node scripts/check-docs.mjs` | Kontrola místních Markdown odkazů po doplnění záznamu review. | [Report odkazů](evidence/c03-document-links.json) |
+| `git diff --check` | Kontrola whitespace změn; bez chyb. | Výstup příkazu v tomto review |
+
+### Nálezy a jejich vyřešení
+
+| ID | Nález | Oprava / stav |
+|---|---|---|
+| R1 | Komentář `inResourceTransaction` vydával PostgreSQL mechanismus stále za pouze ručně ověřený. | Opraven odkaz na opakovatelný `lock-mechanism.test.ts` a verifikační příkaz; historický běh zachován. |
+| R2 | OP-03 zmiňoval „PostgreSQL migration constraint“, ačkoli zvolená varianta používá zámek Resource a SQL migrace překryvy neomezuje. | Specifikace nyní odkazuje na mechanismus ADR-03 a výslovně uvádí absenci exclusion constraintu. Chování REQ-04 se nemění. |
+| R3 | E1/E2/E3 přisuzovaly exclusion constraintu odmítnutí až při commitu a bez čekání. | Opraveno: standardní kontrola je při příkazu, odložená později; souběh může čekat či deadlockovat. Doklad je primární zdroj PostgreSQL 16 odkazovaný u E2; varianta A nebyla implementována ani benchmarkována. |
+| R4 | „Dnes“ v historickém návrhu B–I mohlo být zaměněno za aktuální PostgreSQL pracovní stav. | Doplněno vymezení historického AS-IS `b4f597c` a odkaz na realizaci K/L a aktuální dokončení. |
+
+### Závěr
+
+**Technická kontrola dokončena; nalezené nesoulady v popisu opraveny.**
+V kontrolovaném slice nebyl nalezen blokující funkční nesoulad se specifikací,
+aktuální regresní sady a lokální zátěž prošly.
+Lidské review A9/HC3 dokončil Jan Kovařčík dne 11. 10. 2026 a jeho provedení
+výslovně potvrdil v chatu. Checklist A9/HC3 je uzavřený; týmové schválení baseline
+a samostatné procesní body C02 tím nejsou uzavřeny.
+
+Meze: nově se neprováděl průchod UI v prohlížeči, čistá instalace ani import skutečné
+vývojové DB (jejich předchozí evidence je v technickém dokončení). Mermaid diagramy
+byly kontrolovány obsahově proti kódu, nikoli renderováním. Lokální zátěž nedokazuje
+produkční SLA ani běh více procesů; ruční SQL může obejít BR-02 a regex kontrola L2
+není úplná typová analýza.

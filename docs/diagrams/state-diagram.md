@@ -49,7 +49,7 @@ Guardy 1:1 s implementací (`src/domain/rules.ts`, `src/services/reservationServ
 
 | Guard v diagramu | Odpovídající funkce/kontrola |
 |---|---|
-| `no overlap` | `findOverlappingConfirmed` + atomický guard v `ReservationRepository.transition` (BR-02, REQ-04) |
+| `no overlap` | C03: `ReservationService.allocate()` vyhodnotí `findOverlappingConfirmed` nad stavem načteným v `inResourceTransaction()` pod zámkem Resource (BR-02, REQ-04). `PrismaReservationTx.transition()` navíc chrání očekávaný výchozí stav; překryv už nevyhodnocuje. |
 | `now < start-30min` (confirm), `before approval deadline` (approve) | `isExpiredDraft` / `isApprovalExpired` (BR-04/BR-06) |
 | `now < start` (cancel) | `!isPastCancellationWindow` (BR-03/R-4) |
 | `resource.requiresApproval` | `Resource.requiresApproval` (BR-05) |

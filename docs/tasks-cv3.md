@@ -2,14 +2,34 @@
 
 > ## ⏳ Co ještě zbývá (stav 11. 10. 2026)
 >
-> Vše ostatní z obou zadání (Část A i C03 hlavní část) je hotové a ověřené — 93/93 testů.
+> Technické dokončení na větvi `c03-technical-completion` je popsáno v
+> [aktuální evidenci](c03-technical-completion.md). Historický tag `c03-architecture`
+> stále označuje původní merge `a04be34`; lidské review nových změn dokončil
+> Honza 11. 10. 2026 — [záznam A9/HC3](architecture-and-decisions.md#review-a9--hc3--technická-kontrola).
 >
 > | # | Úkol | Kdo | Detail |
 > |---|---|---|---|
-> | 1 | **Lidské review** všech textů a kódu, které připravilo AI (zadání A9) | Honza | [HC3](#hc3--review) |
-> | 2 | Po review odškrtnout A9 v checklistu Části A | Honza | [checklist Části A](#hotovo-je-když-kontrola-na-s2) |
+> | 1 | ~~**Lidské review** všech textů a kódu, které připravilo AI (zadání A9)~~ — hotovo 11. 10. 2026 | Honza | [záznam review](architecture-and-decisions.md#review-a9--hc3--technická-kontrola) |
+> | 2 | ~~Po review odškrtnout A9 v checklistu Části A~~ — hotovo 11. 10. 2026 | Honza | [checklist Části A](#hotovo-je-když-kontrola-na-s2) |
 > | 3 | ~~**Tag `c03-architecture`** na finálním commitu + zapsat do M~~ — hotovo: tag na merge commitu `a04be34` | Michal | [JC2](#jc2--k-zápis-implementace) |
 > | 4 | ~~PR `c03` → `main`~~ — hotovo: PR #15 mergnut 11. 10. 2026 | Michal | — |
+> | 5 | Křížové lidské review REQ-01…08 a schválení baseline v0.1/v0.2 | Michal + Jarda / tým | [stav C02](c02-completion-evidence.md#aktualizovaný-stav-issue-9) |
+> | 6 | Původní pořadí analýzy C02: pokud důkaz není, dohodnout nápravu s vyučujícím | tým | [kontrola historie](c02-process-history-check.md) |
+
+## Technicky dokončeno 11. 10. 2026
+
+- [x] PostgreSQL 16 jako výchozí provider, samostatné migrace a funkční lokální start.
+- [x] Zachované SQLite migrace, doplnění lokální DB, záloha a ověřený převod konfigurace.
+- [x] Opakovatelné PostgreSQL ověření včetně rozlišujícího testu se zámkem i bez něj.
+- [x] HTTP měření 10× souběhu: 5 a 50 požadavků, tři scénáře, tři opakování.
+- [x] Oprava mapování `no overlap` ve stavovém diagramu a implementace `ReservationTx` v H2.
+- [x] Aktuální setup a evidence; historické C02 výsledky zachované.
+- [x] ADR-04: pro aktuální baseline zachovat trigger expirace při Approve.
+- [x] Prozkoumat dostupnou Git historii původní analýzy; výsledek doložen bez zpětného podpisu.
+
+Technické checkboxy samy neuzavírají lidské review; A9/HC3 je nyní uzavřeno
+samostatným review Honzy. Podpisy C02 zůstávají otevřené. Změna R-16 na automatický
+worker není součástí přijímané baseline; její případné schválení patří týmu.
 
 
 Zadání: *SWI C03 — Část A: Zmapujte současnou realizaci jednoho scénáře* (úterní předstih).
@@ -165,7 +185,7 @@ takže není potřeba brát OP-05 zvlášť.
 | AS-IS diagram odpovídá skutečnému kódu | A7 | Jarda | [x] |
 | Existuje jedna evidencí podložená otázka pro další C03 | A8 | Honza | [x] |
 | Reference scénáře (scénář, REQ, BR, baseline) | A1 | Jarda | [x] |
-| Všechna tvrzení ověřena (AI pravidlo) — čeká na review Honzy | A9 | oba | [ ] |
+| Všechna tvrzení ověřena (AI pravidlo) — review Honzy dokončeno 11. 10. 2026, [záznam](architecture-and-decisions.md#review-a9--hc3--technická-kontrola) | A9 | oba | [x] |
 | Vše je v `docs/architecture-and-decisions.md` + odkaz z README | — | oba | [x] |
 
 ---
@@ -184,7 +204,7 @@ AS-IS → drivers → … → ADR → TO-BE → realizace → delta → implemen
 | C1 doménový model, C2 odpovědnosti | hotovo | tamtéž |
 | D otázka, E1–E3 alternativy, F **ADR-03** (zvolena B: alokace v Reservation Lifecycle pod zámkem Resource) | hotovo | tamtéž |
 | G1–G4 pohledy, H1 sekvence, H2 třídní diagram, I cross-view | hotovo | tamtéž |
-| K implementace | **kód hotový**, commit `c2c9a7d`; zápis do dokumentace chybí (J, K) | `src/repositories/reservationRepository.ts`, `src/services/reservationService.ts`, `src/services/availabilityService.ts`, `tests/services/concurrency.test.ts` |
+| K implementace | kód i zápis J/K hotové; původní hlavní commit `c2c9a7d` | `architecture-and-decisions.md` → J/K; soubory uvedené tamtéž |
 
 Ověřeno: `tsc --noEmit` čisté; celá sada **89/89** na nové izolované SQLite DB, 3× po sobě.
 
@@ -194,16 +214,17 @@ Ověřeno: `tsc --noEmit` čisté; celá sada **89/89** na nové izolované SQLi
    `BEGIN IMMEDIATE` (ověřeno logem SQL dotazů) → celé transakce jsou serializované už samy.
    Mutační test (zámek zakomentován) prošel → na SQLite mechanismus nedokázán.
    **Aktualizace:** ověřeno na PostgreSQL 18.4 ručním během (L1) — bez zámku 8/9 testů souběhu selže.
-2. **Vývojová DB z `.env` nemá migraci `20260921131639_add_orders`** → `tests/spec/op06-orders.test.ts`
-   na ní padá (tabulka `MenuItem` neexistuje). Nesouvisí se změnou. Testy pouštět na izolované DB
-   (viz níže) nebo si lokálně spustit `npx prisma migrate dev`.
-3. **Zastaralý Prisma client** → `tsc` hlásil chyby v objednávkách; po `npx prisma generate` čisté.
+2. **Historický nález:** lokální DB neměla `add_orders`. Dne 11. 10. byly původní
+   SQLite migrace doplněny a lokální konfigurace převedena na PostgreSQL se zálohou
+   a kontrolou shody; viz [evidence](evidence/c03-local-database-migration.json).
+3. **Historický zastaralý Prisma client** je vyřešen generováním obou klientů přes
+   `npm run prisma:generate`; generování je i součástí instalace a ověřovacích příkazů.
 
 Jak pustit testy na čisté DB (bez zásahu do `dev.db`):
 
 ```bash
-export DATABASE_URL="file:/tmp/c03verify/verify.db"; mkdir -p /tmp/c03verify
-npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsc --noEmit -p tsconfig.json && npx vitest run
+npm run verify:c02
+npm run verify:postgres
 ```
 
 ## Rozdělení
@@ -277,14 +298,18 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
       a lazy expiraci D3 (nevyřešeno, mimo ADR-03).
 - [x] Odkazy vést do sekcí `architecture-and-decisions.md`, nic nekopírovat.
 
-> **Stav:** HC1 a HC2 dopsal Jarda (s AI). HC3 musí udělat Honza sám — AI review nenahrazuje lidské (A9).
+> **Stav:** HC1 a HC2 dopsal Jarda (s AI). HC3 dokončil Honza 11. 10. 2026 —
+> [záznam lidského review](architecture-and-decisions.md#review-a9--hc3--technická-kontrola).
 > AI kontrola proti oběma zadáním našla a opravila: H2 ↔ kód, kontrolu existence Resource v API (J, K)
-> a doplnila runtime ověření po změně (L1). Projít, zda je rozdílů víc.
+> a doplnila runtime ověření po změně (L1); Honza následně potvrdil provedení lidského review.
 
 ### HC3 — review
-- [ ] Projít Část A (A1–A8), C03 B–M a kód `c2c9a7d`, `83c7319`, `f6fb771` — každé tvrzení musí mít doklad (A9: texty
+- [x] Projít Část A (A1–A8), C03 B–M a kód `c2c9a7d`, `83c7319`, `f6fb771` — každé tvrzení musí mít doklad (A9: texty
       psal AI, musí je ověřit člověk). Nalezené chyby opravit nebo zapsat.
-- [ ] Odškrtnout A9 v checklistu Části A výše.
+- [x] Odškrtnout A9 v checklistu Části A výše.
+
+Dokončeno Honzou 11. 10. 2026, včetně současných změn větve `c03-technical-completion`;
+[záznam a rozsah review](architecture-and-decisions.md#review-a9--hc3--technická-kontrola).
 
 ## Hotovo je, když (C03 hlavní část)
 
@@ -304,4 +329,4 @@ Pořadí: J → (K, L1 ‖ L2) → M → review → PR. L2 a L1 jdou dělat para
 | Relevantní C02 verification po změně prochází | K, L1 | Jarda | [x] |
 | Opakovatelná kontrola architektonického pravidla | L2 | Honza | [x] |
 | Evidence a přesný commit/tag | M | Honza (+ Jarda tag) — evidence hotová, tag `c03-architecture` = `a04be34` | [x] |
-| Lidské review všech AI textů | HC3 | Honza | [ ] |
+| Lidské review všech AI textů | HC3 | Honza | [x] |

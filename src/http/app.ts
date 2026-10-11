@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { Express, NextFunction, Request, RequestHandler, Response } from "express";
 import { z } from "zod";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { isForeignKeyViolation, PrismaClient } from "../database.js";
 import { ReservationRepository, ReservationConflictError } from "../repositories/reservationRepository.js";
 import { OrderRepository } from "../repositories/orderRepository.js";
 import {
@@ -294,7 +294,7 @@ function errorMiddleware(err: unknown, _req: Request, res: Response, _next: Next
   }
 
   // P2003 = foreign key constraint: rezervace odkazuje na neexistující stůl nebo hosta.
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+  if (isForeignKeyViolation(err)) {
     return res.status(400).json({ error: "Unknown resourceId or userId" });
   }
 

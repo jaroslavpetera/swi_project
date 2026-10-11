@@ -1,0 +1,13 @@
+{
+  "completedAt": "2026-10-11T15:52:52.2163824Z",
+  "status": "passed",
+  "command": "npm ci --offline --no-audit --no-fund",
+  "isolatedCopy": true,
+  "npmPackagesAdded": 158,
+  "postinstallPassed": true,
+  "generatedClients": [
+    "postgresql",
+    "sqlite"
+  ],
+  "existingWorkspaceNodeModulesPreserved": true
+}

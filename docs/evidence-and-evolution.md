@@ -306,16 +306,26 @@ přes `tx.transition()` uvnitř `inResourceTransaction`“; `tests/architecture/
 4/4, celá sada 93/93; 4 úmyslná porušení zachycena.
 
 **Remaining uncertainty / risk:**
-- Projekt stále běží na SQLite. Na SQLite Prisma otevírá transakce `BEGIN IMMEDIATE`, takže zámek
-  Resource tam testem odlišit nelze a celé zápisy jsou serializované (i pro různé stoly).
-  PostgreSQL ověření je ruční běh na verzi 18.4 (compose cíl je 16), není v opakovatelné sadě.
-- Výkon zámku Resource při 10× zátěži neměřen (podmínka znovuotevření ADR-03).
-- D3: vypršení PENDING_APPROVAL zůstává lazy (R-16); aktivní expirace není předmětem ADR-03.
+- Od 11. 10. je PostgreSQL 16 výchozí provider a ověření je opakovatelné.
+  SQLite zůstává regresním profilem; v něm nelze zámek odlišit od serializace celé DB.
+- 10× HTTP zátěž je změřena v lokálním běhu 5 → 50 požadavků. Produkční SLA,
+  objem reálných dat ani distribuované síťové prostředí tímto během nejsou prokázané.
+- D3: vypršení PENDING_APPROVAL zůstává při Approve podle R-16 a ADR-04;
+  případný worker vyžaduje změnu přijímaného chování.
 - Mimo slice čte Reservation API DB přímo (administrace uživatelů/stolů/menu, výpis rezervací
   stolu); stav Reservation nemění. Pravidlo L2 hlídá jen zápisy.
-- Vývojová DB z `.env` nemá migraci `add_orders`; ověření proto běží na izolované DB.
-- Texty C03 i Části A připravila AI; **lidské review a týmové schválení zatím chybí** (A9).
+- Chybějící lokální migrace jsou doplněny, konfigurace převedena na PostgreSQL.
+  Regresní testy dále používají izolované DB a nezasahují do vývojových dat.
+- Texty C03 i Části A připravila AI; **lidské review A9/HC3 dokončil Jan Kovařčík
+  11. 10. 2026** ([záznam](architecture-and-decisions.md#review-a9--hc3--technická-kontrola)).
+  Týmové schválení baseline a samostatné procesní body C02 zůstávají otevřené.
 
 **Commit/tag:** implementace `c2c9a7d` + `f6fb771` (kontrola existence Resource v Availability); L2 test `83c7319`;
 oprava tabulky J `013795c`. Branch `c03` sloučena do `main` přes PR #15, merge commit **`a04be34`**
 = tag **`c03-architecture`**.
+
+**Technické dokončení 11. 10. 2026:** větev `c03-technical-completion`, výchozí
+historický commit `b315e87`. Nové změny nejsou součástí původního tagu.
+Aktuální ověření, SHA-256 ověřených souborů, přenos dat a zátěž jsou v
+[technické evidenci](c03-technical-completion.md). Technické běhy samy nejsou lidským
+schválením; následné lidské review Honzy je doloženo výše samostatně.

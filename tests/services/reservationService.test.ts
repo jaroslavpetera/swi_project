@@ -3,7 +3,7 @@
 // explicit `now` where the rule under test depends on time, since the HTTP
 // layer intentionally does not expose a way to fake the clock.
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../src/database.js";
 import { ReservationRepository } from "../../src/repositories/reservationRepository.js";
 import {
   ReservationService,

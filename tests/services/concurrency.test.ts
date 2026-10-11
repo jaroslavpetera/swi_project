@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../src/database.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ReservationRepository, ReservationTx } from "../../src/repositories/reservationRepository.js";
 import { ReservationService, InvalidStateError, OverlapError } from "../../src/services/reservationService.js";

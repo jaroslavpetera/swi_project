@@ -1,7 +1,7 @@
 // C01 Engineering Spike A: Reservation -> real database -> reload -> verify.
 // See docs/evidence-and-evolution.md for the write-up of this run.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../src/database.js";
 
 const prisma = new PrismaClient();
 

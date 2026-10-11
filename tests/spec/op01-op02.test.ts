@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { AddressInfo } from "node:net";
 import { Server } from "node:http";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../src/database.js";
 import { createApp } from "../../src/http/app.js";
 
 const prisma = new PrismaClient();
