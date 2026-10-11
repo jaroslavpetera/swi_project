@@ -11,7 +11,7 @@
   --green: #36654e;
   --radius: 16px;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 16px;
 }
 * {
   box-sizing: border-box;
@@ -32,7 +32,7 @@ select {
 }
 button,
 .button {
-  min-height: 42px;
+  min-height: 46px;
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 10px 16px;
@@ -70,9 +70,9 @@ button.danger {
   border-color: #f1d9d8;
 }
 button.small {
-  min-height: 32px;
+  min-height: 38px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 1rem;
 }
 :focus-visible {
   outline: 3px solid #aa7f3d;
@@ -84,7 +84,7 @@ button.small {
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 236px;
+  width: 268px;
   background: #fff;
   border-right: 1px solid var(--line);
   display: flex;
@@ -97,7 +97,7 @@ button.small {
   gap: 12px;
   align-items: center;
   text-decoration: none;
-  font-size: 20px;
+  font-size: 1.375rem;
   letter-spacing: -0.6px;
   margin: 0 4px 48px;
   white-space: nowrap;
@@ -120,12 +120,12 @@ button.small {
 .brand small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.875rem;
   letter-spacing: 0.2px;
 }
 .nav-label,
 .eyebrow {
-  font-size: 10px;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 1.7px;
   color: var(--muted);
@@ -160,7 +160,7 @@ button.small {
 .sidebar-note {
   margin: auto 10px 28px;
   padding-top: 45px;
-  font-size: 12px;
+  font-size: 1rem;
 }
 .sidebar-note strong {
   display: block;
@@ -184,12 +184,12 @@ button.small {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
 }
 .sidebar-footer small {
   display: block;
-  font-size: 10px;
+  font-size: 0.8125rem;
   font-weight: 400;
   color: var(--muted);
 }
@@ -202,10 +202,10 @@ button.small {
   place-items: center;
   background: #edf0e7;
   color: var(--green);
-  font-size: 11px;
+  font-size: 0.875rem;
 }
 .workspace {
-  margin-left: 236px;
+  margin-left: 268px;
 }
 .topbar {
   height: 74px;
@@ -215,7 +215,7 @@ button.small {
   justify-content: space-between;
   align-items: center;
   padding: 0 38px;
-  font-size: 12px;
+  font-size: 1rem;
   color: var(--muted);
 }
 .topbar strong {
@@ -246,25 +246,25 @@ main {
 }
 h1 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 38px;
+  font-size: 2.625rem;
   font-weight: 500;
   letter-spacing: -1px;
   margin: 0 0 7px;
   line-height: 1.2;
 }
 h2 {
-  font-size: 18px;
+  font-size: 1.375rem;
   letter-spacing: -0.3px;
   margin: 0 0 16px;
   font-weight: 650;
 }
 h3 {
-  font-size: 13px;
+  font-size: 1rem;
   margin: 22px 0 10px;
 }
 .muted {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 1rem;
   margin: 0;
 }
 .welcome {
@@ -278,7 +278,7 @@ h3 {
   overflow: hidden;
 }
 .welcome-label {
-  font-size: 9px;
+  font-size: 0.8125rem;
   letter-spacing: 2px;
   color: #e0bca5;
 }
@@ -290,7 +290,7 @@ h3 {
   margin: 12px 0;
 }
 .welcome p {
-  font-size: 12px;
+  font-size: 1rem;
   color: #e0ccd0;
   margin: 0;
 }
@@ -313,18 +313,18 @@ h3 {
   border-radius: 12px;
 }
 .stat > span {
-  font-size: 12px;
+  font-size: 1rem;
   color: var(--muted);
 }
 .stat strong {
   display: block;
-  font-size: 28px;
+  font-size: 2rem;
   font-weight: 600;
   line-height: 1.7;
   letter-spacing: -1px;
 }
 .stat small {
-  font-size: 10px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 .stat:nth-child(2) strong {
@@ -370,7 +370,7 @@ h3 {
   grid-column: 1/-1;
 }
 label {
-  font-size: 11px;
+  font-size: 0.875rem;
   font-weight: 600;
   display: flex;
   flex-direction: column;
@@ -379,7 +379,7 @@ label {
 }
 input,
 select {
-  min-height: 42px;
+  min-height: 46px;
   background: #fff;
   border: 1px solid #d8dcd3;
   border-radius: 7px;
@@ -387,7 +387,7 @@ select {
   padding: 9px 11px;
   min-width: 0;
   width: 100%;
-  font-size: 12px;
+  font-size: 1rem;
 }
 input::placeholder {
   color: #777b73;
@@ -409,10 +409,10 @@ select:focus {
   padding-top: 16px;
   border-top: 1px solid var(--line);
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 1rem;
 }
 .form-footer .muted {
-  font-size: 11px;
+  font-size: 0.875rem;
   max-width: 230px;
 }
 .availability-card {
@@ -425,7 +425,7 @@ select:focus {
   font-size: 24px;
 }
 .availability-result {
-  font-size: 11px;
+  font-size: 0.875rem;
   color: var(--muted);
   margin: 14px 0 0;
 }
@@ -453,12 +453,12 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 12px;
+  font-size: 1rem;
 }
 th {
   background: #f8f9f5;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 12px 14px;
   white-space: nowrap;
@@ -471,7 +471,7 @@ td {
 td small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.8125rem;
   margin-top: 3px;
 }
 .actions {
@@ -487,7 +487,7 @@ td small {
   border-radius: 6px;
   background: #f1f2ed;
   color: #555e52;
-  font-size: 10px;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -513,7 +513,7 @@ td small {
   color: #345e93;
 }
 .table-footer {
-  font-size: 11px;
+  font-size: 0.875rem;
   color: var(--muted);
   margin: 15px 0 0;
 }
@@ -538,7 +538,7 @@ td small {
   border-radius: 10px;
   padding: 14px 18px;
   margin-bottom: 22px;
-  font-size: 13px;
+  font-size: 1rem;
   overflow-wrap: anywhere;
 }
 .notice[data-tone="error"] {
@@ -561,12 +561,12 @@ td small {
   border-bottom: 1px solid var(--line);
 }
 .menu-row > span {
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 500;
 }
 .menu-row small {
   display: block;
-  font-size: 11px;
+  font-size: 0.875rem;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -581,7 +581,7 @@ td small {
   background: #f0f2e9;
   border-radius: 10px;
   margin-bottom: 24px;
-  font-size: 12px;
+  font-size: 1rem;
   color: var(--muted);
 }
 .bill-summary > strong {
@@ -636,20 +636,20 @@ td small {
   align-items: center;
   padding: 15px 0;
   border-top: 1px solid var(--line);
-  font-size: 13px;
+  font-size: 1rem;
   overflow-wrap: anywhere;
 }
 .entity-list small {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.875rem;
 }
 .page-footer {
   display: flex;
   justify-content: space-between;
   gap: 15px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.8125rem;
   padding: 4px 0 24px;
 }
 .page-footer > span:first-child {
@@ -695,15 +695,15 @@ td small {
 }
 @media (max-width: 1150px) {
   .sidebar {
-    width: 205px;
+    width: 244px;
     padding-inline: 14px;
   }
   .brand {
-    font-size: 18px;
+    font-size: 1.375rem;
     margin-left: 4px;
   }
   .workspace {
-    margin-left: 205px;
+    margin-left: 244px;
   }
   main {
     padding: 28px 24px 0;
@@ -741,7 +741,7 @@ td small {
   }
   .brand {
     margin: 0 0 17px;
-    font-size: 19px;
+    font-size: 1.375rem;
   }
   .sidebar nav {
     display: flex;
@@ -749,15 +749,15 @@ td small {
   }
   .nav-link {
     flex: 1;
+    min-width: 0;
     justify-content: center;
-    font-size: 11px;
+    font-size: 0.875rem;
     padding: 10px 7px;
     margin: 0;
     gap: 5px;
   }
   .nav-link > span {
-    font-size: 17px;
-    width: 17px;
+    display: none;
   }
   .sidebar-note,
   .sidebar-footer,
@@ -768,9 +768,12 @@ td small {
     margin: 0;
   }
   .topbar {
-    height: 50px;
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+    gap: 10px;
     padding: 0 20px;
-    font-size: 10px;
+    font-size: 0.8125rem;
   }
   main {
     padding: 24px 20px 0;
@@ -779,12 +782,12 @@ td small {
     align-items: flex-start;
   }
   .page-heading .button {
-    font-size: 11px;
+    font-size: 0.875rem;
     padding: 9px 12px;
   }
   .page-heading .muted {
     max-width: 230px;
-    font-size: 12px;
+    font-size: 1rem;
   }
   h1 {
     font-size: 32px;
@@ -823,7 +826,8 @@ td small {
     max-width: none;
   }
   .page-footer {
-    font-size: 9px;
+    font-size: 0.8125rem;
+    flex-wrap: wrap;
   }
   .bill-summary > strong {
     font-size: 30px;
@@ -843,7 +847,7 @@ td small {
     font-size: 25px;
   }
   .welcome p {
-    font-size: 11px;
+    font-size: 0.875rem;
   }
   .welcome p br {
     display: none;
@@ -868,13 +872,13 @@ td small {
     padding-inline: 14px;
   }
   .nav-link {
-    font-size: 10px;
+    font-size: 0.875rem;
   }
   .nav-link > span {
     display: none;
   }
   .stats .stat > span {
-    font-size: 11px;
+    font-size: 0.875rem;
   }
   .card {
     padding: 17px;

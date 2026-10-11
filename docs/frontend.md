@@ -19,6 +19,11 @@ vínovou a krémovou paletu, zelené akcenty, karty, střídmou typografii a vla
 SVG ilustraci stolu a favicon. Externí fonty, fotografie ani sledovací skripty
 se nenačítají.
 
+Základní text, vstupy a obsah tabulek používají 16 px, popisky formulářů
+14 px a doplňující údaje nejméně 13 px. Velikosti jsou odvozené pomocí `rem`.
+Větší písmo doprovází širší navigace a vyšší ovládací prvky; na mobilu se text
+navigace může zalomit, místo aby se zmenšoval.
+
 - **Rezervace:** přehled vybraného stolu, tvorba rezervací, dostupnost,
   vyhledávání podle jména/e-mailu, filtr stavů a akce podle stavu rezervace.
   Čísla v přehledu zahrnují všechny termíny vybraného stolu, nikoliv celou hospodu
