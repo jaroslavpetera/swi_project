@@ -3,3 +3,7 @@ dist/
 *.db
 *.db-journal
 .env
+.env.sqlite.backup
+.local/
+*.db-wal
+*.db-shm

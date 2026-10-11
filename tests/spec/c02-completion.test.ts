@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { AddressInfo } from "node:net";
 import { Server } from "node:http";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../src/database.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../../src/http/app.js";
 import { ReservationRepository } from "../../src/repositories/reservationRepository.js";

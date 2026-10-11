@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../database.js";
 import { OrderLineInput, OrderRecord, OrderState } from "../domain/types.js";
 import { orderTotalCents } from "../domain/rules.js";
 

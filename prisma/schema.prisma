@@ -2,11 +2,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// C01 spike ran against SQLite (see docs/evidence-and-evolution.md).
-// Production target is PostgreSQL (docker-compose.yml); switching the
-// provider + running a fresh `prisma migrate dev` is the only change needed.
+// PostgreSQL 16 is the default development and deployment provider.
+// Historical SQLite schema and migrations remain in prisma/sqlite/.
+// ADR-03 concurrency is verified on PostgreSQL by npm run verify:postgres.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

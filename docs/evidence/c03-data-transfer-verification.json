@@ -1,0 +1,18 @@
+{
+  "completedAt": "2026-10-11T16:18:08.066Z",
+  "status": "passed",
+  "rowCounts": {
+    "user": 1,
+    "resource": 1,
+    "menuItem": 1,
+    "reservation": 1,
+    "order": 1,
+    "orderItem": 1
+  },
+  "fullRowEquality": true,
+  "reused": false,
+  "dataSha256": "a1efa6f14f1fc7efa80b9b12e6938f74e7017f78e57b3cba7b527076560574eb",
+  "preservesIdsTimestampsMoneyAndRelations": true,
+  "identicalRetryAccepted": true,
+  "differingTargetRefused": true
+}

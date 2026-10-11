@@ -22,7 +22,8 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 | Dokument | Co v něm najdete |
 |---|---|
 | [Specifikace](docs/specification.md) | Aktuální kandidát v0.2: požadavky, operace, pravidla a odkazy na diagramy. |
-| [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, garance SQLite, drivery a AS-IS mapování Confirm Reservation (C03 část A). |
+| [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, PostgreSQL, ADR-03/04, drivery a historické AS-IS mapování Confirm Reservation. |
+| [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a zbývající lidské body. |
 | [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a zbývající body issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
 | [Analýza dopadu](docs/c02-completion-impact.md) | Podklad zapsaný před dokončovacími změnami C02. |
@@ -32,30 +33,49 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 
 ## Tech stack
 
-TypeScript (Node.js) + Express + Prisma. Databáze: SQLite pro lokální vývoj/spike, PostgreSQL
-jako produkční cíl (viz ADR v `docs/architecture-and-decisions.md`). Testy: Vitest.
+TypeScript (Node.js 20+) + Express + Prisma 5.20. Výchozí databáze je PostgreSQL 16;
+SQLite zůstává samostatným profilem pro historický spike a regresi. Testy: Vitest.
 
 ## Setup
 
-```bash
-npm install
-cp .env.example .env
-npx prisma migrate dev
-npm run seed    # naplní jídelní a nápojový lístek
-npm test        # spustí unit testy + C01 persistence spike + příklady ověření ze specifikace
-npm run dev      # spustí HTTP server na http://localhost:3000
+```powershell
+npm ci
+# Jen pokud .env ještě nemáš:
+Copy-Item .env.example .env
+npm run dev
 ```
 
-Pro opakovatelnou kontrolu C02 po instalaci závislostí spusťte:
+`npm run dev` spustí připnutý lokální PostgreSQL 16.14 na `127.0.0.1:55432`,
+vygeneruje oba Prisma klienty, aplikuje migrace, doplní menu a spustí HTTP aplikaci
+na `http://localhost:3000`. Databáze zůstává v ignorovaném `.local/postgres/`;
+Ctrl+C ukončí aplikaci i databázi a zachová data. Instalace balíčků vyžaduje
+npm registry nebo naplněnou cache; následný běh nepotřebuje Docker ani další stahování.
+
+Pro Docker použij `docker compose up -d db` a `npm run dev:external` se stejnou
+výchozí URL. Pro jiný PostgreSQL nastav `DATABASE_URL` v `.env` a také použij
+`npm run dev:external`. Oba způsoby používají stejné schéma a migrace.
+
+Existující SQLite databázi lze převést příkazem `npm run db:import-sqlite`, dokud
+`.env` obsahuje její `file:` URL a aplikace neběží. Příkaz doplní migrace, vytvoří
+zálohu, přenese všechny modely a porovná celé řádky; `.env` změní až po úspěchu.
+Původní DB zachová. Lišící se neprázdnou cílovou databázi odmítne přepsat.
+
+Opakovatelné ověření na nových izolovaných databázích:
 
 ```bash
+npm test                 # PostgreSQL: migrace, převod dat, build a celá sada
+npm run verify:postgres  # totéž + 5 → 50 souběžných HTTP požadavků ve třech scénářích
 npm run verify:c02
+npm run verify:docs
 ```
 
-Příkaz připraví **novou oddělenou SQLite databázi**, aplikuje migrace, seed, build
-a celou sadu testů. Nepoužije vývojovou databázi z `.env`. Zapíše výsledek a SHA-256
-ověřených souborů do [`docs/evidence/c02-verification.json`](docs/evidence/c02-verification.json).
-Dočasná databáze zůstane v systémovém temp adresáři pro případnou diagnostiku.
+`verify:c02` připraví novou SQLite DB a spustí zachovanou regresi. PostgreSQL
+specifické testy v tomto profilu výslovně přeskočí. Výsledky jsou v
+[PostgreSQL reportu](docs/evidence/c03-postgres-verification.json),
+[SQLite reportu](docs/evidence/c03-sqlite-verification.json) a
+[kontrole přenosu dat](docs/evidence/c03-data-transfer-verification.json).
+Historické reporty C02 se nepřepisují. Ověření nepoužívá vývojovou DB z `.env`;
+dočasné databáze zůstanou v systémovém temp adresáři pro diagnostiku a servery se ukončí.
 
 Na `http://localhost:3000` běží jednoduché testovací UI: uživatelé, stoly, rezervace, dostupnost
 a objednávky k rezervaci včetně účtu. U stolu lze zapnout „Vyžaduje schválení“;
@@ -95,8 +115,11 @@ POST /reservations
 
 Základ této cesty (validate → persist → return ID) je již implementován v `src/http/app.ts` a
 ověřen v rámci C01 engineering spike. V C02 běží i Confirm, Cancel, Availability,
-Approve/Reject a objednávky. Pro C03 zbývá zejména přenos garancí souběhu na cílovou
-databázi a rozhodnutí o aktivní expiraci; viz `docs/architecture-and-decisions.md`.
+Approve/Reject a objednávky. Garance souběhu je nyní opakovatelně ověřena na
+PostgreSQL 16 včetně 10× zátěže. ADR-04 zachovává expiraci při Approve podle R-16;
+lidské review C03 A9/HC3 dokončil Honza 11. 10. 2026
+([záznam](docs/architecture-and-decisions.md#review-a9--hc3--technická-kontrola)).
+Křížové review C02 a týmové podpisy baseline zůstávají otevřené.
 
 ## Historické splnění C01 — kde co najdete
 

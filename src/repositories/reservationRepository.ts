@@ -111,10 +111,17 @@ export class ReservationRepository implements ReservationStore {
       // another and each one reads the state committed by its predecessor.
       // On SQLite Prisma opens interactive transactions with BEGIN IMMEDIATE,
       // which already serializes all writers; the statement is then redundant
-      // but harmless. The PostgreSQL behaviour was verified only by a manual run
-      // (C03 L1); it is not part of the repeatable suite until migration.
-      await db.$executeRaw`UPDATE "Resource" SET "id" = "id" WHERE "id" = ${resourceId}`;
+      // but harmless. PostgreSQL READ COMMITTED behaviour is covered by the
+      // repeatable lock-mechanism test (with and without this lock), run by
+      // npm run verify:postgres; C03 L1 also retains the historical manual run.
+      await this.acquireResourceLock(db, resourceId);
       return work(new PrismaReservationTx(db));
-    });
+    }, { maxWait: 30_000, timeout: 30_000 });
+  }
+
+  // Kept as a narrow seam for a discriminating PostgreSQL mechanism test.
+  // Production always takes the lock; only the test subclass omits it.
+  protected async acquireResourceLock(db: Prisma.TransactionClient, resourceId: string): Promise<void> {
+    await db.$executeRaw`UPDATE "Resource" SET "id" = "id" WHERE "id" = ${resourceId}`;
   }
 }

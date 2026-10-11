@@ -1,0 +1,10 @@
+{
+  "completedAt": "2026-10-11T15:37:26.807Z",
+  "status": "passed",
+  "provider": "postgresql",
+  "version": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
+  "migrationDeployPassed": true,
+  "demoMenuItems": 9,
+  "unknownResourceStatus": 404,
+  "invalidIntervalStatus": 400
+}

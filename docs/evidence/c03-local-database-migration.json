@@ -1,0 +1,20 @@
+{
+  "completedAt": "2026-10-11T15:33:14.010Z",
+  "status": "passed",
+  "sourceProvider": "sqlite",
+  "targetProvider": "postgresql",
+  "targetVersion": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
+  "rowCounts": {
+    "user": 0,
+    "resource": 0,
+    "menuItem": 0,
+    "reservation": 0,
+    "order": 0,
+    "orderItem": 0
+  },
+  "fullRowEquality": true,
+  "dataSha256": "107fe1d6c7406ea30a0fa8a2715ecca8325bfd3a3f2a0bb616d9bd0308bf0ba0",
+  "sourcePreserved": true,
+  "backupCreated": true,
+  "environmentSwitchedAfterVerification": true
+}

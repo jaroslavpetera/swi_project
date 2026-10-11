@@ -165,14 +165,15 @@ overwriting the winner.
 **REQ-04:** competing Confirm/Approve requests for overlapping intervals of the
 same Resource may produce at most one CONFIRMED reservation. Loser returns 409
 without allocation. Concurrent changes on the same reservation cannot overwrite
-a decision based on newer state. See architecture for SQLite enforcement and the
-PostgreSQL migration constraint.
+a decision based on newer state. See architecture ADR-03 for the application
+decision under a Resource row lock on PostgreSQL and the retained SQLite profile.
+The current PostgreSQL migration does not add an exclusion constraint for overlaps.
 
 **Examples:** existing Confirm success/overlap HTTP examples; V-03.3 cutoff;
 V-04R.1 competing allocations; .3 allocation/Cancel; .6 touching intervals;
 .7 mixed Confirm/Approve; .8 HTTP 200/409.
 **Rationale:** accepting intent differs from exclusive allocation.
-**Scope / TBD:** R-7; REQ-04 is implemented on current SQLite, not deferred.
+**Scope / TBD:** R-7; REQ-04 is implemented and verified on the default PostgreSQL provider and retained SQLite profile.
 
 ## OP-04 — Cancel Reservation (REQ-05)
 
@@ -283,7 +284,7 @@ Technical review by Codex; not team approval.
 | K-7 Uncertainty | OK: deadlines are team-chosen; scope bounded by R-7/15; signature pending. |
 | K-8 Ordering vs lifecycle | OK: CONFIRMED only, no Reservation transitions; V-06.2/3/4. |
 | K-9 Expiry | OK: Approve is the trigger in BR-06/text/diagram; V-05.7/8. |
-| K-10 Concurrency | OK for SQLite application commands; V-04R.1…8. PostgreSQL needs revalidation. |
+| K-10 Concurrency | Original 22 September review: OK for SQLite, V-04R.1…8. PostgreSQL revalidation completed 11 October in the separate C03 technical evidence. |
 
 ## Impact analysis — approval change and completion
 
@@ -316,3 +317,10 @@ work on 21 September is **not proven**; today's prior analysis is linked above.
    v0.1/v0.2. Agent text cannot substitute for their signature.
 4. Find contemporaneous proof of original prior analysis or acknowledge the process
    gap with the instructor. Never backdate evidence.
+
+Technical update, 11 October 2026: PostgreSQL 16 is now the default provider;
+repeatable provider/concurrency verification and a local 5-to-50 HTTP load run
+are recorded in [technical completion](c03-technical-completion.md). This is
+implementation evidence, not a new team signature or a change to R-16. ADR-04
+retains approval-triggered expiry. The available Git history still does not
+establish the original prior-analysis sequence; see [history check](c02-process-history-check.md).

@@ -1,6 +1,6 @@
 // Naplní jídelní lístek, aby šlo objednávání rovnou vyzkoušet.
 // Spuštění: npm run seed
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../src/database.js";
 
 const prisma = new PrismaClient();
 

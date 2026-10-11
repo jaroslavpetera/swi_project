@@ -176,3 +176,12 @@ se při úklidu neměnily a testovací sada nebyla znovu spouštěna.
 
 Celkem **12 plně doložených bodů**; u zbývajících čtyř je přesně pojmenovaná
 procesní mezera. Issue nebylo na GitHubu uzavřeno ani označeno za plně dokončené.
+
+### Technické navázání 11. 10. 2026
+
+Aktuální aplikace již používá PostgreSQL 16; nová ověření jsou oddělená od výše
+uvedených historických běhů v [technickém dokončení C03](c03-technical-completion.md).
+[Kontrola dostupné Git historie](c02-process-history-check.md) původní časové
+pořadí analýzy neprokázala. Body 2/7/10/14 proto zůstávají procesně otevřené:
+technické dokončení nepředstavuje křížové lidské review, podpis ani přijetí nápravy
+vyučujícím. Stav na GitHubu se v tomto technickém kroku nemění.
