@@ -127,25 +127,34 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 
 ## Honza — krok 4 (chování)
 
+> **Stav 12. 10. 2026:** H1–H4 připravené podle předávky S1 v
+> [C05 Detailed Design](architecture-and-decisions.md#detailed-sequence).
+> Operace používají `LifecyclePolicy`, `Clock` a DR1–DR7; rozhodovací řádky C-F1…C-F5
+> a A-F1…A-F4 jsou připravené pro Michalovy testy. Technická kontrola kroků 1–3 a
+> výchozího kódu je v [evidenci](evidence-and-evolution.md#honzova-část--technická-kontrola-a-předávka).
+> Připraveno AI na pokyn Honzy; lidské review dle A9 a týmový průchod S2 tím nejsou potvrzené.
+> Krok 5 a cílová implementace přibyly při synchronizaci před pushem (`f24326a`, `58600c2`);
+> jejich Honzovo review zůstává následným krokem.
+
 ### H1 — Significant methods / operations
-- [ ] Pro `confirmReservation`, `approveReservation`, `allocate` (BR-02) a (N1) `decideConfirm` / `decideApprove` šablona:
+- [x] Pro `confirmReservation`, `approveReservation`, `allocate` (BR-02) a (N1) `decideConfirm` / `decideApprove` šablona:
       *Operation / Responsibility / Input / Output / Preconditions / Postconditions / Side effects / Failure behavior*.
-- [ ] U Failure behavior výslovně: které chyby zapíšou stav **a pak** se vyhodí (`NoShowExpiredError` → CANCELLED, `ApprovalExpiredError` → EXPIRED) a které nechají stav beze změny (`OverlapError`, `InvalidStateError`, `NotFoundError`).
-- [ ] Nedokumentovat gettery, `toRecord`, `decide()` jako pouhou delegaci (pokud nemá vlastní rozhodnutí).
+- [x] U Failure behavior výslovně: které chyby zapíšou stav **a pak** se vyhodí (`NoShowExpiredError` → CANCELLED, `ApprovalExpiredError` → EXPIRED) a které nechají stav beze změny (`OverlapError`, `InvalidStateError`, `NotFoundError`).
+- [x] Nedokumentovat gettery, `toRecord`, `decide()` jako pouhou delegaci (pokud nemá vlastní rozhodnutí).
 
 ### H2 — Algorithm / decision logic
-- [ ] **Rozhodovací tabulka** Confirm: vstupy *stav × lhůta BR-04 × requiresApproval × konflikt BR-02* → výsledek (cílový stav / chyba / zda se zapisuje). Totéž pro Approve (*stav × lhůta BR-06 × konflikt*).
-- [ ] Pořadí vyhodnocení podmínek explicitně (stav → lhůta → BR-05 → BR-02) a **proč** zrovna v tomto pořadí.
-- [ ] Pseudocode `allocate` (BR-02, polouzavřený interval BR-01, vynechání sebe sama).
+- [x] **Rozhodovací tabulka** Confirm: vstupy *stav × lhůta BR-04 × requiresApproval × konflikt BR-02* → výsledek (cílový stav / chyba / zda se zapisuje). Totéž pro Approve (*stav × lhůta BR-06 × konflikt*).
+- [x] Pořadí vyhodnocení podmínek explicitně (stav → lhůta → BR-05 → BR-02) a **proč** zrovna v tomto pořadí.
+- [x] Pseudocode `allocate` (BR-02, polouzavřený interval BR-01, vynechání sebe sama).
 - [ ] Volitelně: výřez stavového automatu jen pro přechody této jednotky.
 
 ### H3 — Detailed sequence
-- [ ] Jeden významný scénář **uvnitř jednotky**, ne HTTP → DB. Doporučuji Approve s konfliktem BR-02:
+- [x] Jeden významný scénář **uvnitř jednotky**, ne HTTP → DB. Doporučuji Approve s konfliktem BR-02:
       `ReservationService → ReservationStore.inResourceTransaction → ReservationTx.findById → policy/rules → ReservationTx.findConfirmedForResource → OverlapError (rollback)`.
-- [ ] Pod diagram dvě řádky „C03 architecture level vs C05 DD level“ (jako v zadání).
+- [x] Pod diagram dvě řádky „C03 architecture level vs C05 DD level“ (jako v zadání).
 
 ### H4 — DD decisions intentionally left to code
-- [ ] Seznam: `toRecord`, Prisma `updateMany` detaily, konkrétní SQL zámku (`UPDATE "Resource" SET id=id`), texty chybových zpráv, …
+- [x] Seznam: `toRecord`, Prisma `updateMany` detaily, konkrétní SQL zámku (`UPDATE "Resource" SET id=id`), texty chybových zpráv, …
 
 ---
 

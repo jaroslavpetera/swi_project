@@ -337,7 +337,7 @@ Ověřuje návrh v [C05 Detailed Design](architecture-and-decisions.md#c05-detai
 
 > **Stav 12. 10. 2026 (Michal, připraveno s AI → čeká na lidské review, A9):**
 > - Testy jsou odvozené z kroků 1–3 DD: DR1–DR7, kontrakty 1–4 a *Rozdíly proti kódu na `main`*.
-> - Krok 4 (Honza) zatím chybí. Jeho rozhodovací tabulku je potřeba porovnat s DD-T9 a metody s DD-T1–T8.
+> - Krok 4 (Honza) je doplněný níže. Jeho rozhodovací tabulku je potřeba porovnat s DD-T9 a metody s DD-T1–T8.
 > - Testy ověřují návrhový záměr. Nejdřív se psaly proti kódu `7ba6a05` před N1/N2: tam DD-T7 selhal
 >   (`it.fails`) a DD-T8/T9 čekaly (`todo`).
 > - Po Jardově implementaci (`f24326a`) testy přešly na `Clock` a DD-T7–T9 jsou plnohodnotné testy.
@@ -443,8 +443,8 @@ je ve sloupci *Před*.
 
 ### Remaining design risk
 
-- **Krok 4 DD (metody, algoritmus, sekvence) zatím chybí.** Implementace `f24326a` tak předešla
-  jeho zapsání. Po doplnění je potřeba ověřit, že kroku 4 odpovídají testy DD-T1–T9 i kód.
+- **Krok 4 DD je nyní doplněný.** Implementace `f24326a` v historii větve předešla
+  jeho začlenění při rebase Honzova souběžně připraveného commitu. Je potřeba ověřit, že kroku 4 odpovídají testy DD-T1–T9 i kód.
 - Fake store modeluje kontrakty 1–2, ne skutečnou DB. Shodu adaptéru s kontraktem dokládají jen
   DD-T10 (transition, čtení) a DD-T11 (zámek). Kontrakt „timeout 30 s → chyba DB“ testem pokrytý není.
 - Cancel (OP-04), Reject a Ordering jsou mimo DD. Používají stejnou transakční cestu a `Clock`, ale
@@ -454,8 +454,53 @@ je ve sloupci *Před*.
 
 ### Commit/tag
 
-- DD kroky 1–3: `ef8257c` (Jarda). Krok 4: *chybí (Honza)*.
+- DD kroky 1–3: `ef8257c` (Jarda). Krok 4 (Honza): commit „docs(c05): complete Honza behavior design and technical review“ (`git log -1 -- docs/architecture-and-decisions.md`).
 - Implementace N1/N2 + `MissingResourceError`: `f24326a` (Jarda).
 - Testy odvozené z DD (DD-T1–T10, fake store) + evidence M1–M3: commit „C05 M1–M3“ nad `f24326a`
   (`git log -1 -- tests/domain/lifecyclePolicy.test.ts`).
 - Tag `c05-detailed-design`: *po S3 (krok 4 + lidské review)*.
+
+### Honzova část — technická kontrola a předávka
+
+**Datum:** 12. 10. 2026 (Europe/Prague). **Provedl:** Codex na pokyn Honzy.
+Jde o technickou kontrolu a přípravu H1–H4, nikoli potvrzení lidského review dle A9.
+Výchozí větev `c05` po `git pull --ff-only`: `ef8257c` (Jardovy kroky 1–3);
+kontrola níže byla připravena nad aplikační baseline `7ba6a05`, před stažením novějších commitů. Kód a testy se v Honzově části nemění.
+
+**Dokončené výstupy:** [H1 operace](architecture-and-decisions.md#important-methods--operations),
+[H2 rozhodovací tabulky a algoritmus](architecture-and-decisions.md#algorithm--decision-logic),
+[H3 sekvence](architecture-and-decisions.md#detailed-sequence),
+[H4 detaily ponechané kódu](architecture-and-decisions.md#dd-decisions-intentionally-left-to-code).
+Řádky C-F1…C-F5 a A-F1…A-F4 umožňují Michalovi odvodit testy včetně priority chyb,
+hranice v rovnosti a odložení BR-02 pro pending. Výsledek `Close` musí testovat služba
+spolu s transakčním fake store: samotná čistá policy neprokáže commit před vyhozením chyby.
+
+**Kontrola Jardových kroků 1–3:** vybraná jednotka odpovídá C03 ADR-03/G2 a požadavkům
+REQ-03/04/06; DR1–DR7 pokrývají významná rozhodnutí Confirm/Approve. Rozhraní policy vrací
+hodnoty a zachovává oddělení rozhodnutí od zápisu; ownership odpovídá pravidlu L2.
+Clock po zámku a tvrdé odmítnutí chybějícího Resource jsou vědomé změny proti baseline.
+H1–H4 používají stejné názvy a výsledky z předávky S1; nebyl nalezen blokující rozpor
+se specifikací BR-01/02/04/05/06. Obsah Mermaid sekvence zkontrolován proti kontraktům;
+render diagramu tento běh neověřuje.
+
+**Historické podklady proti baseline `7ba6a05` (nejde o finální M3):**
+
+| DD decision | Implemented? v baseline | Evidence | Action |
+|---|---|---|---|
+| DR1: rozhodnutí nad opětovně načteným stavem pod zámkem Resource | YES | [ReservationService.decide](../src/services/reservationService.ts), [transakční port a adaptér](../src/repositories/reservationRepository.ts) | keep; při refaktoringu zachovat |
+| H2: stav → lhůta → routing → alokace; pending bez BR-02 | YES | `confirmReservation` / `approveReservation` v [Lifecycle](../src/services/reservationService.ts) | keep; převést do policy |
+| DR4/H1: terminální stav commitnutý před expirační chybou | YES | `Decision`, návrat `{ expired }` a vyhození až po `inResourceTransaction` v [Lifecycle](../src/services/reservationService.ts) | keep; zachovat i po N1 |
+| N1: čistá `LifecyclePolicy`, včetně `decideAllocation` | NO | Větvení a vyhození `OverlapError` přímo v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda po DD |
+| N2/DR2: jeden injektovaný Clock, `now` čtené po zámku | NO | Výchozí parametr `now = new Date()` v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda; test čekání přes cutoff má používat Clock |
+| Chybějící Resource odmítnout jako porušení invariantu | NO | `resource?.requiresApproval` v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda; nepřevádět null na přímý Confirm |
+| H2: polouzavřený překryv, ignorování sebe sama a ne-CONFIRMED | YES | `allocate` v [Lifecycle](../src/services/reservationService.ts), [rules](../src/domain/rules.ts) | keep; přesun rozhodnutí do `decideAllocation` |
+
+**Resolution:** chybějící N1/N2 nejsou důvodem přepsat DD podle dnešního kódu.
+Přijmout cílový návrh a implementaci změnit v Jardově kroku 6; ověřit Michalovými testy N3.
+Při původní přípravě této části kroky 5 a cílová implementace ještě neexistovaly. Při synchronizaci před pushem byly staženy commity `f24326a`, `ad1ede6` a `58600c2`; aktuální stav zachycuje Michalova evidence výše. Jejich Honzovo review
+zůstává následným krokem. Týmový průchod S2/S3, lidské review A9, tag a PR nejsou uzavřené.
+
+**Kontroly dokumentace:** `npm run verify:docs` a `git diff --check`;
+výsledek kontroly odkazů je v [C05 reportu](evidence/c05-document-links.json).
+Historický C03 report zachován. Nová C05 unit/component sada se v této dokumentační části
+nespouští; její implementace a běh patří Michalovi (M1–M3).

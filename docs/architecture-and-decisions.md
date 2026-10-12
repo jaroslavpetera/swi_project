@@ -1159,16 +1159,243 @@ Adaptér `ReservationRepository` / `PrismaReservationTx` (realizace portu) a HTT
 
 ### Detailed sequence
 
-*Doplní Honza — [H3](tasks-cv5.md#h3--detailed-sequence).*
+**H3 — Approve s konfliktem BR-02.** Rezervace existuje, pod zámkem je stále
+PENDING_APPROVAL a čas rozhodnutí je před deadline. Jiná rezervace stejného Resource byla
+mezitím potvrzena na překrývající se interval. Sekvence realizuje DR1–DR3, DR6 a DR7;
+vychází z rozhraní předaných na S1. Policy a Clock jsou navržené prvky N1/N2;
+jejich implementaci mezitím přidal commit `f24326a`.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Volající Lifecycle
+    participant Service as ReservationService
+    participant Store as ReservationStore
+    participant Tx as ReservationTx
+    participant Clock
+    participant Policy as LifecyclePolicy
+    participant Rules as ReservationRules
+    Caller->>Service: approveReservation(id)
+    Service->>Store: findById(id)
+    Store-->>Service: located (pouze resourceId pro zámek)
+    Service->>Store: inResourceTransaction(located.resourceId, work)
+    Note over Store,Tx: Získat zámek Resource před spuštěním work
+    Store->>Service: work(tx)
+    Service->>Tx: findById(id)
+    Tx-->>Service: current (PENDING_APPROVAL)
+    Service->>Clock: now()
+    Clock-->>Service: čas rozhodnutí po zámku
+    Service->>Policy: decideApprove(current, now)
+    Policy->>Rules: isApprovalExpired(current, now)
+    Rules-->>Policy: false
+    Policy-->>Service: Allocate
+    Service->>Tx: findConfirmedForResource(current.resourceId)
+    Tx-->>Service: confirmed (aktuální pod zámkem)
+    Service->>Policy: decideAllocation(current, confirmed)
+    Policy->>Rules: findOverlappingConfirmed(current, bez sebe sama)
+    Rules-->>Policy: překrývající se rezervace
+    Policy-->>Service: Conflict(conflictingReservationId)
+    Service-->>Store: work odmítnut s OverlapError(id)
+    Note over Store,Tx: Rollback a uvolnění zámku; transition se nevolá
+    Store-->>Service: inResourceTransaction odmítnut s OverlapError
+    Service-->>Caller: OverlapError; stav zůstává PENDING_APPROVAL
+```
+
+**C03 architecture level:** Reservation Lifecycle → Domain Rules → Reservation Persistence.
+
+**C05 DD level:** `ReservationService → ReservationStore.inResourceTransaction →
+ReservationTx.findById → Clock.now → LifecyclePolicy.decideApprove →
+ReservationTx.findConfirmedForResource → LifecyclePolicy.decideAllocation →
+ReservationRules.findOverlappingConfirmed → OverlapError (rollback)`.
+
+Při `Close` by sekvence měla jiný závěr: `tx.transition(current, EXPIRED)` → návrat hodnoty
+obsahující příčinu expirace z `work` → **commit** → teprve potom `ApprovalExpiredError`
+volajícímu. Vyhodit tuto chybu uvnitř `work` by porušilo DR4, protože by způsobila rollback.
 
 ### Important methods / operations
 
-*Doplní Honza — [H1](tasks-cv5.md#h1--significant-methods--operations).*
+**H1 — kontrakty významných operací.** Níže je cílový návrh po N1/N2; explicitní parametr
+`now` dnešních metod nahrazuje injektovaný `Clock`. Stav ani čas z requestu nejsou vstupem
+rozhodnutí. Platné datumy a interval dle BR-01 zajišťuje vytvoření rezervace; policy tyto
+vstupy znovu nevaliduje. Policy vrací rozhodnutí jako hodnotu, chyby vytváří služba.
+
+#### `ReservationService.confirmReservation(id): Promise<ReservationRecord>`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `confirmReservation(id)` — OP-03 |
+| Responsibility | DR1–DR7: zorganizovat rozhodnutí Confirm, transakci a případný zápis; pravidla delegovat policy. |
+| Input | ID rezervace; závislosti `ReservationStore` a `Clock` z konstruktoru. |
+| Output | Záznam po úspěšném commitu ve stavu PENDING_APPROVAL nebo CONFIRMED. |
+| Preconditions | Pro úspěch: rezervace existuje a stav **načtený v transakci** je DRAFT; `now < startsAt − NO_SHOW_GRACE_MINUTES`; Resource existuje. Pro přímé potvrzení navíc žádný konflikt BR-02. |
+| Postconditions | BR-05 true → PENDING_APPROVAL bez alokace; BR-05 false a volný interval → CONFIRMED. Vypršení → uložen CANCELLED a pak chyba. Ostatní doménová odmítnutí nic nezapisují. |
+| Side effects | První čtení určí Resource, pod jeho zámkem se znovu načte aktuální rezervace, jednou se přečte Clock a pro policy se načte Resource. Nejvýše jeden `tx.transition` na příkaz; zámek trvá do commitu/rollbacku. |
+| Failure behavior | `InvalidState` → `InvalidStateError(current.state, DRAFT)`; `Close` → zápis CANCELLED, commit, `NoShowExpiredError`; `Conflict(id)` z alokace → `OverlapError(id)` bez zápisu. Společná selhání viz tabulka níže. |
+
+#### `ReservationService.approveReservation(id): Promise<ReservationRecord>`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `approveReservation(id)` — schvalovací část OP-05 |
+| Responsibility | DR1–DR4, DR6–DR7: rozhodnout nad aktuální čekající žádostí, znovu prověřit alokaci a atomicky ji potvrdit nebo uzavřít. |
+| Input | ID rezervace; `ReservationStore` a `Clock`. |
+| Output | Záznam CONFIRMED po úspěšném commitu. |
+| Preconditions | Pro úspěch: existující PENDING_APPROVAL načtená pod zámkem, `now < startsAt − APPROVAL_GRACE_MINUTES` a bez konfliktu BR-02. |
+| Postconditions | Volný interval → CONFIRMED; vypršení → uložen EXPIRED a pak chyba; konflikt → PENDING_APPROVAL beze změny. `requiresApproval` se znovu nerozhoduje: příkaz již zpracovává čekající žádost. |
+| Side effects | Lokalizace Resource, opětovné načtení pod zámkem, jedno čtení Clock a pouze při `Allocate` načtení CONFIRMED rezervací. Nejvýše jeden `tx.transition`. |
+| Failure behavior | `InvalidState` → `InvalidStateError(current.state, PENDING_APPROVAL)`; `Close` → EXPIRED, commit, `ApprovalExpiredError`; `Conflict(id)` → `OverlapError(id)` bez zápisu. Společná selhání níže. |
+
+#### `ReservationService.allocate(tx, current): Promise<ReservationRecord>`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `allocate(tx, current)` — společná orchestrace BR-02 pro Confirm i Approve |
+| Responsibility | DR6–DR7: načíst blokující rezervace, vyžádat rozhodnutí policy a pouze při `Free` uložit CONFIRMED. |
+| Input | `ReservationTx` aktivní transakce se zámkem `current.resourceId`; aktuální `ReservationRecord`. |
+| Output | Záznam s CONFIRMED; vnějšímu volajícímu se vrátí až po commitu celé transakce. |
+| Preconditions | Policy pro tentýž záznam a čas již vrátila `Allocate`; stav je DRAFT nebo PENDING_APPROVAL. Záznam byl načten v téže transakci. |
+| Postconditions | `Free` → jeden guardovaný přechod CONFIRMED; `Conflict(id)` → žádný přechod. BR-02 se rozhoduje jen přes `decideAllocation`, nikoli podruhé v SQL. |
+| Side effects | `tx.findConfirmedForResource`, případně `tx.transition`; nečte Clock a neuvolňuje zámek. |
+| Failure behavior | `Conflict(id)` převést na `OverlapError(id)` uvnitř transakce → rollback. Guard zápisu může vyhodit `ReservationConflictError`; DB chyba se propaguje a rovněž způsobí rollback. |
+
+#### `LifecyclePolicy.decideConfirm(current, resource, now): ConfirmDecision`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `decideConfirm(current, resource, now)` — čistá funkce N1 |
+| Responsibility | DR3–DR5: v pořadí stav, cutoff, routing zvolit další krok. |
+| Input | `ReservationRecord`, odpovídající `ResourceRecord`, jedno platné `now: Date`. |
+| Output | Právě jedna hodnota `InvalidState(expected: DRAFT)`, `Close(to: CANCELLED, cause: NO_SHOW_CUTOFF)`, `RouteToApproval` nebo `Allocate`. |
+| Preconditions | Platné snapshoty dle kontraktu policy v kroku 3, `resource.id == current.resourceId`; `now` získané po zámku. Chybný lifecycle stav je platný vstup a vede na `InvalidState`. |
+| Postconditions | Rozhodnutí odpovídá prvnímu použitelnému řádku C-F1…C-F5 níže. `Allocate` pouze žádá následné rozhodnutí BR-02; samo nepotvrzuje rezervaci. |
+| Side effects | Žádné I/O, mutace vstupů, čtení systémového času ani zápis stavu. |
+| Failure behavior | Doménové odmítnutí je hodnota; nevyhazuje výjimky a nevytváří doménové Error objekty. |
+
+#### `LifecyclePolicy.decideApprove(current, now): ApproveDecision`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `decideApprove(current, now)` — čistá funkce N1 |
+| Responsibility | DR3–DR4: ověřit PENDING_APPROVAL a deadline, pak požádat o alokaci. |
+| Input | Aktuální `ReservationRecord`, jedno platné `now: Date`. |
+| Output | `InvalidState(expected: PENDING_APPROVAL)`, `Close(to: EXPIRED, cause: APPROVAL_DEADLINE)` nebo `Allocate`. |
+| Preconditions | Platný snapshot a čas z kontraktu policy; nesprávný lifecycle stav je platný vstup pro odmítnutí. |
+| Postconditions | Rozhodnutí odpovídá A-F1…A-F4 níže. Nevyhodnocuje BR-05 ani konflikt BR-02. |
+| Side effects | Žádné; deterministická funkce bez Clock, portu a mutací. |
+| Failure behavior | Doménové odmítnutí je hodnota; žádné výjimky. |
+
+#### `LifecyclePolicy.decideAllocation(candidate, confirmed): AllocationDecision`
+
+| Položka | Kontrakt |
+|---|---|
+| Operation | `decideAllocation(candidate, confirmed)` — čistá část DR6 |
+| Responsibility | Vynechat vlastní ID a pomocí sdílené definice BR-01/02 zvolit volno nebo konflikt. |
+| Input | Kandidát a snapshot rezervací stejného Resource načtený pod týmž zámkem. |
+| Output | `Free` nebo `Conflict(conflictingReservationId)`. |
+| Preconditions | Platné intervaly; kolekce patří stejnému Resource. Port vrací CONFIRMED, policy navíc ignoruje jiné stavy. |
+| Postconditions | Konflikt právě tehdy, když jiná CONFIRMED rezervace splňuje `candidate.startsAt < other.endsAt && other.startsAt < candidate.endsAt`. Dotýkající se intervaly jsou volné. |
+| Side effects | Žádné; nemění kolekci ani její záznamy. |
+| Failure behavior | Konflikt je hodnota, ne výjimka. Při více konfliktech vrací první v dodané kolekci; konkrétní ID není závislé na garantovaném DB pořadí. |
+
+#### Chyby, zápis a transakční výsledek
+
+| Příčina / chyba | Zápis stavu | Kdy chyba vznikne / výsledek transakce |
+|---|---|---|
+| `NotFoundError(id)` — nenalezeno při lokalizaci nebo při opětovném čtení | Žádný | Před otevřením transakce, nebo uvnitř `work` → rollback. |
+| `InvalidStateError` | Žádný | Převod `InvalidState` službou uvnitř `work` → rollback. |
+| `OverlapError(conflictingReservationId)` | Žádný; DRAFT / PENDING_APPROVAL zůstává | Převod `Conflict` službou uvnitř `work` → rollback. |
+| `NoShowExpiredError` | CANCELLED | `Close` → `transition` uvnitř `work`, návrat hodnoty → commit; až potom vyhodit chybu. |
+| `ApprovalExpiredError` | EXPIRED | `Close` → `transition` uvnitř `work`, návrat hodnoty → commit; až potom vyhodit chybu. |
+| `ReservationConflictError` | Neúspěšný guard nic nepřepíše | Výjimka z `transition` uvnitř `work` → rollback; nesmí se změnit na chybu expirace. |
+| Chybějící Resource, timeout nebo jiná DB chyba | Žádný commit přechodu | Propagace chyby; případný rozpracovaný zápis se rollbackne. Expirační chybu lze oznámit pouze po úspěšném commitu. |
+
+Chybějící Resource je dle kroku 3 porušení invariantu, nikoli `requiresApproval = false`.
+Služba před voláním `decideConfirm` zkontroluje výsledek `tx.findResource`; při `null`
+odmítne transakci chybou (stávající obecné HTTP mapování → 500). Nenalezená **rezervace**
+zůstává `NotFoundError` (404). Na neplatná data se rozhodovací tabulky policy nevztahují.
+Načtení Resource jako vstupu čisté funkce neznamená vyhodnocení BR-05 před stavem a lhůtou.
 
 ### Algorithm / decision logic
 
-*Doplní Honza — [H2](tasks-cv5.md#h2--algorithm--decision-logic).*
+**H2 — rozhodovací tabulky.** Řádky mají stabilní ID pro odvození testů Michalem (M1).
+`—` znamená „nevyhodnocuje se“, nikoli false. Vstupy pocházejí z transakce pod zámkem;
+nenalezené záznamy a infrastrukturní selhání řeší H1 před dokončením rozhodnutí.
+
+Cutoff Confirm = `startsAt − NO_SHOW_GRACE_MINUTES × 60 000 ms`; deadline Approve =
+`startsAt − APPROVAL_GRACE_MINUTES × 60 000 ms`. Obě konstanty jsou v baseline 30 minut.
+**V rovnosti již lhůta vypršela** (`now >= hranice`); 1 ms před ní je příkaz včasný.
+Clock se čte jednou po získání zámku a opětovném načtení rezervace; všechna rozhodnutí
+této transakce používají tentýž `now`, včetně čekání na další DB čtení. Čas se nepřepočítává
+v `allocate`. Dlouhé čekání na zámek proto nemůže použít čas příchodu příkazu.
+
+#### Confirm (OP-03)
+
+| ID | Aktuální stav | BR-04 | requiresApproval | Konflikt BR-02 | Policy / následný krok | Cílový stav / chyba | Zápis |
+|---|---|---|---|---|---|---|---|
+| C-F1 | Jiný než DRAFT | — | — | — | `InvalidState(DRAFT)` | `InvalidStateError` | Žádný |
+| C-F2 | DRAFT | `now >= cutoff` | — | — | `Close(CANCELLED, NO_SHOW_CUTOFF)` | CANCELLED, pak `NoShowExpiredError` | Jednou, commit před chybou |
+| C-F3 | DRAFT | `now < cutoff` | true | — | `RouteToApproval` | PENDING_APPROVAL | Jednou; bez čtení CONFIRMED a bez `decideAllocation` |
+| C-F4 | DRAFT | `now < cutoff` | false | Ano | `Allocate` → `Conflict(id)` | `OverlapError(id)`; zůstává DRAFT | Žádný |
+| C-F5 | DRAFT | `now < cutoff` | false | Ne | `Allocate` → `Free` | CONFIRMED | Jednou |
+
+#### Approve (OP-05)
+
+| ID | Aktuální stav | BR-06 | Konflikt BR-02 | Policy / následný krok | Cílový stav / chyba | Zápis |
+|---|---|---|---|---|---|---|
+| A-F1 | Jiný než PENDING_APPROVAL | — | — | `InvalidState(PENDING_APPROVAL)` | `InvalidStateError` | Žádný |
+| A-F2 | PENDING_APPROVAL | `now >= deadline` | — | `Close(EXPIRED, APPROVAL_DEADLINE)` | EXPIRED, pak `ApprovalExpiredError` | Jednou, commit před chybou |
+| A-F3 | PENDING_APPROVAL | `now < deadline` | Ano | `Allocate` → `Conflict(id)` | `OverlapError(id)`; zůstává PENDING_APPROVAL | Žádný |
+| A-F4 | PENDING_APPROVAL | `now < deadline` | Ne | `Allocate` → `Free` | CONFIRMED | Jednou |
+
+**Pořadí a důvod.** Nejprve **stav (DR3)**: neplatný přechod se nesmí změnit na uzavření
+již terminální rezervace, i když je po cutoff. Potom **lhůta (DR4)**: pozdní DRAFT se uzavírá
+bez ohledu na approval flag a pozdní pending bez ohledu na překryv. Následuje **routing (DR5,
+jen Confirm)**: pending nealokuje, proto pro něj nemá BR-02 rozhodovat. Poslední je
+**alokace (DR6)**: aktuální konflikt se čte teprve při skutečné snaze získat Resource.
+Pořadí tak určuje i prioritu chyb a čtení, která se nesmějí provést v C-F3/C-F2/A-F2.
+
+#### Pseudocode alokace (BR-01 / BR-02)
+
+```text
+LifecyclePolicy.decideAllocation(candidate, confirmed):
+    others = confirmed bez záznamů s id == candidate.id  // nová kolekce
+    conflict = ReservationRules.findOverlappingConfirmed(candidate, others)
+    // Sdílený predikát vybírá první other, pro který platí:
+    // other.state == CONFIRMED
+    // AND candidate.startsAt < other.endsAt
+    // AND other.startsAt < candidate.endsAt
+    if conflict existuje:
+        return Conflict(conflict.id)
+    return Free
+
+ReservationService.allocate(tx, current):
+    // Zámek current.resourceId už drží vnější inResourceTransaction.
+    confirmed = await tx.findConfirmedForResource(current.resourceId)
+    decision = LifecyclePolicy.decideAllocation(current, confirmed)
+    if decision je Conflict(id):
+        throw OverlapError(id)           // bez transition, rollback celé work
+    return await tx.transition(current, CONFIRMED)  // guard current.state
+    // Commit provede vnější store; allocate sám transakci neukončuje.
+```
+
+Překryv je striktní v obou nerovnostech: `[18:00, 19:00)` a `[19:00, 20:00)` se
+nepřekrývají. Stejný interval jiné CONFIRMED rezervace je konflikt. Vlastní ID se ignoruje
+i kdyby ho fake store předal v kolekci; DRAFT a PENDING_APPROVAL nikdy neblokují.
+Pro n načtených rezervací jde o O(n) průchod; řazení ani výběr „nejstaršího“ konfliktu
+nejsou součástí kontraktu. Approve nepoužívá výsledek dostupnosti ani Confirm z minulosti.
 
 ### DD decisions intentionally left to code
 
-*Doplní Honza — [H4](tasks-cv5.md#h4--dd-decisions-intentionally-left-to-code).*
+**H4 — detaily bez samostatného návrhového rozhodnutí.** Implementace může zvolit:
+
+- převod Prisma řádku na `ReservationRecord` (`toRecord`) a místní helpery;
+- konkrétní reprezentaci diskriminovaných union hodnot (`kind`, názvy interních tagů),
+  pokud zachová význam všech rozhodnutí policy a jejich oddělení od výjimek;
+- syntaxi Prisma `updateMany` a přepočet jeho výsledku na chybu guardu;
+- SQL pro zámek, např. `UPDATE "Resource" SET id=id`, a privátní DB helpery;
+- texty chybových zpráv, lokální proměnné a běžný framework boilerplate.
+
+V kódu zůstává **syntaxe**, nikoli garance: serializace podle Resource, guard očekávaného
+stavu, sdílený predikát překryvu, pořadí rozhodnutí, jedno `now` po zámku a commit terminálního
+stavu před chybou jsou závazná rozhodnutí DD. Změna typu chyby nebo `conflictingReservationId`
+mění kontrakt; změna pouhého textu zprávy jej nemění. Změnu garance musí doprovázet
+vědomá úprava DD a testů podle mismatch procesu kroku 6.
