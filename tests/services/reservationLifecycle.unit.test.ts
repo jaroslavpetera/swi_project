@@ -7,11 +7,13 @@ import {
   ApprovalExpiredError,
   InvalidStateError,
   NoShowExpiredError,
+  MissingResourceError,
   OverlapError,
   ReservationService,
 } from "../../src/services/reservationService.js";
 import { ReservationState as S } from "../../src/domain/types.js";
 import { InMemoryReservationStore } from "../support/inMemoryReservationStore.js";
+import { TestClock } from "../support/clock.js";
 
 const TABLE = "table-1";
 const VIP = "vip-room";
@@ -23,13 +25,15 @@ const beforeCutoff = new Date(cutoff.getTime() - 1);
 const earlier = new Date("2027-06-01T12:00:00Z");
 
 let store: InMemoryReservationStore;
+let clock: TestClock;
 let service: ReservationService;
 
 beforeEach(() => {
   store = new InMemoryReservationStore();
   store.addResource(TABLE, false);
   store.addResource(VIP, true);
-  service = new ReservationService(store);
+  clock = new TestClock(earlier);
+  service = new ReservationService(store, clock);
 });
 
 describe("DD-T1 algorithm branch — BR-05 routing (DR5)", () => {
@@ -38,7 +42,7 @@ describe("DD-T1 algorithm branch — BR-05 routing (DR5)", () => {
     store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.CONFIRMED });
     const draft = store.addReservation({ resourceId: VIP, startsAt, endsAt });
 
-    const result = await service.confirmReservation(draft.id, earlier);
+    const result = await service.confirmReservation(draft.id);
 
     expect(result.state).toBe(S.PENDING_APPROVAL);
     expect(store.stateOf(draft.id)).toBe(S.PENDING_APPROVAL);
@@ -48,7 +52,7 @@ describe("DD-T1 algorithm branch — BR-05 routing (DR5)", () => {
   it("DD-T1b: DRAFT on a Resource without approval → allocation decides → CONFIRMED", async () => {
     const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
 
-    const result = await service.confirmReservation(draft.id, earlier);
+    const result = await service.confirmReservation(draft.id);
 
     expect(result.state).toBe(S.CONFIRMED);
     expect(store.calls).toContain("tx.findConfirmedForResource");
@@ -58,8 +62,9 @@ describe("DD-T1 algorithm branch — BR-05 routing (DR5)", () => {
 describe("DD-T2 state transition — close on deadline, then report (DR4)", () => {
   it("DD-T2: Confirm at the BR-04 cutoff commits CANCELLED and only then throws NoShowExpiredError", async () => {
     const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
+    clock.set(cutoff);
 
-    await expect(service.confirmReservation(draft.id, cutoff)).rejects.toBeInstanceOf(NoShowExpiredError);
+    await expect(service.confirmReservation(draft.id)).rejects.toBeInstanceOf(NoShowExpiredError);
 
     // Zápis přežil chybovou odpověď: transakce commitnula, ne rollback.
     expect(store.stateOf(draft.id)).toBe(S.CANCELLED);
@@ -69,8 +74,9 @@ describe("DD-T2 state transition — close on deadline, then report (DR4)", () =
 
   it("DD-T2b: Approve at the BR-06 deadline commits EXPIRED and only then throws ApprovalExpiredError", async () => {
     const pending = store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.PENDING_APPROVAL });
+    clock.set(cutoff);
 
-    await expect(service.approveReservation(pending.id, cutoff)).rejects.toBeInstanceOf(ApprovalExpiredError);
+    await expect(service.approveReservation(pending.id)).rejects.toBeInstanceOf(ApprovalExpiredError);
 
     expect(store.stateOf(pending.id)).toBe(S.EXPIRED);
     expect(store.calls).not.toContain("rollback");
@@ -78,8 +84,9 @@ describe("DD-T2 state transition — close on deadline, then report (DR4)", () =
 
   it("DD-T2c: 1 ms before the cutoff the deadline branch is not taken (half-open boundary)", async () => {
     const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
+    clock.set(beforeCutoff);
 
-    const result = await service.confirmReservation(draft.id, beforeCutoff);
+    const result = await service.confirmReservation(draft.id);
 
     expect(result.state).toBe(S.CONFIRMED);
   });
@@ -94,7 +101,7 @@ describe("DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7)", 
       endsAt: new Date("2027-06-01T21:00:00Z"),
     });
 
-    const error = await service.confirmReservation(draft.id, earlier).catch((e) => e);
+    const error = await service.confirmReservation(draft.id).catch((e) => e);
 
     expect(error).toBeInstanceOf(OverlapError);
     expect((error as OverlapError).conflictingReservationId).toBe(winner.id);
@@ -107,7 +114,7 @@ describe("DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7)", 
     store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.CONFIRMED });
     const pending = store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.PENDING_APPROVAL });
 
-    await expect(service.approveReservation(pending.id, earlier)).rejects.toBeInstanceOf(OverlapError);
+    await expect(service.approveReservation(pending.id)).rejects.toBeInstanceOf(OverlapError);
 
     expect(store.stateOf(pending.id)).toBe(S.PENDING_APPROVAL);
   });
@@ -121,7 +128,7 @@ describe("DD-T4 collaboration — decide on state read under the lock (DR1)", ()
       store.reservations.get(draft.id)!.state = S.CONFIRMED;
     });
 
-    const error = await service.confirmReservation(draft.id, earlier).catch((e) => e);
+    const error = await service.confirmReservation(draft.id).catch((e) => e);
 
     expect(error).toBeInstanceOf(InvalidStateError);
     expect((error as InvalidStateError).currentState).toBe(S.CONFIRMED);
@@ -135,7 +142,7 @@ describe("DD-T4 collaboration — decide on state read under the lock (DR1)", ()
       store.addReservation({ resourceId: TABLE, startsAt, endsAt, state: S.CONFIRMED });
     });
 
-    await expect(service.confirmReservation(draft.id, earlier)).rejects.toBeInstanceOf(OverlapError);
+    await expect(service.confirmReservation(draft.id)).rejects.toBeInstanceOf(OverlapError);
     expect(store.stateOf(draft.id)).toBe(S.DRAFT);
   });
 });
@@ -150,7 +157,7 @@ describe("DD-T5 algorithm — decideAllocation scope (DR6, BR-01)", () => {
     store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.CONFIRMED });
     const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
 
-    const result = await service.confirmReservation(draft.id, earlier);
+    const result = await service.confirmReservation(draft.id);
 
     expect(result.state).toBe(S.CONFIRMED);
   });
@@ -162,7 +169,7 @@ describe("DD-T6 state transition — only allowed source states (DR3)", () => {
     async (state) => {
       const row = store.addReservation({ resourceId: TABLE, startsAt, endsAt, state });
 
-      const error = await service.confirmReservation(row.id, earlier).catch((e) => e);
+      const error = await service.confirmReservation(row.id).catch((e) => e);
 
       expect(error).toBeInstanceOf(InvalidStateError);
       expect((error as InvalidStateError).expectedState).toBe(S.DRAFT);
@@ -175,7 +182,7 @@ describe("DD-T6 state transition — only allowed source states (DR3)", () => {
     async (state) => {
       const row = store.addReservation({ resourceId: VIP, startsAt, endsAt, state });
 
-      const error = await service.approveReservation(row.id, earlier).catch((e) => e);
+      const error = await service.approveReservation(row.id).catch((e) => e);
 
       expect(error).toBeInstanceOf(InvalidStateError);
       expect((error as InvalidStateError).expectedState).toBe(S.PENDING_APPROVAL);
@@ -184,20 +191,39 @@ describe("DD-T6 state transition — only allowed source states (DR3)", () => {
   );
 });
 
-describe("DD-T7 interface contract — LifecyclePolicy precondition: Resource exists", () => {
-  // DD (Key interface 3, Rozdíly proti kódu): chybějící Resource uvnitř transakce je
-  // porušený invariant → chyba. Kód 7ba6a05 pokračuje přímým Confirm
-  // (`resource?.requiresApproval`). `it.fails` dokládá rozdíl design ↔ code pro krok 6;
-  // po implementaci N1 se z něj musí stát běžný `it`.
-  it.fails("DD-T7: Confirm whose Resource is missing inside the transaction must fail and write nothing", async () => {
+describe("DD-T7 interface contract — precondition: the Resource exists", () => {
+  // DD (Key interface 3): chybějící Resource uvnitř transakce je porušený invariant,
+  // ne vstup routingu BR-05 — jinak by se rezervace potvrdila bez ohledu na schvalování.
+  it("DD-T7: Confirm whose Resource is missing inside the transaction → MissingResourceError, nothing written", async () => {
     const orphan = store.addReservation({ resourceId: "missing-resource", startsAt, endsAt });
 
-    await expect(service.confirmReservation(orphan.id, earlier)).rejects.toThrow();
+    await expect(service.confirmReservation(orphan.id)).rejects.toBeInstanceOf(MissingResourceError);
+
     expect(store.stateOf(orphan.id)).toBe(S.DRAFT);
+    expect(store.calls).toContain("rollback");
   });
 });
 
-describe("DD decisions waiting for implementation (krok 6)", () => {
-  it.todo("DD-T8 (N2 Clock): now() is read exactly once per command, after the Resource lock is acquired");
-  it.todo("DD-T9 (N1 LifecyclePolicy): decideConfirm / decideApprove decision table as pure function, without the store");
+describe("DD-T8 interface contract — Clock (N2)", () => {
+  it("DD-T8: now() is read exactly once per command, inside the transaction, after the lock", async () => {
+    const reads: number[] = [];
+    const counting = { now: () => { reads.push(store.calls.length); store.calls.push("clock.now"); return earlier; } };
+    const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
+
+    await new ReservationService(store, counting).confirmReservation(draft.id);
+
+    expect(reads).toHaveLength(1);
+    expect(store.calls.indexOf(`lock:${TABLE}`)).toBeLessThan(store.calls.indexOf("clock.now"));
+    expect(store.calls.indexOf("clock.now")).toBeLessThan(store.calls.indexOf("commit"));
+  });
+
+  it("DD-T8b: a deadline crossed while waiting for the lock counts → CANCELLED + NoShowExpiredError", async () => {
+    const draft = store.addReservation({ resourceId: TABLE, startsAt, endsAt });
+    clock.set(beforeCutoff);
+    // Požadavek přišel před lhůtou, ale zámek získá až po ní.
+    store.whileWaitingForLock(() => clock.set(cutoff));
+
+    await expect(service.confirmReservation(draft.id)).rejects.toBeInstanceOf(NoShowExpiredError);
+    expect(store.stateOf(draft.id)).toBe(S.CANCELLED);
+  });
 });

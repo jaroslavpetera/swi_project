@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-12T12:45:29.858Z",
+  "startedAt": "2026-10-12T12:48:49.545Z",
   "provider": "postgresql",
   "steps": [
     "Non-empty SQLite transfer: all six models, identical retry, refusal of differing target",
@@ -8,13 +8,13 @@
       "migrationDrift": 0
     }
   ],
-  "baseCommit": "ef8257c1bf4558ab430dbd4eebd98cebaae0b5b3",
+  "baseCommit": "ad1ede6be261ee0e08a64e109d7c20a951ed17ef",
   "version": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
   "isolation": "read committed",
   "tests": {
-    "passed": 119,
+    "passed": 137,
     "failed": 0,
-    "total": 121,
+    "total": 137,
     "skipped": 0
   },
   "suites": [
@@ -99,15 +99,71 @@
       ]
     },
     {
-      "file": "tests/postgres/lock-mechanism.test.ts",
+      "file": "tests/domain/lifecyclePolicy.test.ts",
       "status": "passed",
       "tests": [
         {
-          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) with the Resource lock, the second decision sees the committed winner",
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: false }",
           "status": "passed"
         },
         {
-          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) removing only the lock reproduces two overlapping confirmations",
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state CONFIRMED, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state PENDING_APPROVAL, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state CANCELLED, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: PENDING_APPROVAL at 2027-06-01T17:29:59.999Z → { kind: 'Allocate' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: PENDING_APPROVAL at 2027-06-01T17:30:00.000Z → { kind: 'Close', to: 'EXPIRED', cause: 'APPROVAL_DEADLINE' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: DRAFT at 2027-06-01T17:29:59.999Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: CONFIRMED at 2027-06-01T17:30:00.000Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: EXPIRED at 2027-06-01T17:30:00.000Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: overlapping CONFIRMED → Conflict with its id",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: the candidate is never its own conflict",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: touching interval and non-CONFIRMED rows → Free",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: policy is pure — frozen inputs, no exception, same input → same decision",
           "status": "passed"
         }
       ]
@@ -208,6 +264,20 @@
         },
         {
           "name": "isPastCancellationWindow is true once now reaches or passes the reservation's start",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/postgres/lock-mechanism.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) with the Resource lock, the second decision sees the committed winner",
+          "status": "passed"
+        },
+        {
+          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) removing only the lock reproduces two overlapping confirmations",
           "status": "passed"
         }
       ]
@@ -339,16 +409,16 @@
           "status": "passed"
         },
         {
-          "name": "DD-T7 interface contract — LifecyclePolicy precondition: Resource exists DD-T7: Confirm whose Resource is missing inside the transaction must fail and write nothing",
+          "name": "DD-T7 interface contract — precondition: the Resource exists DD-T7: Confirm whose Resource is missing inside the transaction → MissingResourceError, nothing written",
           "status": "passed"
         },
         {
-          "name": "DD decisions waiting for implementation (krok 6) DD-T8 (N2 Clock): now() is read exactly once per command, after the Resource lock is acquired",
-          "status": "todo"
+          "name": "DD-T8 interface contract — Clock (N2) DD-T8: now() is read exactly once per command, inside the transaction, after the lock",
+          "status": "passed"
         },
         {
-          "name": "DD decisions waiting for implementation (krok 6) DD-T9 (N1 LifecyclePolicy): decideConfirm / decideApprove decision table as pure function, without the store",
-          "status": "todo"
+          "name": "DD-T8 interface contract — Clock (N2) DD-T8b: a deadline crossed while waiting for the lock counts → CANCELLED + NoShowExpiredError",
+          "status": "passed"
         }
       ]
     },
@@ -582,9 +652,9 @@
     }
   ],
   "status": "passed",
-  "completedAt": "2026-10-12T12:46:09.958Z",
+  "completedAt": "2026-10-12T12:49:20.156Z",
   "snapshot": {
-    "sha256": "60a38f73a03702160a37372dc7b57a4082e6c9862d3f58415fe8dc4ea81e3a60",
+    "sha256": "6a4b3477eb6442a09ced95af0b9919074775fdb6e545a4706e4e0c38033b4219",
     "inputs": [
       {
         "file": "docker-compose.yml",
@@ -707,12 +777,20 @@
         "sha256": "89cdbdd038930bbd032db3eaeb7fd5457717bd60a20384552ab29b268be4573f"
       },
       {
+        "file": "src/domain/clock.ts",
+        "sha256": "195d0bcbcede6823f355e56f66b36fd111499f55ce9b74780b13e09accc9447e"
+      },
+      {
+        "file": "src/domain/lifecyclePolicy.ts",
+        "sha256": "2e51a5e8523da639d21754ee1707daa21534f62c38d118d7d3a8f5105099c2f1"
+      },
+      {
         "file": "src/domain/rules.ts",
         "sha256": "2fdcacda6ad17205754b906e2a08ed74059cd3453da514c1a05466e367fd90dc"
       },
       {
         "file": "src/domain/types.ts",
-        "sha256": "774e5f2e9003ea454b23eaf2fb46efce2f2d734b217b4e954affdaaf8830aa2a"
+        "sha256": "96530f84976cc11ff507b6adce7852b4d926bc13efdd924a0e8659766bb48def"
       },
       {
         "file": "src/http/app.ts",
@@ -728,7 +806,7 @@
       },
       {
         "file": "src/repositories/reservationRepository.ts",
-        "sha256": "d1e31314a1a86b4be56193b25f7153704af55ac237c259306676f95ab21103e5"
+        "sha256": "32e7da38552575b548e16b6a5a53d9b0c8241fe7ed5cb8cf28c41c2da2d45572"
       },
       {
         "file": "src/services/availabilityService.ts",
@@ -740,11 +818,15 @@
       },
       {
         "file": "src/services/reservationService.ts",
-        "sha256": "3b44d775895e3db45e14b437814dddec4db0c7ced48ce1033b4441f1866b2fb2"
+        "sha256": "e4a952c65db7e3bdb987d0b4b7f8cb6afcc7128b98013daf15b426ed52538d11"
       },
       {
         "file": "tests/architecture/lifecycle-ownership.test.ts",
         "sha256": "62da18c45f0ede4b40d1ead611151411c8541802bded1890fb29d9fd9d08b3fa"
+      },
+      {
+        "file": "tests/domain/lifecyclePolicy.test.ts",
+        "sha256": "306eb20eef5bf6e2041d7274d0d79aafcb3c7bd096593fb6316587756f21fe1e"
       },
       {
         "file": "tests/domain/ordering.test.ts",
@@ -760,27 +842,27 @@
       },
       {
         "file": "tests/postgres/lock-mechanism.test.ts",
-        "sha256": "77f9b3a8c804bb1566ad658dd905a2beb4ffb288e17dfda204f7207510ee9aae"
+        "sha256": "468469fe9b2a88e83ffbad72cb2b9659aa086230f18c8825fb71634f2095cf1e"
       },
       {
         "file": "tests/services/concurrency.test.ts",
-        "sha256": "0620fb3e0b721fb07f83a9774eab9b68cbabfbeecd54ed23fc770ba8b29968e8"
+        "sha256": "a807cc70bbdd78e0b8c99e343ed433465fd85dcc8bbd9aeb7a0e3077ea29c963"
       },
       {
         "file": "tests/services/reservationLifecycle.unit.test.ts",
-        "sha256": "3a0efa822d5cb18a18d12ffe6dcb503ed056c6760158ad1f6a17c1cd4f8cca71"
+        "sha256": "d83c1c0ad6665e1ef78415e3769e27c9863594f43e299fd403815499fbb88bf1"
       },
       {
         "file": "tests/services/reservationService.test.ts",
-        "sha256": "5b86139bf887311ed2133ae9fe52d6486ee3b091ff85d756e6528af2b4fc9cef"
+        "sha256": "ff7c27b66d5acccd58c8795dbe11e8b89b142f7b5222a861a3a3307a2c80d1d5"
       },
       {
         "file": "tests/services/reservationTx.contract.test.ts",
-        "sha256": "f01ca804012741ef5a1def195104ba7dd184970663b35d2eda0d4486739be0c1"
+        "sha256": "fe048bdd9c397bb389c74a4bb21b82a64799e5efa39f080a5f4ef7491f1736aa"
       },
       {
         "file": "tests/spec/c02-completion.test.ts",
-        "sha256": "abe56456fcc46fb53a77f70ece583fbea7ec16b19783e7d7c5bfd0178e31f002"
+        "sha256": "fb14ee55a49c4a7d8b18727811cad2e75d43278d552b2d59ddf2a963cf29cc58"
       },
       {
         "file": "tests/spec/op01-op02.test.ts",
@@ -795,8 +877,12 @@
         "sha256": "3cb5a293308e171827c935ecf44385f465a3b1c63d41db0e24ec4524434de0bd"
       },
       {
+        "file": "tests/support/clock.ts",
+        "sha256": "e7767b9c953116e8da633e0eb92515fe9ed5781c0f221bbd96c06b57aed8de89"
+      },
+      {
         "file": "tests/support/inMemoryReservationStore.ts",
-        "sha256": "ccca7f83dec48c091ea3853cde4dcc9f0e7f4954d15393e908185c5ddb617bdd"
+        "sha256": "71dc2fb81913785874e16225ecadd133c3db86269db38707905815029b2bc8ac"
       },
       {
         "file": "tsconfig.json",

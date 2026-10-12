@@ -151,12 +151,16 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 
 ## Michal — kroky 5 a 6 (verifikace)
 
-> **Stav 12. 10. 2026:** M1–M3 připravené v [C05 DD Verification Evidence](evidence-and-evolution.md#c05-dd-verification-evidence)
-> (s AI → čeká na lidské review, A9). Testy jsou odvozené z kroků 1–3 (krok 4 zatím chybí):
-> DD-T1–T7 unit přes fake store, DD-T10 komponentový kontrakt `transition`, DD-T11 = `lock-mechanism.test.ts`.
-> **Pro Jardu (implementace):** DD-T7 je `it.fails` (chybějící Resource) → po opravě změnit na `it`;
-> DD-T8 (Clock) a DD-T9 (LifecyclePolicy) jsou `it.todo` → napsat po N1/N2. Pak přepsat mismatch tabulku.
-> **Pro Honzu:** zkontrolovat rozhodovací tabulku kroku 4 proti DD-T1–T6.
+> **Stav 12. 10. 2026:** M1–M3 hotové v [C05 DD Verification Evidence](evidence-and-evolution.md#c05-dd-verification-evidence)
+> (s AI → čeká na lidské review, A9). Testy DD-T1–T11 jsou odvozené z kroků 1–3:
+> - unit přes fake store: `tests/services/reservationLifecycle.unit.test.ts`;
+> - rozhodovací tabulka policy: `tests/domain/lifecyclePolicy.test.ts`;
+> - kontrakt `transition` nad DB: `tests/services/reservationTx.contract.test.ts`;
+> - souběh: `lock-mechanism.test.ts`.
+>
+> Testy jsou upravené na Jardovo N1/N2. Mismatch je přepsaný: všechny tři rozdíly jsou YES.
+> `npm test` na PostgreSQL 16.14: 137/137. Mutační kontrola: 5/5 zanesených chyb zachyceno.
+> **Pro Honzu:** po kroku 4 porovnat rozhodovací tabulku s DD-T9 a metody s DD-T1–T8.
 
 ### M1 — Krok 5: Testy odvozené z DD (min. 5)
 - [x] Tabulka *DD element / decision | What must hold? | Test level | Test case* — každý řádek musí odkazovat na konkrétní prvek z kroků 3–4. Minimálně:
@@ -175,12 +179,12 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 ### M2 — Implementace testů (N3)
 - [x] In-memory `ReservationStore` / `ReservationTx` fake v `tests/` (žádná DB), umožní nastavit Resource, potvrzené rezervace a stav viděný uvnitř tx.
 - [x] Nové unit testy v `tests/services/` (např. `reservationLifecycle.unit.test.ts`); názvy testů = ID řádků z M1, ať je vazba DD → test dohledatelná.
-- [ ] Spustit `npm test` (PostgreSQL sada) — výsledek uložit do `docs/evidence/c05-*.json` jako u C03.
+- [x] Spustit `npm test` (PostgreSQL sada) — výsledek uložit do `docs/evidence/c05-*.json` jako u C03.
 
 ### M3 — Krok 6: Evidence `## C05 DD Verification Evidence`
 - [x] *Tests derived from DD* — odkaz na tabulku M1.
 - [x] *Unit/component tests executed* — příkaz, počet testů, výsledek, datum, prostředí.
-- [x] *Design ↔ implementation mismatch* (předběžně — přepsat po implementaci N1/N2) — tabulka *DD decision / Implemented? (YES/PARTLY/NO) / Evidence (file/test) / Action (keep / update DD / update code)*. Podklady dodá Jarda (co z N1/N2 udělal) a Honza (review kódu proti krokům 3–4).
+- [x] *Design ↔ implementation mismatch* (po implementaci N1/N2) — tabulka *DD decision / Implemented? (YES/PARTLY/NO) / Evidence (file/test) / Action (keep / update DD / update code)*. Podklady dodá Jarda (co z N1/N2 udělal) a Honza (review kódu proti krokům 3–4).
 - [x] *Resolution* — u každého rozdílu, **proč** jsme rozhodli tak, jak jsme rozhodli.
 - [x] *Remaining design risk* — např. Ordering a Cancel mimo DD; SQLite nerozliší zámek; disciplína „stav mění jen Lifecycle“ (L2).
 - [ ] *Commit/tag* — hash commitu s DD, hash commitu s implementací, tag `c05-detailed-design`.
@@ -221,9 +225,9 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 - [ ] detailed sequence
 - [ ] významné methods / operations
 - [ ] algorithm / decision logic
-- [ ] minimálně 5 testů odvozených z DD
-- [ ] testy spuštěné
-- [ ] DD porovnáno s implementací
+- [x] minimálně 5 testů odvozených z DD
+- [x] testy spuštěné
+- [x] DD porovnáno s implementací
 - [ ] commit/tag (`c05-detailed-design`), PR `c05` → `main`
 - [ ] lidské review AI výstupů zapsané (A9)
 - [ ] `npm run verify:docs` projde (odkazy v dokumentech)
