@@ -84,12 +84,27 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 
 ## Jarda — kroky 1–3 (struktura)
 
+> **Stav 12. 10. 2026:** J1–J3 hotové v [C05 Detailed Design](architecture-and-decisions.md#c05-detailed-design)
+> (připraveno s AI → čeká na lidské review, viz A9). Návrh **předpokládá přijetí N1 + N2 + N3** —
+> pokud S0 některé odmítne, upravit ownership tabulku a diagram.
+>
+> **Předávka na S1 (názvy pro Honzu a Michala):**
+> - prvky: `ReservationService` (orchestrátor), `LifecyclePolicy` (čistý modul), `ReservationRules`,
+>   `ReservationStore`, `ReservationTx`, `Clock`
+> - rozhodnutí policy: `decideConfirm → InvalidState | Close(CANCELLED, NO_SHOW_CUTOFF) | RouteToApproval | Allocate`,
+>   `decideApprove → InvalidState | Close(EXPIRED, APPROVAL_DEADLINE) | Allocate`,
+>   `decideAllocation → Free | Conflict(id)`
+> - detailní odpovědnosti DR1–DR7 (odkazovat v metodách i testech)
+> - chyby beze změny: `NotFoundError`, `InvalidStateError`, `NoShowExpiredError`, `ApprovalExpiredError`,
+>   `OverlapError`, `ReservationConflictError`
+> - nově rozhodnuto: čas se čte **po zámku**; chybějící Resource v transakci = porušený invariant → chyba
+
 ### J1 — Krok 1: Vybraná jednotka
-- [ ] Tabulka *Selected architecture unit / Related requirement(s) / Related scenario(s) / Relevant business rule(s)* (návrh výše).
-- [ ] Jednou větou hranice: co do jednotky patří (rozhodnutí o přechodu + BR-02) a co ne (HTTP mapování R1, DB zámek R8, Availability R7).
+- [x] Tabulka *Selected architecture unit / Related requirement(s) / Related scenario(s) / Relevant business rule(s)* (návrh výše).
+- [x] Jednou větou hranice: co do jednotky patří (rozhodnutí o přechodu + BR-02) a co ne (HTTP mapování R1, DB zámek R8, Availability R7).
 
 ### J2 — Krok 2: Detailed responsibilities (3–7)
-- [ ] Tabulka *Detailed responsibility / Why is it needed?*. Návrh:
+- [x] Tabulka *Detailed responsibility / Why is it needed?*. Návrh:
   - načíst aktuální stav pod zámkem Resource (ne stav z requestu)
   - ověřit, že přechod je ze stavu povolený (statechart)
   - vyhodnotit časovou lhůtu (BR-04 / BR-06) a případně zapsat terminální stav
@@ -97,16 +112,16 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
   - rozhodnout alokaci (BR-02) nad potvrzenými rezervacemi téhož Resource
   - atomicky zapsat přechod s guardem očekávaného stavu (REQ-04)
   - vrátit výsledek nebo jednoznačnou doménovou chybu (po commitu, je-li zapsán terminální stav)
-- [ ] Nemíchat se třídami — to je až krok 3.
+- [x] Nemíchat se třídami — to je až krok 3.
 
 ### J3 — Krok 3: Ownership, data/state, rozhraní
-- [ ] Tabulka *Responsibility / Owner / State/data / Why here?* — owner = `ReservationService`, `ConfirmPolicy`/`decide*` (N1), `rules.ts`, `ReservationStore`, `ReservationTx`, `Clock` (N2).
-- [ ] **Interface + kontrakt** (min. jeden, doporučuji dva):
+- [x] Tabulka *Responsibility / Owner / State/data / Why here?* — owner = `ReservationService`, `LifecyclePolicy` (N1), `rules.ts`, `ReservationStore`, `ReservationTx`, `Clock` (N2).
+- [x] **Interface + kontrakt** (min. jeden, doporučuji dva):
   - `ReservationStore.inResourceTransaction(resourceId, work)` — pre: Resource existuje; post: `work` běží serializovaně vůči ostatním transakcím téhož Resource, commit/rollback celku; failures.
   - `ReservationTx.transition(reservation, state)` — pre: `reservation.state` je stav načtený v téže tx; post: uložen nový stav; failure: `ReservationConflictError`, když se stav mezitím změnil.
   - (N1) `decideConfirm(...) : Outcome` — pre/post/failures.
-- [ ] **Focused UML structural view** — Mermaid class diagram, 4–8 prvků: `ReservationService`, policy (N1), `ReservationRules`, `ReservationStore`, `ReservationTx`, `Clock` (N2), chyby. Ukázat směr závislostí a kdo vlastní `ReservationState`. Vycházet z C03 H2, ale **zúžit a doplnit nové prvky** — ne kopírovat.
-- [ ] Na S1 předat názvy Honzovi a Michalovi.
+- [x] **Focused UML structural view** — Mermaid class diagram, 4–8 prvků: `ReservationService`, policy (N1), `ReservationRules`, `ReservationStore`, `ReservationTx`, `Clock` (N2), chyby. Ukázat směr závislostí a kdo vlastní `ReservationState`. Vycházet z C03 H2, ale **zúžit a doplnit nové prvky** — ne kopírovat.
+- [x] Na S1 předat názvy Honzovi a Michalovi.
 
 ---
 

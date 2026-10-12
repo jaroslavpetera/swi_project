@@ -963,3 +963,212 @@ vývojové DB (jejich předchozí evidence je v technickém dokončení). Mermai
 byly kontrolovány obsahově proti kódu, nikoli renderováním. Lokální zátěž nedokazuje
 produkční SLA ani běh více procesů; ruční SQL může obejít BR-02 a regex kontrola L2
 není úplná typová analýza.
+
+## C05 Detailed Design
+
+Navazuje na [C03 — Architecture](#c03--architecture): rozpracovává dovnitř jeden prvek z G2,
+**Reservation Lifecycle**, a to jeho rozhodnutí o přechodech Confirm a Approve. Je to
+**návrhový záměr**, ne popis současného kódu: kde se návrh od kódu na `main` (`7ba6a05`) liší,
+je to uvedeno u rozhodnutí a řeší to krok 6 v
+[C05 DD Verification Evidence](evidence-and-evolution.md#c05-dd-verification-evidence).
+Rozdělení práce: [`tasks-cv5.md`](tasks-cv5.md).
+
+### Selected architecture unit
+
+| Položka | Hodnota |
+|---|---|
+| Selected architecture unit / responsibility | **Reservation Lifecycle** (C03 G2, ADR-03) — rozhodnutí o přechodu Reservation při Confirm a Approve včetně alokace BR-02. Odpovědnosti R2, R3, R5, R6 z [C2](#c2-odpovědnosti-systému). |
+| Related requirement(s) | REQ-03 (Confirm), REQ-04 (souběžná alokace), REQ-06 (Approve) — [`specification.md`](specification.md) |
+| Related scenario(s) | OP-03 Confirm Reservation, OP-05 Approve (Reject jen jako sousední přechod) |
+| Relevant business rule(s) | BR-01 interval, BR-02 exkluzivita, BR-04 no-show cutoff, BR-05 approval routing, BR-06 approval deadline |
+
+**Hranice DD.** Uvnitř: od přijetí příkazu `confirm(id)` / `approve(id)` Lifecyclem po vrácení
+výsledku nebo doménové chyby. Vně (beze změny z C03): HTTP mapování chyb na status (R1, Reservation
+API), DB-specifický zámek (R8, implementace portu), dotaz na dostupnost (R7, Availability),
+Create (OP-01) a Cancel (OP-04). Cancel a Reject používají stejnou transakční cestu a stejný zdroj
+času, ale jejich pravidla tento DD nerozpracovává.
+
+### Detailed responsibilities
+
+| # | Detailed responsibility | Why is it needed? |
+|---|---|---|
+| DR1 | Najít rezervaci a Resource, jehož zámek rozhodnutí serializuje; stav pro rozhodnutí **znovu načíst až pod zámkem**. | Rozhodnutí nad stavem přečteným před zámkem by bylo zastaralé (REQ-04, ADR-03). Před zámkem je potřeba jen `resourceId`. |
+| DR2 | Určit **čas rozhodnutí** — jedno `now` na příkaz z jednoho zdroje času, přečtené až po získání zámku. | BR-04 i BR-06 musí počítat lhůtu stejně (C2 R6). Čekání na zámek může trvat až 30 s; rozhoduje okamžik rozhodnutí, ne příchodu požadavku. |
+| DR3 | Ověřit, že příkaz je z aktuálního stavu povolený (Confirm jen z DRAFT, Approve jen z PENDING_APPROVAL). | Statechart v0.2; bez toho by šlo např. oživit CANCELLED (OP-04: „cannot be resurrected“). |
+| DR4 | Vyhodnotit lhůtu (BR-04 pro Confirm, BR-06 pro Approve) a po ní rezervaci **uzavřít terminálním stavem**, který přežije chybovou odpověď. | Spec výslovně žádá „persist CANCELLED / EXPIRED and return 410“ — zápis i chyba zároveň. |
+| DR5 | Zvolit cestu podle Resource (BR-05): vyžaduje-li schválení, přejít do PENDING_APPROVAL **bez alokace**. | Pending nealokuje; BR-02 se vyhodnotí až při Approve proti tehdejšímu stavu. |
+| DR6 | Rozhodnout alokaci (BR-02) proti CONFIRMED rezervacím téhož Resource přečteným pod zámkem, bez rezervace samotné. | Jediné místo, kde se BR-02 rozhoduje (C03 D4); musí používat stejnou definici překryvu (BR-01) jako Availability. |
+| DR7 | Zapsat přechod atomicky s pojistkou očekávaného stavu a vrátit výsledek nebo **jednu doménovou chybu na jednu příčinu**. | REQ-04 („loser never overwrites“); stejná příčina musí vždy dát stejnou odpověď (C03 R1). |
+
+### Design elements and ownership
+
+| Responsibility | Owner (design element) | State / data | Why here? |
+|---|---|---|---|
+| DR1 lokalizace + opětovné načtení | `ReservationService` (orchestrátor Lifecycle, metoda `decide`) | `id` → `resourceId`; aktuální `ReservationRecord` z `ReservationTx.findById` | Jen orchestrátor zná příkaz a ví, kterou transakci otevřít; čtení pod zámkem poskytuje port. |
+| DR2 čas rozhodnutí | `Clock` (zdroj) — čte ho `ReservationService` uvnitř transakce | `now: Date`, jeden na příkaz | Jeden injektovaný zdroj času místo `new Date()` v parametrech metod; v testech nahraditelný pevným časem. **Nové (N2).** |
+| DR3 povolený přechod | `LifecyclePolicy` (čistý modul) | `current.state` | Rozhodnutí bez I/O → rozhodovací tabulka se testuje přímo, bez DB. **Nové (N1).** |
+| DR4 lhůta | `LifecyclePolicy` rozhoduje; predikáty `isExpiredDraft`, `isApprovalExpired` a konstanty lhůt zůstávají v `ReservationRules` | `current.startsAt`, `now`, `NO_SHOW_GRACE_MINUTES`, `APPROVAL_GRACE_MINUTES` | Pravidlo (kdy lhůta vypršela) se mění jinak než pořadí rozhodování; predikáty už jsou otestované a sdílené. |
+| DR5 routing | `LifecyclePolicy` | `ResourceRecord.requiresApproval` (z `ReservationTx.findResource`) | Součást téhož rozhodnutí o cílovém stavu jako DR3/DR4. |
+| DR6 alokace | `LifecyclePolicy.decideAllocation` nad `ReservationRules.findOverlappingConfirmed` | kandidát (`TimeRange`, `id`) + `ReservationRecord[]` CONFIRMED téhož Resource | Definice překryvu zůstává jedna (`rangesOverlap`) a sdílí ji Availability; policy jen rozhodne volno/konflikt. |
+| DR7 zápis | `ReservationTx.transition` (zápis + pojistka), `ReservationStore.inResourceTransaction` (atomicita, zámek); `ReservationService` převede rozhodnutí na zápis a chybu | perzistovaný `Reservation.state` | Technologie zápisu se mění nezávisle na pravidlech (C03 D2/R8); chybu vyhazuje orchestrátor, protože jen on ví, že se má vyhodit **až po commitu**. |
+
+**Vlastnictví stavu.** `ReservationState` rezervace o přechodu **rozhoduje** výhradně Lifecycle
+(policy navrhne, service provede) a **ukládá** ho výhradně `ReservationTx.transition` uvnitř
+`inResourceTransaction` — pravidlo L2 z C03 platí beze změny. Policy ani rules žádný stav nevlastní
+a nic nemění.
+
+**Směr závislostí.** `ReservationService → LifecyclePolicy → ReservationRules → domain types`;
+`ReservationService → ReservationStore/ReservationTx` (rozhraní) `← ReservationRepository`
+(adaptér). Policy nezávisí na portu ani na čase ze systému — vstupy dostává hodnotou.
+
+### Key interface(s) / contract(s)
+
+**1. `<<interface>> ReservationStore` — transakční hranice (existuje z C03, kontrakt zpřesněn)**
+
+```text
+inResourceTransaction<T>(resourceId, work: (tx: ReservationTx) => Promise<T>) : Promise<T>
+```
+
+| | |
+|---|---|
+| Preconditions | `resourceId` patří existujícímu Resource. `work` nevolá nic mimo databázi (žádný externí krok pod zámkem — ADR-03, R-15). |
+| Postconditions | `work` proběhl při držení výhradního zámku Resource až do commitu/rollbacku. Každé čtení v `work` vidí stav commitnutý předchozími transakcemi nad stejným Resource. Vrátí-li `work` hodnotu → commit a vrácení hodnoty. |
+| Failures | Výjimka z `work` → rollback, výjimka propadne beze změny (proto chyby po zápisu terminálního stavu nesmí vzniknout jako výjimka uvnitř `work` — viz DR4). Překročení `maxWait`/`timeout` 30 s → chyba databáze (nemapovaná, 500). |
+
+**2. `<<interface>> ReservationTx` — čtení a zápis uvnitř transakce**
+
+```text
+findById(id) : ReservationRecord | null
+findResource(resourceId) : ResourceRecord | null
+findConfirmedForResource(resourceId) : ReservationRecord[]
+transition(reservation, to: ReservationState) : ReservationRecord
+```
+
+| | |
+|---|---|
+| Preconditions (`transition`) | `reservation` byla přečtena v téže transakci; přechod `reservation.state → to` povolila policy. |
+| Postconditions (`transition`) | Uložený stav je `to`; vrací kopii záznamu s novým stavem. Nevyhodnocuje BR-02 ani jiné business pravidlo. |
+| Failures (`transition`) | Uložený stav ≠ `reservation.state` → `ReservationConflictError` (→ 409). Pod zámkem Resource by k tomu nemělo dojít; je to druhá pojistka REQ-04. |
+| Postconditions (`findConfirmedForResource`) | Vrací všechny CONFIRMED rezervace Resource commitnuté před získáním zámku; žádnou jinou (BR-02: jen CONFIRMED blokuje). |
+
+**3. `<<module>> LifecyclePolicy` — rozhodnutí o přechodu (nové, N1)**
+
+```text
+decideConfirm(current: ReservationRecord, resource: ResourceRecord, now: Date) : ConfirmDecision
+decideApprove(current: ReservationRecord, now: Date) : ApproveDecision
+decideAllocation(candidate: ReservationRecord, confirmed: ReservationRecord[]) : AllocationDecision
+
+ConfirmDecision    = InvalidState(expected: DRAFT)
+                   | Close(to: CANCELLED, cause: NO_SHOW_CUTOFF)
+                   | RouteToApproval
+                   | Allocate
+ApproveDecision    = InvalidState(expected: PENDING_APPROVAL)
+                   | Close(to: EXPIRED, cause: APPROVAL_DEADLINE)
+                   | Allocate
+AllocationDecision = Free | Conflict(conflictingReservationId)
+```
+
+| | |
+|---|---|
+| Preconditions | `current` je stav přečtený pod zámkem; `resource.id == current.resourceId` (Resource existuje — cizí klíč `Reservation.resourceId` je povinný); `confirmed` jsou CONFIRMED rezervace téhož Resource přečtené pod týmž zámkem. |
+| Postconditions | Vrátí právě jedno rozhodnutí; deterministické pro stejné vstupy; žádné I/O, žádná mutace vstupů. Pořadí vyhodnocení: stav → lhůta → routing; alokace je samostatný krok jen po `Allocate`. `decideAllocation` ignoruje kandidáta samotného a ne-CONFIRMED záznamy. |
+| Failures | Žádné výjimky — neúspěch je hodnota (`InvalidState`, `Close`, `Conflict`). Převod na doménovou chybu a rozhodnutí, zda se vyhodí před nebo po commitu, patří `ReservationService`. |
+
+Proč rozhodnutí jako hodnota, ne výjimka: `Close` znamená „zapiš a pak oznam chybu“; kdyby policy
+vyhazovala, rollback by zápis zahodil. Hodnota zároveň umožňuje otestovat celou rozhodovací
+tabulku unit testem bez transakce.
+
+**4. `<<interface>> Clock` (nové, N2)** — `now() : Date`. Produkce: systémový čas. Testy: pevný
+nebo posouvatelný čas. Kontrakt: `ReservationService` volá `now()` **jednou na příkaz, uvnitř
+`inResourceTransaction`, po získání zámku**.
+
+**Rozdíly proti kódu na `main`** (vstup pro krok 6, ne opravy návrhu):
+
+| Návrh | Kód `7ba6a05` |
+|---|---|
+| Rozhodnutí v `LifecyclePolicy` jako hodnota | větvení přímo v callbacku `confirmReservation` / `approveReservation` |
+| `Clock`, čas čtený po zámku | `now: Date = new Date()` jako parametr metody, vyhodnocený před čekáním na zámek |
+| Chybějící Resource uvnitř transakce = porušený invariant → chyba | `resource?.requiresApproval` — chybějící Resource potichu vede na přímý Confirm |
+
+### Focused structural view
+
+```mermaid
+classDiagram
+    direction LR
+    class ReservationService {
+        <<Reservation Lifecycle — orchestrator>>
+        +confirmReservation(id) ReservationRecord
+        +approveReservation(id) ReservationRecord
+        -decide(id, work) ReservationRecord
+    }
+    class Clock {
+        <<interface>>
+        +now() Date
+    }
+    class LifecyclePolicy {
+        <<module, pure>>
+        +decideConfirm(current, resource, now) ConfirmDecision
+        +decideApprove(current, now) ApproveDecision
+        +decideAllocation(candidate, confirmed) AllocationDecision
+    }
+    class ReservationRules {
+        <<module, pure>>
+        +isExpiredDraft(reservation, now) boolean
+        +isApprovalExpired(reservation, now) boolean
+        +findOverlappingConfirmed(candidate, confirmed) ReservationRecord
+    }
+    class ReservationStore {
+        <<interface, persistence port>>
+        +findById(id) ReservationRecord
+        +inResourceTransaction(resourceId, work) T
+    }
+    class ReservationTx {
+        <<interface>>
+        +findById(id) ReservationRecord
+        +findResource(resourceId) ResourceRecord
+        +findConfirmedForResource(resourceId) ReservationRecord[]
+        +transition(reservation, to) ReservationRecord
+    }
+    class Decision {
+        <<value>>
+        ConfirmDecision, ApproveDecision
+        AllocationDecision
+    }
+    class ReservationRecord {
+        <<data>>
+        id, resourceId
+        startsAt, endsAt
+        state : ReservationState
+    }
+
+    ReservationService --> Clock : now() after lock
+    ReservationService --> ReservationStore : opens transaction
+    ReservationService ..> ReservationTx : reads / transition
+    ReservationService ..> LifecyclePolicy : asks for decision
+    LifecyclePolicy ..> ReservationRules : deadline + overlap predicates
+    LifecyclePolicy ..> Decision : returns
+    ReservationStore ..> ReservationTx : provides within lock
+    ReservationTx ..> ReservationRecord : reads / persists state
+    LifecyclePolicy ..> ReservationRecord : reads only
+```
+
+Adaptér `ReservationRepository` / `PrismaReservationTx` (realizace portu) a HTTP vrstva jsou vynechány
+— nemění se a jsou v [C03 H2](#h2-návrhový-třídní-diagram). Doménové chyby (`OverlapError`,
+`InvalidStateError`, `NoShowExpiredError`, `ApprovalExpiredError`, `NotFoundError`) vytváří jen
+`ReservationService` z rozhodnutí policy; jejich mapování popisuje krok 4.
+
+### Detailed sequence
+
+*Doplní Honza — [H3](tasks-cv5.md#h3--detailed-sequence).*
+
+### Important methods / operations
+
+*Doplní Honza — [H1](tasks-cv5.md#h1--significant-methods--operations).*
+
+### Algorithm / decision logic
+
+*Doplní Honza — [H2](tasks-cv5.md#h2--algorithm--decision-logic).*
+
+### DD decisions intentionally left to code
+
+*Doplní Honza — [H4](tasks-cv5.md#h4--dd-decisions-intentionally-left-to-code).*

@@ -329,3 +329,8 @@ historický commit `b315e87`. Nové změny nejsou součástí původního tagu.
 Aktuální ověření, SHA-256 ověřených souborů, přenos dat a zátěž jsou v
 [technické evidenci](c03-technical-completion.md). Technické běhy samy nejsou lidským
 schválením; následné lidské review Honzy je doloženo výše samostatně.
+
+## C05 DD Verification Evidence
+
+*Doplní Michal po S2 — [M1–M3](tasks-cv5.md#michal--kroky-5-a-6-verifikace). Návrh je v
+[C05 Detailed Design](architecture-and-decisions.md#c05-detailed-design).*
