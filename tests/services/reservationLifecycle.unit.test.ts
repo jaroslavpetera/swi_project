@@ -118,6 +118,16 @@ describe("DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7)", 
 
     expect(store.stateOf(pending.id)).toBe(S.PENDING_APPROVAL);
   });
+
+  it("DD-T3c (H2 A-F4): Approve before the deadline without conflict → CONFIRMED, exactly one write", async () => {
+    const pending = store.addReservation({ resourceId: VIP, startsAt, endsAt, state: S.PENDING_APPROVAL });
+
+    const result = await service.approveReservation(pending.id);
+
+    expect(result.state).toBe(S.CONFIRMED);
+    expect(store.stateOf(pending.id)).toBe(S.CONFIRMED);
+    expect(store.calls.filter((c) => c.startsWith("tx.transition"))).toEqual([`tx.transition:${S.CONFIRMED}`]);
+  });
 });
 
 describe("DD-T4 collaboration — decide on state read under the lock (DR1)", () => {

@@ -337,7 +337,8 @@ Ověřuje návrh v [C05 Detailed Design](architecture-and-decisions.md#c05-detai
 
 > **Stav 12. 10. 2026 (Michal, připraveno s AI → čeká na lidské review, A9):**
 > - Testy jsou odvozené z kroků 1–3 DD: DR1–DR7, kontrakty 1–4 a *Rozdíly proti kódu na `main`*.
-> - Krok 4 (Honza) je doplněný níže. Jeho rozhodovací tabulku je potřeba porovnat s DD-T9 a metody s DD-T1–T8.
+> - Krok 4 (Honza) je doplněný. Jeho rozhodovací tabulky H2 jsou porovnané s testy
+  [níže](#pokrytí-rozhodovacích-tabulek-h2-testy). Všech 9 řádků je pokrytých, chybějící test pro A-F4 byl doplněn (DD-T3c).
 > - Testy ověřují návrhový záměr. Nejdřív se psaly proti kódu `7ba6a05` před N1/N2: tam DD-T7 selhal
 >   (`it.fails`) a DD-T8/T9 čekaly (`todo`).
 > - Po Jardově implementaci (`f24326a`) testy přešly na `Clock` a DD-T7–T9 jsou plnohodnotné testy.
@@ -391,6 +392,28 @@ Testovací dvojníci:
 - *What design decision does this test verify?* postcondition kontraktu 1 („`work` běží
   serializovaně vůči ostatním transakcím téhož Resource“).
 
+#### Pokrytí rozhodovacích tabulek H2 testy
+
+Kontrola Honzových tabulek z [Algorithm / decision logic](architecture-and-decisions.md#algorithm--decision-logic)
+proti testům, 12. 10. 2026. Každý řádek je pokrytý na dvou úrovních: na úrovni čisté policy
+(rozhodnutí) a na úrovni služby s fake store (zápis, commit/rollback, chyba).
+
+| Řádek H2 | Policy (DD-T9) | Služba + fake store (zápis / chyba) | Shoda |
+|---|---|---|---|
+| C-F1 jiný než DRAFT → `InvalidStateError`, žádný zápis | CONFIRMED po cutoff, PENDING, CANCELLED | DD-T6 (5 stavů), DD-T4 | ano |
+| C-F2 DRAFT, `now >= cutoff` → CANCELLED, pak chyba | DRAFT v cutoff, i s `requiresApproval` | DD-T2 (commit, ne rollback), DD-T8b (cutoff během čekání na zámek) | ano |
+| C-F3 DRAFT, včas, `requiresApproval` → PENDING bez čtení CONFIRMED | `RouteToApproval` | DD-T1 (`findConfirmedForResource` se nevolá) | ano |
+| C-F4 DRAFT, včas, konflikt → `OverlapError(id)`, žádný zápis | `decideAllocation → Conflict(id)` | DD-T3, DD-T4b | ano |
+| C-F5 DRAFT, včas, bez konfliktu → CONFIRMED | `Allocate`, `Free` | DD-T1b, DD-T2c (1 ms před cutoff), DD-T5 | ano |
+| A-F1 jiný než PENDING → `InvalidStateError`, žádný zápis | DRAFT, CONFIRMED, EXPIRED | DD-T6b (5 stavů) | ano |
+| A-F2 PENDING, `now >= deadline` → EXPIRED, pak chyba | PENDING v deadline | DD-T2b | ano |
+| A-F3 PENDING, včas, konflikt → `OverlapError`, zůstává PENDING | `Conflict(id)` | DD-T3b | ano |
+| A-F4 PENDING, včas, bez konfliktu → CONFIRMED, jeden zápis | `Allocate` | **DD-T3c (doplněn při této kontrole)** | ano |
+
+Pseudocode alokace (striktní překryv, ignorování vlastního id, DRAFT/PENDING neblokují) pokrývají
+DD-T5 a DD-T9 › *candidate is never its own conflict* / *touching interval*. Pravidlo H2 „Clock
+se čte jednou po zámku“ pokrývá DD-T8. **Rozpor mezi krokem 4, testy a kódem nebyl nalezen.**
+
 ### Unit/component tests executed
 
 Prostředí 12. 10. 2026: Windows 11, Node, Vitest 2.1.1.
@@ -405,7 +428,8 @@ Prostředí 12. 10. 2026: Windows 11, Node, Vitest 2.1.1.
 | Mutace M4: v `decideConfirm` vynechán routing BR-05 | **2 failed**: DD-T1, DD-T9 |
 | Mutace M5: `decideAllocation` nevyřadí kandidáta | **1 failed**: DD-T9 |
 | Po každé mutaci kód vrácen | 39 passed; `git status src` beze změn |
-| `npm test` (embedded PostgreSQL **16.14**, `read committed`, nová DB, migrace + seed + `tsc` + celá sada) | **137 passed, 0 failed, 0 todo** (14 souborů), včetně DD-T1–T11 a L2 `lifecycle-ownership` — [`c05-postgres-tests.json`](evidence/c05-postgres-tests.json) |
+| Po kontrole kroku 4: přidán DD-T3c (A-F4), stejný příkaz bez DB | **40 passed** (24 + 16) |
+| `npm test` (embedded PostgreSQL **16.14**, `read committed`, nová DB, migrace + seed + `tsc` + celá sada) | **137 passed, 0 failed, 0 todo** (14 souborů), včetně DD-T1–T11 a L2 `lifecycle-ownership` — [`c05-postgres-tests.json`](evidence/c05-postgres-tests.json). Běh proběhl před přidáním DD-T3c, který nepotřebuje DB. Opakovaný běh po něm se nespustil, protože běžící `npm run dev` držel zamčený Prisma engine (EPERM). Je potřeba ho zopakovat před tagem. |
 
 ### Design ↔ implementation mismatch
 
@@ -443,8 +467,9 @@ je ve sloupci *Před*.
 
 ### Remaining design risk
 
-- **Krok 4 DD je nyní doplněný.** Implementace `f24326a` v historii větve předešla
-  jeho začlenění při rebase Honzova souběžně připraveného commitu. Je potřeba ověřit, že kroku 4 odpovídají testy DD-T1–T9 i kód.
+- **Krok 4 DD je doplněný a ověřený proti testům** (viz *Pokrytí rozhodovacích tabulek H2*). V historii
+  větve ale implementace `f24326a` předchází commitu s krokem 4. Krok 4 byl připravený souběžně a do větve
+  se dostal až rebasem. Zadání chce DD před implementací. Kroky 1–3 (`ef8257c`) implementaci předcházejí.
 - Fake store modeluje kontrakty 1–2, ne skutečnou DB. Shodu adaptéru s kontraktem dokládají jen
   DD-T10 (transition, čtení) a DD-T11 (zámek). Kontrakt „timeout 30 s → chyba DB“ testem pokrytý není.
 - Cancel (OP-04), Reject a Ordering jsou mimo DD. Používají stejnou transakční cestu a `Clock`, ale
