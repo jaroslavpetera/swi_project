@@ -151,8 +151,15 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 
 ## Michal — kroky 5 a 6 (verifikace)
 
+> **Stav 12. 10. 2026:** M1–M3 připravené v [C05 DD Verification Evidence](evidence-and-evolution.md#c05-dd-verification-evidence)
+> (s AI → čeká na lidské review, A9). Testy jsou odvozené z kroků 1–3 (krok 4 zatím chybí):
+> DD-T1–T7 unit přes fake store, DD-T10 komponentový kontrakt `transition`, DD-T11 = `lock-mechanism.test.ts`.
+> **Pro Jardu (implementace):** DD-T7 je `it.fails` (chybějící Resource) → po opravě změnit na `it`;
+> DD-T8 (Clock) a DD-T9 (LifecyclePolicy) jsou `it.todo` → napsat po N1/N2. Pak přepsat mismatch tabulku.
+> **Pro Honzu:** zkontrolovat rozhodovací tabulku kroku 4 proti DD-T1–T6.
+
 ### M1 — Krok 5: Testy odvozené z DD (min. 5)
-- [ ] Tabulka *DD element / decision | What must hold? | Test level | Test case* — každý řádek musí odkazovat na konkrétní prvek z kroků 3–4. Minimálně:
+- [x] Tabulka *DD element / decision | What must hold? | Test level | Test case* — každý řádek musí odkazovat na konkrétní prvek z kroků 3–4. Minimálně:
 
 | DD element | Co musí platit | Úroveň | Test case (návrh) |
 |---|---|---|---|
@@ -163,19 +170,19 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 | collaboration | Lifecycle rozhoduje nad stavem z `tx.findById`, ne nad stavem z prvního čtení mimo tx | unit (fake store vrací jiný stav uvnitř tx) | nový |
 | collaboration | dva souběžné Confirm na PostgreSQL → právě jeden vítěz | integration (PostgreSQL) | existuje `lock-mechanism.test.ts` → odkázat |
 
-- [ ] U **alespoň dvou** testů rozepsat *Selected level / Why this level / What design decision does this test verify?* (doporučuji fake-store „rozhoduje nad stavem z tx“ a PostgreSQL souběh — ukazují, proč jeden je unit a druhý integrace).
+- [x] U **alespoň dvou** testů rozepsat *Selected level / Why this level / What design decision does this test verify?* (doporučuji fake-store „rozhoduje nad stavem z tx“ a PostgreSQL souběh — ukazují, proč jeden je unit a druhý integrace).
 
 ### M2 — Implementace testů (N3)
-- [ ] In-memory `ReservationStore` / `ReservationTx` fake v `tests/` (žádná DB), umožní nastavit Resource, potvrzené rezervace a stav viděný uvnitř tx.
-- [ ] Nové unit testy v `tests/services/` (např. `reservationLifecycle.unit.test.ts`); názvy testů = ID řádků z M1, ať je vazba DD → test dohledatelná.
+- [x] In-memory `ReservationStore` / `ReservationTx` fake v `tests/` (žádná DB), umožní nastavit Resource, potvrzené rezervace a stav viděný uvnitř tx.
+- [x] Nové unit testy v `tests/services/` (např. `reservationLifecycle.unit.test.ts`); názvy testů = ID řádků z M1, ať je vazba DD → test dohledatelná.
 - [ ] Spustit `npm test` (PostgreSQL sada) — výsledek uložit do `docs/evidence/c05-*.json` jako u C03.
 
 ### M3 — Krok 6: Evidence `## C05 DD Verification Evidence`
-- [ ] *Tests derived from DD* — odkaz na tabulku M1.
-- [ ] *Unit/component tests executed* — příkaz, počet testů, výsledek, datum, prostředí.
-- [ ] *Design ↔ implementation mismatch* — tabulka *DD decision / Implemented? (YES/PARTLY/NO) / Evidence (file/test) / Action (keep / update DD / update code)*. Podklady dodá Jarda (co z N1/N2 udělal) a Honza (review kódu proti krokům 3–4).
-- [ ] *Resolution* — u každého rozdílu, **proč** jsme rozhodli tak, jak jsme rozhodli.
-- [ ] *Remaining design risk* — např. Ordering a Cancel mimo DD; SQLite nerozliší zámek; disciplína „stav mění jen Lifecycle“ (L2).
+- [x] *Tests derived from DD* — odkaz na tabulku M1.
+- [x] *Unit/component tests executed* — příkaz, počet testů, výsledek, datum, prostředí.
+- [x] *Design ↔ implementation mismatch* (předběžně — přepsat po implementaci N1/N2) — tabulka *DD decision / Implemented? (YES/PARTLY/NO) / Evidence (file/test) / Action (keep / update DD / update code)*. Podklady dodá Jarda (co z N1/N2 udělal) a Honza (review kódu proti krokům 3–4).
+- [x] *Resolution* — u každého rozdílu, **proč** jsme rozhodli tak, jak jsme rozhodli.
+- [x] *Remaining design risk* — např. Ordering a Cancel mimo DD; SQLite nerozliší zámek; disciplína „stav mění jen Lifecycle“ (L2).
 - [ ] *Commit/tag* — hash commitu s DD, hash commitu s implementací, tag `c05-detailed-design`.
 
 ---
