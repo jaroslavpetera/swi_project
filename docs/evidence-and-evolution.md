@@ -329,3 +329,203 @@ historický commit `b315e87`. Nové změny nejsou součástí původního tagu.
 Aktuální ověření, SHA-256 ověřených souborů, přenos dat a zátěž jsou v
 [technické evidenci](c03-technical-completion.md). Technické běhy samy nejsou lidským
 schválením; následné lidské review Honzy je doloženo výše samostatně.
+
+## C05 DD Verification Evidence
+
+Ověřuje návrh v [C05 Detailed Design](architecture-and-decisions.md#c05-detailed-design)
+(jednotka Reservation Lifecycle, Confirm / Approve). Rozdělení práce: [M1–M3](tasks-cv5.md#michal--kroky-5-a-6-verifikace).
+
+> **Stav 12. 10. 2026 (Michal, připraveno s AI → čeká na lidské review, A9):**
+> - Testy jsou odvozené z kroků 1–3 DD: DR1–DR7, kontrakty 1–4 a *Rozdíly proti kódu na `main`*.
+> - Krok 4 (Honza) je doplněný. Jeho rozhodovací tabulky H2 jsou porovnané s testy
+  [níže](#pokrytí-rozhodovacích-tabulek-h2-testy). Všech 9 řádků je pokrytých, chybějící test pro A-F4 byl doplněn (DD-T3c).
+> - Testy ověřují návrhový záměr. Nejdřív se psaly proti kódu `7ba6a05` před N1/N2: tam DD-T7 selhal
+>   (`it.fails`) a DD-T8/T9 čekaly (`todo`).
+> - Po Jardově implementaci (`f24326a`) testy přešly na `Clock` a DD-T7–T9 jsou plnohodnotné testy.
+
+### Tests derived from DD
+
+| ID | DD element / decision | What must hold? | Test level | Test case |
+|---|---|---|---|---|
+| DD-T1 | **algorithm branch:** DR5, `decideConfirm → RouteToApproval` | DRAFT na Resource s `requiresApproval` → PENDING_APPROVAL. BR-02 se **nevyhodnocuje** (nečte se `findConfirmedForResource`), ani když existuje překrývající se CONFIRMED. Bez schválení → `Allocate` → CONFIRMED. | unit (fake store) | `reservationLifecycle.unit.test.ts` › DD-T1, DD-T1b |
+| DD-T2 | **state transition:** DR4, `Close(CANCELLED / EXPIRED)` — „zapiš a pak oznam“ | V okamžiku lhůty BR-04 se uloží CANCELLED **a** vyhodí se `NoShowExpiredError`. Transakce commitne, nesmí udělat rollback. Totéž pro BR-06: EXPIRED + `ApprovalExpiredError`. 1 ms před lhůtou se tato větev nevezme. | unit (fake store) | DD-T2, DD-T2b, DD-T2c |
+| DD-T3 | **failure behavior:** DR6/DR7, `decideAllocation → Conflict` | Překryv s CONFIRMED → `OverlapError` s id konfliktní rezervace. Nic se nezapíše, stav zůstane DRAFT / PENDING_APPROVAL a transakce udělá rollback. Approve vyhodnocuje BR-02 znovu v okamžiku rozhodnutí. | unit (fake store) | DD-T3, DD-T3b |
+| DD-T4 | **collaboration:** DR1, kontrakt 1 („čtení pod zámkem“) | Rozhoduje se nad stavem z `tx.findById` po zámku, ne nad prvním čtením mimo transakci. Pořadí volání je `store.findById → lock → tx.findById`. Změna commitnutá během čekání na zámek vede na `InvalidStateError` nebo `OverlapError`. | unit (fake store) | DD-T4, DD-T4b |
+| DD-T5 | **algorithm:** DR6, rozsah alokace (BR-01) | Neblokují: dotýkající se CONFIRMED interval (polouzavřený), překrývající se DRAFT / PENDING / CANCELLED / REJECTED / EXPIRED ani CONFIRMED jiného Resource. | unit (fake store) | DD-T5 |
+| DD-T6 | **state transition:** DR3, `InvalidState(expected)` | Confirm jen z DRAFT, Approve jen z PENDING_APPROVAL. Z ostatních stavů skončí `InvalidStateError` se správným `expectedState` a stav se nezmění (nelze např. oživit CANCELLED). | unit (fake store) | DD-T6 (5 stavů), DD-T6b (5 stavů) |
+| DD-T7 | **interface contract:** kontrakt 3, precondition „Resource existuje“ | Chybějící Resource uvnitř transakce = porušený invariant → `MissingResourceError`. Nic se nezapíše, rollback. | unit (fake store) | DD-T7 |
+| DD-T8 | **interface contract:** kontrakt 4 `Clock` (N2), DR2 | `now()` se čte **jednou** na příkaz, uvnitř transakce, po zámku. Lhůta překročená během čekání na zámek se počítá: požadavek přijde před cutoff, zámek získá po něm → CANCELLED + `NoShowExpiredError`. | unit (fake store + test clock) | DD-T8, DD-T8b |
+| DD-T9 | **algorithm / decision table:** kontrakt 3 `LifecyclePolicy` (N1) | Celá tabulka `decideConfirm` (7 kombinací) a `decideApprove` (5) i pořadí *stav → lhůta → routing*: po cutoff se neposílá ke schválení, CONFIRMED po cutoff se nezavírá. `decideAllocation` vrací `Conflict(id)` / `Free`, kandidát není svým konfliktem. Policy je čistá: zmrazené vstupy, žádná výjimka, deterministická. | unit (čistá funkce, bez úložiště) | `tests/domain/lifecyclePolicy.test.ts` › DD-T9 (16 případů) |
+| DD-T10 | **interface contract:** kontrakt 2 `ReservationTx.transition` / `findConfirmedForResource` | Ze zastaralého stavu → `ReservationConflictError` a novější stav se nepřepíše. Z aktuálního stavu se nový stav uloží. `findConfirmedForResource` vrací jen CONFIRMED daného Resource. | component (skutečná DB, Prisma adaptér) | `reservationTx.contract.test.ts` › DD-T10, DD-T10b, DD-T10c (**nový**, kontrakt dřív neměl test) |
+| DD-T11 | **collaboration / concurrency:** kontrakt 1, ADR-03 | Dvě souběžná rozhodnutí o alokaci na PostgreSQL READ COMMITTED: se zámkem Resource má právě jednoho vítěze, bez zámku vzniknou dvě CONFIRMED. | integration (PostgreSQL) | existující `tests/postgres/lock-mechanism.test.ts` |
+
+Testovací dvojníci:
+- [`tests/support/inMemoryReservationStore.ts`](../tests/support/inMemoryReservationStore.ts)
+  (N3) implementuje `ReservationStore` / `ReservationTx` podle kontraktů 1–2:
+  - commit při vrácení hodnoty, rollback při výjimce;
+  - `transition` s pojistkou očekávaného stavu;
+  - `whileWaitingForLock` simuluje transakci, která commitne během čekání na zámek;
+  - `calls` zaznamenává pořadí spolupráce.
+- [`tests/support/clock.ts`](../tests/support/clock.ts) (`TestClock`, Jarda) nahrazuje systémový čas.
+
+**DD-T4 — rozhodnutí nad stavem čteným pod zámkem**
+- *Selected level:* unit, `ReservationService` s in-memory portem.
+- *Why this level:* chování závisí na **pořadí** čtení a zámku, ne na databázi. Fake umí
+  deterministicky vložit cizí commit přesně mezi první čtení a zámek. Se skutečnou DB by to
+  vyžadovalo bariéry mezi dvěma klienty a výsledek by se hůř reprodukoval. Že skutečný zámek
+  serializuje, dokazuje zvlášť DD-T11.
+- *What design decision does this test verify?* DR1 a kontrakt 1: Lifecycle rozhoduje výhradně nad
+  stavem znovu načteným v `inResourceTransaction`. Mutace M2 níže to potvrzuje.
+
+**DD-T9 — rozhodovací tabulka LifecyclePolicy**
+- *Selected level:* unit, čistá funkce bez úložiště, transakce i hodin.
+- *Why this level:* N1 vytáhlo rozhodnutí z transakce právě proto, aby šla celá tabulka (stav ×
+  lhůta × routing) projít bez I/O a každá kombinace byla jeden řádek testu. Přes službu a DB by se
+  stejné kombinace testovaly draze a nepřímo.
+- *What design decision does this test verify?* kontrakt 3: pořadí vyhodnocení, neúspěch jako
+  hodnota (žádná výjimka) a determinismus. Mutace M4 a M5 níže to potvrzují.
+
+**DD-T11 — souběh na PostgreSQL**
+- *Selected level:* integration (skutečný PostgreSQL, dva nezávislí klienti).
+- *Why this level:* garance ADR-03 stojí na řádkovém zámku databáze pod READ COMMITTED. Fake ani
+  SQLite (`BEGIN IMMEDIATE`) ji nedokážou ani vyvrátit.
+- *What design decision does this test verify?* postcondition kontraktu 1 („`work` běží
+  serializovaně vůči ostatním transakcím téhož Resource“).
+
+#### Pokrytí rozhodovacích tabulek H2 testy
+
+Kontrola Honzových tabulek z [Algorithm / decision logic](architecture-and-decisions.md#algorithm--decision-logic)
+proti testům, 12. 10. 2026. Každý řádek je pokrytý na dvou úrovních: na úrovni čisté policy
+(rozhodnutí) a na úrovni služby s fake store (zápis, commit/rollback, chyba).
+
+| Řádek H2 | Policy (DD-T9) | Služba + fake store (zápis / chyba) | Shoda |
+|---|---|---|---|
+| C-F1 jiný než DRAFT → `InvalidStateError`, žádný zápis | CONFIRMED po cutoff, PENDING, CANCELLED | DD-T6 (5 stavů), DD-T4 | ano |
+| C-F2 DRAFT, `now >= cutoff` → CANCELLED, pak chyba | DRAFT v cutoff, i s `requiresApproval` | DD-T2 (commit, ne rollback), DD-T8b (cutoff během čekání na zámek) | ano |
+| C-F3 DRAFT, včas, `requiresApproval` → PENDING bez čtení CONFIRMED | `RouteToApproval` | DD-T1 (`findConfirmedForResource` se nevolá) | ano |
+| C-F4 DRAFT, včas, konflikt → `OverlapError(id)`, žádný zápis | `decideAllocation → Conflict(id)` | DD-T3, DD-T4b | ano |
+| C-F5 DRAFT, včas, bez konfliktu → CONFIRMED | `Allocate`, `Free` | DD-T1b, DD-T2c (1 ms před cutoff), DD-T5 | ano |
+| A-F1 jiný než PENDING → `InvalidStateError`, žádný zápis | DRAFT, CONFIRMED, EXPIRED | DD-T6b (5 stavů) | ano |
+| A-F2 PENDING, `now >= deadline` → EXPIRED, pak chyba | PENDING v deadline | DD-T2b | ano |
+| A-F3 PENDING, včas, konflikt → `OverlapError`, zůstává PENDING | `Conflict(id)` | DD-T3b | ano |
+| A-F4 PENDING, včas, bez konfliktu → CONFIRMED, jeden zápis | `Allocate` | **DD-T3c (doplněn při této kontrole)** | ano |
+
+Pseudocode alokace (striktní překryv, ignorování vlastního id, DRAFT/PENDING neblokují) pokrývají
+DD-T5 a DD-T9 › *candidate is never its own conflict* / *touching interval*. Pravidlo H2 „Clock
+se čte jednou po zámku“ pokrývá DD-T8. **Rozpor mezi krokem 4, testy a kódem nebyl nalezen.**
+
+### Unit/component tests executed
+
+Prostředí 12. 10. 2026: Windows 11, Node, Vitest 2.1.1.
+
+| Běh | Výsledek |
+|---|---|
+| Před N1/N2 (kód `7ba6a05`): `npx vitest run tests/services/reservationLifecycle.unit.test.ts` | 21 passed, 2 todo. DD-T7 jako očekávané selhání (`it.fails`): kód návrh nesplňoval. |
+| Po N1/N2 (`f24326a`): `npx vitest run tests/services/reservationLifecycle.unit.test.ts tests/domain/lifecyclePolicy.test.ts` (bez DB) | **39 passed** (23 + 16) |
+| Mutace M1: `Close` vyhodí chybu uvnitř transakce | **3 failed**: DD-T2, DD-T2b, DD-T8b (rollback zahodil terminální stav) |
+| Mutace M2: `decide` předá do rozhodnutí stav z prvního čtení (`located`) | **1 failed**: DD-T4 |
+| Mutace M3: `clock.now()` čten navíc před zámkem | **1 failed**: DD-T8 |
+| Mutace M4: v `decideConfirm` vynechán routing BR-05 | **2 failed**: DD-T1, DD-T9 |
+| Mutace M5: `decideAllocation` nevyřadí kandidáta | **1 failed**: DD-T9 |
+| Po každé mutaci kód vrácen | 39 passed; `git status src` beze změn |
+| Po kontrole kroku 4: přidán DD-T3c (A-F4), stejný příkaz bez DB | **40 passed** (24 + 16) |
+| `npm test` (embedded PostgreSQL **16.14**, `read committed`, nová DB, migrace + seed + `tsc` + celá sada) | **137 passed, 0 failed, 0 todo** (14 souborů), včetně DD-T1–T11 a L2 `lifecycle-ownership` — [`c05-postgres-tests.json`](evidence/c05-postgres-tests.json). Běh proběhl před přidáním DD-T3c, který nepotřebuje DB. Opakovaný běh po něm se nespustil, protože běžící `npm run dev` držel zamčený Prisma engine (EPERM). Je potřeba ho zopakovat před tagem. |
+
+### Design ↔ implementation mismatch
+
+Porovnání návrhu s kódem na `c05` po implementaci (`f24326a`). Stav před implementací (`7ba6a05`)
+je ve sloupci *Před*.
+
+| DD decision | Před (`7ba6a05`) | Implemented? | Evidence | Action |
+|---|---|---|---|---|
+| DR1: rozhodnutí nad stavem znovu načteným pod zámkem | YES | YES | `ReservationService.decide()`; DD-T4 | keep |
+| DR2 / N2: `Clock`, `now()` jednou na příkaz po zámku | NO (`now = new Date()` jako parametr, vyhodnocený před zámkem) | YES | `src/domain/clock.ts`, `decide()` volá `clock.now()` v transakci; DD-T8, DD-T8b | update code — provedeno |
+| DR3: povolený zdrojový stav | YES | YES | `decideConfirm` / `decideApprove` → `InvalidState`; DD-T6, DD-T9 | keep |
+| DR4: terminální stav commitnout, chybu vyhodit až po commitu | YES | YES | `Close` → `Outcome { expired }`; DD-T2, DD-T2b | keep |
+| DR5: routing BR-05 bez alokace | YES | YES | `RouteToApproval`; DD-T1, DD-T9 | keep |
+| DR6: alokace jen proti CONFIRMED téhož Resource, bez sebe, BR-01 | YES | YES | `decideAllocation`; DD-T3, DD-T5, DD-T9 | keep |
+| DR7 / kontrakt 2: pojistka očekávaného stavu v `transition` | YES | YES | `PrismaReservationTx.transition`; DD-T10b | keep |
+| Kontrakt 1: serializace podle Resource | YES | YES (PostgreSQL) | `inResourceTransaction`; DD-T11 | keep |
+| N1 / kontrakt 3: rozhodnutí v `LifecyclePolicy` jako hodnota | NO (větvení v callbacku služby) | YES | `src/domain/lifecyclePolicy.ts`; DD-T9 | update code — provedeno |
+| Kontrakt 3: chybějící Resource = porušený invariant → chyba | NO (`resource?.requiresApproval` → přímý Confirm) | YES | `MissingResourceError`; DD-T7 | update code — provedeno |
+| Mapování `MissingResourceError` na HTTP | — | PARTLY | žádné mapování v `errorMiddleware` → 500 | keep (záměr, viz Resolution) |
+
+### Resolution
+
+- **N1, N2 a chybějící Resource: změněn kód, ne DD.** Návrh byl správný a kód ho nerealizoval.
+  - N1 dává rozhodovací tabulce jedno testovatelné místo (DD-T9).
+  - N2 je jediný způsob, jak splnit C2 R6 („jednotný zdroj času“). Zároveň opravuje skutečnou vadu:
+    `now` vyhodnocené před až 30 s čekáním na zámek posouvalo lhůtu BR-04 / BR-06. Opravu dokládá
+    DD-T8b.
+  - Tiché pokračování bez Resource by obešlo BR-05, kdyby se invariant cizího klíče někdy porušil.
+- **`MissingResourceError` → 500 ponecháno.** Nastat může jen při porušeném invariantu databáze
+  (povinný cizí klíč, žádná DELETE route). Je to tedy chyba systému, ne klienta. HTTP mapování je
+  mimo hranici DD (R1, Reservation API).
+- **Ostatní řádky: keep.** C03 implementace už odpovídala DR1, DR3–DR7. Dokládají to testy
+  odvozené z DD, ne z kódu, a mutační kontrola ukazuje, že tyto testy návrh opravdu hlídají.
+- Žádný rozdíl se neřešil úpravou DD podle kódu.
+
+### Remaining design risk
+
+- **Krok 4 DD je doplněný a ověřený proti testům** (viz *Pokrytí rozhodovacích tabulek H2*). V historii
+  větve ale implementace `f24326a` předchází commitu s krokem 4. Krok 4 byl připravený souběžně a do větve
+  se dostal až rebasem. Zadání chce DD před implementací. Kroky 1–3 (`ef8257c`) implementaci předcházejí.
+- Fake store modeluje kontrakty 1–2, ne skutečnou DB. Shodu adaptéru s kontraktem dokládají jen
+  DD-T10 (transition, čtení) a DD-T11 (zámek). Kontrakt „timeout 30 s → chyba DB“ testem pokrytý není.
+- Cancel (OP-04), Reject a Ordering jsou mimo DD. Používají stejnou transakční cestu a `Clock`, ale
+  jejich pravidla nejsou v `LifecyclePolicy` (Reject a Cancel rozhodují přímo ve službě).
+- Pravidlo „stav mění jen Lifecycle“ hlídá dál textová kontrola L2 (`lifecycle-ownership.test.ts`), ne typy.
+- Testy a text připravila AI za Michala. **Lidské review zatím chybí (A9).**
+
+### Commit/tag
+
+- DD kroky 1–3: `ef8257c` (Jarda). Krok 4 (Honza): commit „docs(c05): complete Honza behavior design and technical review“ (`git log -1 -- docs/architecture-and-decisions.md`).
+- Implementace N1/N2 + `MissingResourceError`: `f24326a` (Jarda).
+- Testy odvozené z DD (DD-T1–T10, fake store) + evidence M1–M3: commit „C05 M1–M3“ nad `f24326a`
+  (`git log -1 -- tests/domain/lifecyclePolicy.test.ts`).
+- Tag `c05-detailed-design`: *po S3 (krok 4 + lidské review)*.
+
+### Honzova část — technická kontrola a předávka
+
+**Datum:** 12. 10. 2026 (Europe/Prague). **Provedl:** Codex na pokyn Honzy.
+Jde o technickou kontrolu a přípravu H1–H4, nikoli potvrzení lidského review dle A9.
+Výchozí větev `c05` po `git pull --ff-only`: `ef8257c` (Jardovy kroky 1–3);
+kontrola níže byla připravena nad aplikační baseline `7ba6a05`, před stažením novějších commitů. Kód a testy se v Honzově části nemění.
+
+**Dokončené výstupy:** [H1 operace](architecture-and-decisions.md#important-methods--operations),
+[H2 rozhodovací tabulky a algoritmus](architecture-and-decisions.md#algorithm--decision-logic),
+[H3 sekvence](architecture-and-decisions.md#detailed-sequence),
+[H4 detaily ponechané kódu](architecture-and-decisions.md#dd-decisions-intentionally-left-to-code).
+Řádky C-F1…C-F5 a A-F1…A-F4 umožňují Michalovi odvodit testy včetně priority chyb,
+hranice v rovnosti a odložení BR-02 pro pending. Výsledek `Close` musí testovat služba
+spolu s transakčním fake store: samotná čistá policy neprokáže commit před vyhozením chyby.
+
+**Kontrola Jardových kroků 1–3:** vybraná jednotka odpovídá C03 ADR-03/G2 a požadavkům
+REQ-03/04/06; DR1–DR7 pokrývají významná rozhodnutí Confirm/Approve. Rozhraní policy vrací
+hodnoty a zachovává oddělení rozhodnutí od zápisu; ownership odpovídá pravidlu L2.
+Clock po zámku a tvrdé odmítnutí chybějícího Resource jsou vědomé změny proti baseline.
+H1–H4 používají stejné názvy a výsledky z předávky S1; nebyl nalezen blokující rozpor
+se specifikací BR-01/02/04/05/06. Obsah Mermaid sekvence zkontrolován proti kontraktům;
+render diagramu tento běh neověřuje.
+
+**Historické podklady proti baseline `7ba6a05` (nejde o finální M3):**
+
+| DD decision | Implemented? v baseline | Evidence | Action |
+|---|---|---|---|
+| DR1: rozhodnutí nad opětovně načteným stavem pod zámkem Resource | YES | [ReservationService.decide](../src/services/reservationService.ts), [transakční port a adaptér](../src/repositories/reservationRepository.ts) | keep; při refaktoringu zachovat |
+| H2: stav → lhůta → routing → alokace; pending bez BR-02 | YES | `confirmReservation` / `approveReservation` v [Lifecycle](../src/services/reservationService.ts) | keep; převést do policy |
+| DR4/H1: terminální stav commitnutý před expirační chybou | YES | `Decision`, návrat `{ expired }` a vyhození až po `inResourceTransaction` v [Lifecycle](../src/services/reservationService.ts) | keep; zachovat i po N1 |
+| N1: čistá `LifecyclePolicy`, včetně `decideAllocation` | NO | Větvení a vyhození `OverlapError` přímo v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda po DD |
+| N2/DR2: jeden injektovaný Clock, `now` čtené po zámku | NO | Výchozí parametr `now = new Date()` v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda; test čekání přes cutoff má používat Clock |
+| Chybějící Resource odmítnout jako porušení invariantu | NO | `resource?.requiresApproval` v [Lifecycle](../src/services/reservationService.ts) | update code — Jarda; nepřevádět null na přímý Confirm |
+| H2: polouzavřený překryv, ignorování sebe sama a ne-CONFIRMED | YES | `allocate` v [Lifecycle](../src/services/reservationService.ts), [rules](../src/domain/rules.ts) | keep; přesun rozhodnutí do `decideAllocation` |
+
+**Resolution:** chybějící N1/N2 nejsou důvodem přepsat DD podle dnešního kódu.
+Přijmout cílový návrh a implementaci změnit v Jardově kroku 6; ověřit Michalovými testy N3.
+Při původní přípravě této části kroky 5 a cílová implementace ještě neexistovaly. Při synchronizaci před pushem byly staženy commity `f24326a`, `ad1ede6` a `58600c2`; aktuální stav zachycuje Michalova evidence výše. Jejich Honzovo review
+zůstává následným krokem. Týmový průchod S2/S3, lidské review A9, tag a PR nejsou uzavřené.
+
+**Kontroly dokumentace:** `npm run verify:docs` a `git diff --check`;
+výsledek kontroly odkazů je v [C05 reportu](evidence/c05-document-links.json).
+Historický C03 report zachován. Nová C05 unit/component sada se v této dokumentační části
+nespouští; její implementace a běh patří Michalovi (M1–M3).

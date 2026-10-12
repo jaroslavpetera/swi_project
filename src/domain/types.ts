@@ -23,6 +23,12 @@ export interface ReservationRecord extends ReservationInput {
   createdAt: Date;
 }
 
+// The part of a Resource the Reservation Lifecycle decides on (BR-05).
+export interface ResourceRecord {
+  id: string;
+  requiresApproval: boolean;
+}
+
 export enum OrderState {
   PLACED = "PLACED",
   SERVED = "SERVED",
