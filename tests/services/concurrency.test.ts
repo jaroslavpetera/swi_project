@@ -62,7 +62,7 @@ function pair() {
       }));
     }
   }
-  return [db, otherDb].map((client) => new ReservationService(new CoordinatedRepository(client)));
+  return [db, otherDb].map((client) => new ReservationService(new CoordinatedRepository(client), { now: () => now }));
 }
 async function setup(approval = false) {
   const table = await db.resource.create({ data: { name: "Race table", capacity: 4, requiresApproval: approval } });
@@ -87,7 +87,7 @@ describe("REQ-04 — coordinated races across independent SQLite clients", () =>
     const a = await create(); const b = await create();
     const [first, second] = pair();
     const action = approval ? "approveReservation" : "confirmReservation";
-    oneWinner(await Promise.allSettled([first[action](a.id, now), second[action](b.id, now)]), OverlapError);
+    oneWinner(await Promise.allSettled([first[action](a.id), second[action](b.id)]), OverlapError);
     const rows = await db.reservation.findMany({ where: { resourceId: table.id } });
     expect(rows.filter((r) => r.state === S.CONFIRMED)).toHaveLength(1);
     expect(rows.filter((r) => r.state === (approval ? S.PENDING_APPROVAL : S.DRAFT))).toHaveLength(1);
@@ -96,14 +96,14 @@ describe("REQ-04 — coordinated races across independent SQLite clients", () =>
   it("V-04R.2: duplicate approval has one winner", async () => {
     const { create } = await setup(true); const row = await create();
     const [first, second] = pair();
-    oneWinner(await Promise.allSettled([first.approveReservation(row.id, now), second.approveReservation(row.id, now)]), InvalidStateError);
+    oneWinner(await Promise.allSettled([first.approveReservation(row.id), second.approveReservation(row.id)]), InvalidStateError);
   });
 
   it.each([false, true])("V-04R.3: cancellation cannot be overwritten by a stale allocation (approval=%s)", async (approval) => {
     const { create } = await setup(approval); const row = await create();
     const [first, second] = pair();
     const action = approval ? "approveReservation" : "confirmReservation";
-    const results = await Promise.allSettled([first[action](row.id, now), second.cancelReservation(row.id, now)]);
+    const results = await Promise.allSettled([first[action](row.id), second.cancelReservation(row.id)]);
     // Serialized orders: Cancel first → the allocation fails on CANCELLED; allocation
     // first → Cancel runs on the new state. Either way the stale allocation never
     // overwrites the cancellation.
@@ -115,13 +115,13 @@ describe("REQ-04 — coordinated races across independent SQLite clients", () =>
   it("V-04R.4: Approve and Reject cannot both succeed on the same pending request", async () => {
     const { create } = await setup(true); const row = await create();
     const [first, second] = pair();
-    oneWinner(await Promise.allSettled([first.approveReservation(row.id, now), second.rejectReservation(row.id)]), InvalidStateError);
+    oneWinner(await Promise.allSettled([first.approveReservation(row.id), second.rejectReservation(row.id)]), InvalidStateError);
   });
 
   it("V-04R.5: simultaneous cancellations are idempotent", async () => {
     const { create } = await setup(); const row = await create();
     const [first, second] = pair();
-    const results = await Promise.all([first.cancelReservation(row.id, now), second.cancelReservation(row.id, now)]);
+    const results = await Promise.all([first.cancelReservation(row.id), second.cancelReservation(row.id)]);
     expect(results.map((r) => r.state)).toEqual([S.CANCELLED, S.CANCELLED]);
   });
 
@@ -129,7 +129,7 @@ describe("REQ-04 — coordinated races across independent SQLite clients", () =>
     const { create } = await setup(); const a = await create();
     const b = await create(endsAt, new Date("2027-06-01T22:00:00Z"));
     const [first, second] = pair();
-    const results = await Promise.all([first.confirmReservation(a.id, now), second.confirmReservation(b.id, now)]);
+    const results = await Promise.all([first.confirmReservation(a.id), second.confirmReservation(b.id)]);
     expect(results.map((r) => r.state)).toEqual([S.CONFIRMED, S.CONFIRMED]);
   });
 
@@ -139,7 +139,7 @@ describe("REQ-04 — coordinated races across independent SQLite clients", () =>
     // Models a pending request retained after a resource configuration change.
     await db.reservation.update({ where: { id: b.id }, data: { state: S.PENDING_APPROVAL } });
     const [first, second] = pair();
-    oneWinner(await Promise.allSettled([first.confirmReservation(a.id, now), second.approveReservation(b.id, now)]), OverlapError);
+    oneWinner(await Promise.allSettled([first.confirmReservation(a.id), second.approveReservation(b.id)]), OverlapError);
     expect(await db.reservation.count({ where: { resourceId: table.id, state: S.CONFIRMED } })).toBe(1);
   });
 });

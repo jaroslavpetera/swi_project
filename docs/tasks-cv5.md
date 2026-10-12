@@ -181,10 +181,26 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 ---
 
 ## Jarda — implementace (krok 6, po S2)
-- [ ] N1: vytáhnout rozhodnutí do čisté funkce / policy podle kroku 3–4; `ReservationService` jen orchestruje.
-- [ ] N2 (pokud přijato): `Clock` do konstruktoru, sestavení v `src/index.ts` / `app.ts`.
-- [ ] Žádný existující test nesmí oslabit tvrzení o chování; L2 (`lifecycle-ownership.test.ts`) musí dál projít.
-- [ ] Kde kód **nejde** udělat podle DD, nepřepisovat DD potichu — zapsat Michalovi do mismatch tabulky.
+
+> **Stav 12. 10. 2026:** N1 + N2 implementováno (necommitnuto — commitnout až po commitu DD).
+> `npm test` (PostgreSQL 16, embedded): **95 passed / 0 failed**, typecheck `tsconfig.verify.json` OK.
+>
+> **Pro Michala (M2, M3):**
+> - Nové: `src/domain/lifecyclePolicy.ts` (`decideConfirm`, `decideApprove`, `decideAllocation`),
+>   `src/domain/clock.ts` (`Clock`, `systemClock`), `MissingResourceError` v `reservationService.ts`;
+>   `ResourceRecord` přesunut do `src/domain/types.ts` (repository ho re-exportuje).
+> - `ReservationService(store, clock = systemClock)`; metody už **nemají parametr `now`** — čas se čte
+>   `clock.now()` jednou uvnitř transakce po zámku.
+> - Testovací hodiny: `tests/support/clock.ts` (`TestClock.set(date)`); fake store dej klidně vedle.
+> - Upravené testy (jen přechod z `now` parametru na clock, tvrzení beze změny):
+>   `reservationService.test.ts`, `c02-completion.test.ts`, `concurrency.test.ts`, `lock-mechanism.test.ts`.
+> - Podklady pro mismatch tabulku: všechny tři rozdíly z „Rozdíly proti kódu na `main`“ jsou teď
+>   implementované (YES); `MissingResourceError` zatím nemá test ani HTTP mapování (→ 500 záměrně).
+> - Pozor: `npm test` i `verify:docs` přepisují soubory `docs/evidence/c03-*.json` — před commitem vrátit.
+- [x] N1: vytáhnout rozhodnutí do čisté funkce / policy podle kroku 3–4; `ReservationService` jen orchestruje.
+- [x] N2 (pokud přijato): `Clock` do konstruktoru, sestavení v `src/index.ts` / `app.ts`.
+- [x] Žádný existující test nesmí oslabit tvrzení o chování; L2 (`lifecycle-ownership.test.ts`) musí dál projít.
+- [x] Kde kód **nejde** udělat podle DD, nepřepisovat DD potichu — zapsat Michalovi do mismatch tabulky.
 
 ---
 

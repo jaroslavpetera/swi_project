@@ -1,6 +1,6 @@
 // C02 (Osoba B): OP-03/OP-04/OP-05 service-level behaviour. Uses a real
-// database (same pattern as the C01 persistence spike) and passes an
-// explicit `now` where the rule under test depends on time, since the HTTP
+// database (same pattern as the C01 persistence spike) and sets the
+// Lifecycle's clock where the rule under test depends on time, since the HTTP
 // layer intentionally does not expose a way to fake the clock.
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { PrismaClient } from "../../src/database.js";
@@ -15,9 +15,13 @@ import {
 } from "../../src/services/reservationService.js";
 import { AvailabilityService } from "../../src/services/availabilityService.js";
 import { ReservationState } from "../../src/domain/types.js";
+import { TestClock } from "../support/clock.js";
 
 const prisma = new PrismaClient();
-const service = new ReservationService(new ReservationRepository(prisma));
+const clock = new TestClock();
+const service = new ReservationService(new ReservationRepository(prisma), clock);
+// The decision sees `now` through the Lifecycle's clock (C05 DD, N2).
+const at = (now: Date) => (clock.set(now), service);
 const availability = new AvailabilityService(new ReservationRepository(prisma));
 
 let userId: string;
@@ -51,7 +55,7 @@ describe("OP-03 Confirm — BR-05 requiresApproval routing", () => {
       startsAt: new Date("2027-05-01T18:00:00Z"),
       endsAt: new Date("2027-05-01T19:00:00Z"),
     });
-    const confirmed = await service.confirmReservation(reservation.id, new Date("2027-05-01T10:00:00Z"));
+    const confirmed = await at(new Date("2027-05-01T10:00:00Z")).confirmReservation(reservation.id);
     expect(confirmed.state).toBe(ReservationState.CONFIRMED);
   });
 
@@ -62,7 +66,7 @@ describe("OP-03 Confirm — BR-05 requiresApproval routing", () => {
       startsAt: new Date("2027-05-01T18:00:00Z"),
       endsAt: new Date("2027-05-01T19:00:00Z"),
     });
-    const result = await service.confirmReservation(reservation.id, new Date("2027-05-01T10:00:00Z"));
+    const result = await at(new Date("2027-05-01T10:00:00Z")).confirmReservation(reservation.id);
     expect(result.state).toBe(ReservationState.PENDING_APPROVAL);
   });
 });
@@ -75,9 +79,9 @@ describe("OP-05 Approve Reservation", () => {
       startsAt: new Date("2027-05-02T18:00:00Z"),
       endsAt: new Date("2027-05-02T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-02T10:00:00Z"));
+    await at(new Date("2027-05-02T10:00:00Z")).confirmReservation(reservation.id);
 
-    const approved = await service.approveReservation(reservation.id, new Date("2027-05-02T10:05:00Z"));
+    const approved = await at(new Date("2027-05-02T10:05:00Z")).approveReservation(reservation.id);
     expect(approved.state).toBe(ReservationState.CONFIRMED);
   });
 
@@ -88,7 +92,7 @@ describe("OP-05 Approve Reservation", () => {
       startsAt: new Date("2027-05-03T18:00:00Z"),
       endsAt: new Date("2027-05-03T19:00:00Z"),
     });
-    await service.confirmReservation(pending.id, new Date("2027-05-03T10:00:00Z"));
+    await at(new Date("2027-05-03T10:00:00Z")).confirmReservation(pending.id);
 
     // A second, non-approval reservation on the SAME resource gets confirmed
     // in the meantime — approvalResourceId here is treated as an open slot
@@ -105,7 +109,7 @@ describe("OP-05 Approve Reservation", () => {
     });
 
     await expect(
-      service.approveReservation(pending.id, new Date("2027-05-03T10:05:00Z"))
+      at(new Date("2027-05-03T10:05:00Z")).approveReservation(pending.id)
     ).rejects.toBeInstanceOf(OverlapError);
 
     const reloaded = await prisma.reservation.findUniqueOrThrow({ where: { id: pending.id } });
@@ -120,11 +124,11 @@ describe("OP-05 Approve Reservation", () => {
       endsAt: new Date("2027-05-04T19:00:00Z"),
     });
     // Well before the no-show deadline (start - 30min), so Confirm succeeds.
-    await service.confirmReservation(reservation.id, new Date("2027-05-04T10:00:00Z"));
+    await at(new Date("2027-05-04T10:00:00Z")).confirmReservation(reservation.id);
 
     // Past the approval deadline (start - 30min = 17:30).
     await expect(
-      service.approveReservation(reservation.id, new Date("2027-05-04T17:45:00Z"))
+      at(new Date("2027-05-04T17:45:00Z")).approveReservation(reservation.id)
     ).rejects.toBeInstanceOf(ApprovalExpiredError);
 
     const reloaded = await prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } });
@@ -150,7 +154,7 @@ describe("OP-05 Reject Reservation", () => {
       startsAt: new Date("2027-05-06T18:00:00Z"),
       endsAt: new Date("2027-05-06T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-06T10:00:00Z"));
+    await at(new Date("2027-05-06T10:00:00Z")).confirmReservation(reservation.id);
 
     const rejected = await service.rejectReservation(reservation.id);
     expect(rejected.state).toBe(ReservationState.REJECTED);
@@ -165,9 +169,9 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
       startsAt: new Date("2027-05-07T18:00:00Z"),
       endsAt: new Date("2027-05-07T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-07T10:00:00Z"));
+    await at(new Date("2027-05-07T10:00:00Z")).confirmReservation(reservation.id);
 
-    const cancelled = await service.cancelReservation(reservation.id, new Date("2027-05-07T10:05:00Z"));
+    const cancelled = await at(new Date("2027-05-07T10:05:00Z")).cancelReservation(reservation.id);
     expect(cancelled.state).toBe(ReservationState.CANCELLED);
 
     const available = await availability.checkAvailability(
@@ -185,9 +189,9 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
       startsAt: new Date("2027-05-08T18:00:00Z"),
       endsAt: new Date("2027-05-08T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-08T10:00:00Z"));
+    await at(new Date("2027-05-08T10:00:00Z")).confirmReservation(reservation.id);
 
-    const cancelled = await service.cancelReservation(reservation.id, new Date("2027-05-08T10:05:00Z"));
+    const cancelled = await at(new Date("2027-05-08T10:05:00Z")).cancelReservation(reservation.id);
     expect(cancelled.state).toBe(ReservationState.CANCELLED);
   });
 
@@ -198,10 +202,10 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
       startsAt: new Date("2027-05-09T18:00:00Z"),
       endsAt: new Date("2027-05-09T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-09T10:00:00Z"));
+    await at(new Date("2027-05-09T10:00:00Z")).confirmReservation(reservation.id);
 
     await expect(
-      service.cancelReservation(reservation.id, new Date("2027-05-09T18:00:01Z"))
+      at(new Date("2027-05-09T18:00:01Z")).cancelReservation(reservation.id)
     ).rejects.toBeInstanceOf(CancellationWindowError);
 
     const reloaded = await prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } });
@@ -216,8 +220,8 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
       endsAt: new Date("2027-05-10T19:00:00Z"),
     });
     const now = new Date("2027-05-10T10:00:00Z");
-    await service.cancelReservation(reservation.id, now);
-    const second = await service.cancelReservation(reservation.id, now);
+    await at(now).cancelReservation(reservation.id);
+    const second = await at(now).cancelReservation(reservation.id);
     expect(second.state).toBe(ReservationState.CANCELLED);
   });
 
@@ -228,11 +232,11 @@ describe("OP-04 Cancel — BR-03 cancellation policy", () => {
       startsAt: new Date("2027-05-11T18:00:00Z"),
       endsAt: new Date("2027-05-11T19:00:00Z"),
     });
-    await service.confirmReservation(reservation.id, new Date("2027-05-11T10:00:00Z"));
+    await at(new Date("2027-05-11T10:00:00Z")).confirmReservation(reservation.id);
     await service.rejectReservation(reservation.id);
 
     await expect(
-      service.cancelReservation(reservation.id, new Date("2027-05-11T10:05:00Z"))
+      at(new Date("2027-05-11T10:05:00Z")).cancelReservation(reservation.id)
     ).rejects.toBeInstanceOf(NotCancellableError);
   });
 });
