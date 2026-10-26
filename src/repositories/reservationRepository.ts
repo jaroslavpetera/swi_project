@@ -1,15 +1,12 @@
 import { Prisma, PrismaClient, Reservation as PrismaReservation } from "@prisma/client";
-import { ReservationInput, ReservationRecord, ReservationState } from "../domain/types.js";
+import { ReservationInput, ReservationRecord, ReservationState, ResourceRecord } from "../domain/types.js";
+
+export type { ResourceRecord };
 
 export class ReservationConflictError extends Error {
   constructor(id: string) {
     super(`Reservation ${id} changed concurrently; reload and retry`);
   }
-}
-
-export interface ResourceRecord {
-  id: string;
-  requiresApproval: boolean;
 }
 
 // Reads and writes inside one resource-scoped transaction (ADR-03). Decisions

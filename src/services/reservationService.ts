@@ -1,12 +1,14 @@
 import { ReservationStore, ReservationTx } from "../repositories/reservationRepository.js";
 import { ReservationInput, ReservationRecord, ReservationState } from "../domain/types.js";
+import { isCancellable, isPastCancellationWindow } from "../domain/rules.js";
+import { Clock, systemClock } from "../domain/clock.js";
 import {
-  findOverlappingConfirmed,
-  isExpiredDraft,
-  isApprovalExpired,
-  isCancellable,
-  isPastCancellationWindow,
-} from "../domain/rules.js";
+  ApproveDecision,
+  ConfirmDecision,
+  decideAllocation,
+  decideApprove,
+  decideConfirm,
+} from "../domain/lifecyclePolicy.js";
 
 export class OverlapError extends Error {
   constructor(public readonly conflictingReservationId: string) {
@@ -53,63 +55,47 @@ export class NotFoundError extends Error {
   }
 }
 
+// The foreign key guarantees a Reservation's Resource exists; missing it
+// inside the transaction is a broken invariant, not a routing input (C05 DD).
+export class MissingResourceError extends Error {
+  constructor(resourceId: string) {
+    super(`Resource ${resourceId} of the reservation does not exist`);
+  }
+}
+
 // A terminal state written because a deadline passed must be committed before
 // the error reaches the caller (BR-04, BR-06), so it leaves the transaction as a
 // value and is thrown only after commit.
-type Decision = { reservation: ReservationRecord } | { expired: Error };
+type Outcome = { reservation: ReservationRecord } | { expired: Error };
 
-// Reservation Lifecycle (C03 ADR-03): the only element that decides
+// Reservation Lifecycle (C03 ADR-03, C05 DD): the only element that decides
 // Reservation state transitions, including the BR-02 allocation decision.
-// Every decision runs inside a transaction serialized per Resource, on state
-// read under that lock.
+// LifecyclePolicy decides; this orchestrator runs every decision inside a
+// transaction serialized per Resource, on state read under that lock, and
+// turns the decision into a write and/or a domain error.
 export class ReservationService {
-  constructor(private readonly repository: ReservationStore) {}
+  constructor(
+    private readonly repository: ReservationStore,
+    private readonly clock: Clock = systemClock
+  ) {}
 
   async createReservation(input: ReservationInput): Promise<ReservationRecord> {
     return this.repository.create(input);
   }
 
-  async confirmReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
-    return this.decide(id, async (tx, reservation) => {
-      // Potvrdit lze jen DRAFT — bez této pojistky by šlo znovu potvrdit
-      // i zrušenou rezervaci (CANCELLED → CONFIRMED).
-      if (reservation.state !== ReservationState.DRAFT) {
-        throw new InvalidStateError(reservation.state, ReservationState.DRAFT);
-      }
-
-      if (isExpiredDraft(reservation, now)) {
-        await tx.transition(reservation, ReservationState.CANCELLED);
-        return { expired: new NoShowExpiredError() };
-      }
-
-      // BR-05: a Resource that requires approval routes Confirm through the
-      // approval workflow instead of going straight to CONFIRMED — the overlap
-      // check (BR-02) is deferred to OP-05 approve, where it's re-checked
-      // against the state at decision time, not at request time.
-      const resource = await tx.findResource(reservation.resourceId);
-      if (resource?.requiresApproval) {
-        return { reservation: await tx.transition(reservation, ReservationState.PENDING_APPROVAL) };
-      }
-
-      return { reservation: await this.allocate(tx, reservation) };
+  async confirmReservation(id: string): Promise<ReservationRecord> {
+    return this.decide(id, async (tx, current, now) => {
+      const resource = await tx.findResource(current.resourceId);
+      if (!resource) throw new MissingResourceError(current.resourceId);
+      return this.apply(tx, current, decideConfirm(current, resource, now));
     });
   }
 
-  async approveReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
-    return this.decide(id, async (tx, reservation) => {
-      if (reservation.state !== ReservationState.PENDING_APPROVAL) {
-        throw new InvalidStateError(reservation.state, ReservationState.PENDING_APPROVAL);
-      }
-
-      if (isApprovalExpired(reservation, now)) {
-        await tx.transition(reservation, ReservationState.EXPIRED);
-        return { expired: new ApprovalExpiredError() };
-      }
-
-      // Re-checked here, not trusted from request time: another reservation
-      // for the same slot may have been confirmed while this one was waiting.
-      return { reservation: await this.allocate(tx, reservation) };
-    });
+  async approveReservation(id: string): Promise<ReservationRecord> {
+    // Allocation is re-checked here, not trusted from request time: another
+    // reservation for the same slot may have been confirmed while this one
+    // was waiting.
+    return this.decide(id, async (tx, current, now) => this.apply(tx, current, decideApprove(current, now)));
   }
 
   async rejectReservation(id: string): Promise<ReservationRecord> {
@@ -121,8 +107,8 @@ export class ReservationService {
     });
   }
 
-  async cancelReservation(id: string, now: Date = new Date()): Promise<ReservationRecord> {
-    return this.decide(id, async (tx, reservation) => {
+  async cancelReservation(id: string): Promise<ReservationRecord> {
+    return this.decide(id, async (tx, reservation, now) => {
       // R-5: cancelling an already-cancelled reservation is an idempotent
       // success — a client retrying after a timeout must not get an error.
       if (reservation.state === ReservationState.CANCELLED) {
@@ -141,34 +127,53 @@ export class ReservationService {
     });
   }
 
+  private async apply(
+    tx: ReservationTx,
+    current: ReservationRecord,
+    decision: ConfirmDecision | ApproveDecision
+  ): Promise<Outcome> {
+    switch (decision.kind) {
+      case "InvalidState":
+        throw new InvalidStateError(current.state, decision.expected);
+      case "Close":
+        await tx.transition(current, decision.to);
+        return {
+          expired: decision.cause === "NO_SHOW_CUTOFF" ? new NoShowExpiredError() : new ApprovalExpiredError(),
+        };
+      case "RouteToApproval":
+        return { reservation: await tx.transition(current, ReservationState.PENDING_APPROVAL) };
+      case "Allocate":
+        return { reservation: await this.allocate(tx, current) };
+    }
+  }
+
   // BR-02, decided here only: the confirmed reservations are read under the
   // Resource lock, so a competing allocation has either committed already
   // (and is seen) or waits until this transaction ends.
   private async allocate(tx: ReservationTx, reservation: ReservationRecord): Promise<ReservationRecord> {
     const confirmed = await tx.findConfirmedForResource(reservation.resourceId);
-    const conflict = findOverlappingConfirmed(
-      reservation,
-      confirmed.filter((r) => r.id !== reservation.id)
-    );
-    if (conflict) throw new OverlapError(conflict.id);
+    const allocation = decideAllocation(reservation, confirmed);
+    if (allocation.kind === "Conflict") throw new OverlapError(allocation.conflictingReservationId);
     return tx.transition(reservation, ReservationState.CONFIRMED);
   }
 
   private async decide(
     id: string,
-    work: (tx: ReservationTx, current: ReservationRecord) => Promise<Decision>
+    work: (tx: ReservationTx, current: ReservationRecord, now: Date) => Promise<Outcome>
   ): Promise<ReservationRecord> {
     // Read outside the lock only to learn which Resource to lock; the decision
     // itself uses the state reloaded inside the transaction.
     const located = await this.repository.findById(id);
     if (!located) throw new NotFoundError(id);
 
-    const decision = await this.repository.inResourceTransaction(located.resourceId, async (tx) => {
+    const outcome = await this.repository.inResourceTransaction(located.resourceId, async (tx) => {
       const current = await tx.findById(id);
       if (!current) throw new NotFoundError(id);
-      return work(tx, current);
+      // Decision time is read once, after the lock is held: waiting for the
+      // lock may cross a BR-04/BR-06 deadline, and that must count.
+      return work(tx, current, this.clock.now());
     });
-    if ("expired" in decision) throw decision.expired;
-    return decision.reservation;
+    if ("expired" in outcome) throw outcome.expired;
+    return outcome.reservation;
   }
 }

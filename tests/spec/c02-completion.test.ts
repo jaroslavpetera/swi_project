@@ -7,9 +7,12 @@ import { createApp } from "../../src/http/app.js";
 import { ReservationRepository } from "../../src/repositories/reservationRepository.js";
 import { ReservationState as S } from "../../src/domain/types.js";
 import { ApprovalExpiredError, NoShowExpiredError, ReservationService } from "../../src/services/reservationService.js";
+import { TestClock } from "../support/clock.js";
 
 const db = new PrismaClient();
-const service = new ReservationService(new ReservationRepository(db));
+const clock = new TestClock();
+const service = new ReservationService(new ReservationRepository(db), clock);
+const at = (now: Date) => (clock.set(now), service);
 const resources: string[] = [];
 let userId: string;
 let server: Server;
@@ -94,21 +97,21 @@ describe("C02 v0.2 — requirement verification", () => {
   it("V-03.3: confirm one millisecond before deadline succeeds; at deadline cancels", async () => {
     const table = await resource(false);
     const good = await create(table);
-    expect((await service.confirmReservation(good, before)).state).toBe(S.CONFIRMED);
+    expect((await at(before).confirmReservation(good)).state).toBe(S.CONFIRMED);
     const late = await create(table);
-    await expect(service.confirmReservation(late, deadline)).rejects.toBeInstanceOf(NoShowExpiredError);
+    await expect(at(deadline).confirmReservation(late)).rejects.toBeInstanceOf(NoShowExpiredError);
     expect((await db.reservation.findUniqueOrThrow({ where: { id: late } })).state).toBe(S.CANCELLED);
   });
 
   it("V-05.6: approve before deadline succeeds; at deadline persists EXPIRED and leaves slot free", async () => {
     const table = await resource();
     const good = await create(table);
-    await service.confirmReservation(good, before);
-    expect((await service.approveReservation(good, before)).state).toBe(S.CONFIRMED);
-    await service.cancelReservation(good, before);
+    await at(before).confirmReservation(good);
+    expect((await at(before).approveReservation(good)).state).toBe(S.CONFIRMED);
+    await at(before).cancelReservation(good);
     const late = await create(table);
-    await service.confirmReservation(late, before);
-    await expect(service.approveReservation(late, deadline)).rejects.toBeInstanceOf(ApprovalExpiredError);
+    await at(before).confirmReservation(late);
+    await expect(at(deadline).approveReservation(late)).rejects.toBeInstanceOf(ApprovalExpiredError);
     expect((await db.reservation.findUniqueOrThrow({ where: { id: late } })).state).toBe(S.EXPIRED);
     expect(await available(table)).toBe(true);
     expect((await post(`/reservations/${late}/cancel`)).status).toBe(409);
@@ -117,7 +120,7 @@ describe("C02 v0.2 — requirement verification", () => {
   it("V-05.7: reads do not expire a pending request; reject after deadline still succeeds", async () => {
     const table = await resource();
     const id = await create(table);
-    await service.confirmReservation(id, before);
+    await at(before).confirmReservation(id);
     // Put the deadline in the real past, so the actual HTTP request tests overdue rejection.
     await db.reservation.update({ where: { id }, data: {
       startsAt: new Date("2020-01-01T18:00:00Z"), endsAt: new Date("2020-01-01T20:00:00Z"),
@@ -130,9 +133,9 @@ describe("C02 v0.2 — requirement verification", () => {
   it("V-04.3: repeat cancel succeeds after start; pending cancel between deadline and start succeeds", async () => {
     const table = await resource();
     const id = await create(table);
-    await service.confirmReservation(id, before);
-    expect((await service.cancelReservation(id, deadline)).state).toBe(S.CANCELLED);
-    expect((await service.cancelReservation(id, end)).state).toBe(S.CANCELLED);
+    await at(before).confirmReservation(id);
+    expect((await at(deadline).cancelReservation(id)).state).toBe(S.CANCELLED);
+    expect((await at(end).cancelReservation(id)).state).toBe(S.CANCELLED);
   });
 
   it("V-01.5: past interval can be created but never confirmed (HTTP)", async () => {
@@ -147,7 +150,7 @@ describe("C02 v0.2 — requirement verification", () => {
   it("V-05.8: HTTP expiry returns 410 with persisted EXPIRED, then 409 on retry", async () => {
     const table = await resource();
     const id = await create(table);
-    await service.confirmReservation(id, before);
+    await at(before).confirmReservation(id);
     await db.reservation.update({ where: { id }, data: {
       startsAt: new Date("2020-01-01T18:00:00Z"), endsAt: new Date("2020-01-01T20:00:00Z"),
     } });

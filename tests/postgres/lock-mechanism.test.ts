@@ -60,8 +60,8 @@ describe.skipIf(!postgres)('ADR-03 — PostgreSQL lock mechanism (READ COMMITTED
         }));
       }
     }
-    const services = [firstDb, secondDb].map((db) => new ReservationService(new MeasuredRepository(db)));
-    const results = await Promise.allSettled(rows.map((row, i) => services[i].confirmReservation(row.id, now)));
+    const services = [firstDb, secondDb].map((db) => new ReservationService(new MeasuredRepository(db), { now: () => now }));
+    const results = await Promise.allSettled(rows.map((row, i) => services[i].confirmReservation(row.id)));
     const confirmed = await firstDb.reservation.count({ where: { resourceId: table.id, state: S.CONFIRMED } });
     return { results, confirmed };
   }
