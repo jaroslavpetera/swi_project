@@ -23,6 +23,7 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 |---|---|
 | [Specifikace](docs/specification.md) | Aktuální kandidát v0.2: požadavky, operace, pravidla a odkazy na diagramy. |
 | [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, PostgreSQL, ADR-03/04, drivery a historické AS-IS mapování Confirm Reservation. |
+| [C05 Detailed Design](docs/architecture-and-decisions.md#c05-detailed-design) a [evidence](docs/evidence-and-evolution.md#c05-dd-verification-evidence) | Detailní návrh Reservation Lifecycle (Confirm/Approve), testy odvozené z DD a porovnání s kódem; [checklist](docs/tasks-cv5.md). |
 | [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a zbývající lidské body. |
 | [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a zbývající body issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |

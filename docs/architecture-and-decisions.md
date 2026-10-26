@@ -1033,7 +1033,7 @@ inResourceTransaction<T>(resourceId, work: (tx: ReservationTx) => Promise<T>) : 
 |---|---|
 | Preconditions | `resourceId` patří existujícímu Resource. `work` nevolá nic mimo databázi (žádný externí krok pod zámkem — ADR-03, R-15). |
 | Postconditions | `work` proběhl při držení výhradního zámku Resource až do commitu/rollbacku. Každé čtení v `work` vidí stav commitnutý předchozími transakcemi nad stejným Resource. Vrátí-li `work` hodnotu → commit a vrácení hodnoty. |
-| Failures | Výjimka z `work` → rollback, výjimka propadne beze změny (proto chyby po zápisu terminálního stavu nesmí vzniknout jako výjimka uvnitř `work` — viz DR4). Překročení `maxWait`/`timeout` 30 s → chyba databáze (nemapovaná, 500). |
+| Failures | Výjimka z `work` → rollback, výjimka propadne beze změny (proto chyby po zápisu terminálního stavu nesmí vzniknout jako výjimka uvnitř `work` — viz DR4). Překročení `maxWait`/`timeout` 30 s → chyba databáze (nemapovaná, 500). Porušená precondition (Resource neexistuje): zámek nic nezamkne a `work` neběží serializovaně; Lifecycle to zjistí přes `tx.findResource` a odmítne dřív, než cokoli zapíše (`MissingResourceError`, DD-T7). |
 
 **2. `<<interface>> ReservationTx` — čtení a zápis uvnitř transakce**
 
@@ -1152,6 +1152,8 @@ classDiagram
     LifecyclePolicy ..> ReservationRecord : reads only
 ```
 
+Vynechaná závislost mimo hranici DD: `ReservationService` volá přímo `ReservationRules.isCancellable` a
+`isPastCancellationWindow` pro Cancel (OP-04), který tato DD nerozpracovává.
 Adaptér `ReservationRepository` / `PrismaReservationTx` (realizace portu) a HTTP vrstva jsou vynechány
 — nemění se a jsou v [C03 H2](#h2-návrhový-třídní-diagram). Doménové chyby (`OverlapError`,
 `InvalidStateError`, `NoShowExpiredError`, `ApprovalExpiredError`, `NotFoundError`) vytváří jen

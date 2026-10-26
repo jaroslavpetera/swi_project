@@ -224,6 +224,7 @@ describe("DD-T8 interface contract — Clock (N2)", () => {
 
     expect(reads).toHaveLength(1);
     expect(store.calls.indexOf(`lock:${TABLE}`)).toBeLessThan(store.calls.indexOf("clock.now"));
+    expect(store.calls.indexOf("tx.findById")).toBeLessThan(store.calls.indexOf("clock.now"));
     expect(store.calls.indexOf("clock.now")).toBeLessThan(store.calls.indexOf("commit"));
   });
 

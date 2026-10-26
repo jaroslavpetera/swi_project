@@ -1,5 +1,15 @@
 # C05 Detailed Design — rozdělení práce (Jarda + Honza + Michal)
 
+> ## ⏳ Co ještě zbývá (stav 26. 10. 2026)
+>
+> Kroky 1–6 jsou hotové a sloučené do `main` (PR #20, `055917c`). Přehled commitů a uzavření:
+> [C05 Commit/tag](evidence-and-evolution.md#committag) a [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3).
+>
+> | # | Úkol | Kdo | Detail |
+> |---|---|---|---|
+> | 1 | ~~**Lidské review A9**~~ — hotovo 26. 10. 2026 (Jarda, Honza) | Jarda, Honza | [Lidské review A9](evidence-and-evolution.md#lidské-review-a9) |
+> | 2 | Pushnout tag `c05-detailed-design` (→ `055917c`) | Jarda | `git push origin c05-detailed-design` |
+
 Zadání: *SWI C05 — Detailed Design: od architektury k návrhovému záměru a unit testům*.
 Vstup: C03 architektura v [`architecture-and-decisions.md`](architecture-and-decisions.md)
 (C2 odpovědnosti, ADR-03, G2/G3, H1, H2) a aktuální kód na `main` (`7ba6a05`).
@@ -34,7 +44,7 @@ významné rozhraní (`ReservationStore` / `ReservationTx`).
 | Položka | Hodnota |
 |---|---|
 | Architecture unit | Reservation Lifecycle (C03 G2, ADR-03) |
-| Požadavky | REQ-03, REQ-04 |
+| Požadavky | REQ-03, REQ-04, REQ-06 |
 | Scénáře | OP-03 Confirm, OP-05 Approve/Reject (Cancel OP-04 jen okrajově) |
 | Business pravidla | BR-01, BR-02, BR-04, BR-05, BR-06 |
 | Kód | `src/services/reservationService.ts`, `src/domain/rules.ts`, `src/repositories/reservationRepository.ts` (port) |
@@ -226,17 +236,20 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 
 ## Hotovo je, když (kontrola na S3) — Definition of Done ze zadání
 
-- [ ] jedna architecture responsibility / unit
-- [ ] detailed responsibilities
-- [ ] ownership
-- [ ] významné interface / contract
-- [ ] focused structural UML view
-- [ ] detailed sequence
-- [ ] významné methods / operations
-- [ ] algorithm / decision logic
-- [x] minimálně 5 testů odvozených z DD
-- [x] testy spuštěné
-- [x] DD porovnáno s implementací
-- [ ] commit/tag (`c05-detailed-design`), PR `c05` → `main`
-- [ ] lidské review AI výstupů zapsané (A9)
-- [ ] `npm run verify:docs` projde (odkazy v dokumentech)
+| Kritérium zadání | Kde | ✔ |
+|---|---|---|
+| jedna architecture responsibility / unit | [Selected architecture unit](architecture-and-decisions.md#selected-architecture-unit) | [x] |
+| detailed responsibilities | [DR1–DR7](architecture-and-decisions.md#detailed-responsibilities) | [x] |
+| ownership | [Design elements and ownership](architecture-and-decisions.md#design-elements-and-ownership) | [x] |
+| významné interface / contract | [kontrakty 1–4](architecture-and-decisions.md#key-interfaces--contracts) | [x] |
+| focused structural UML view | [Focused structural view](architecture-and-decisions.md#focused-structural-view) | [x] |
+| detailed sequence | [H3](architecture-and-decisions.md#detailed-sequence) | [x] |
+| významné methods / operations | [H1](architecture-and-decisions.md#important-methods--operations) | [x] |
+| algorithm / decision logic | [H2](architecture-and-decisions.md#algorithm--decision-logic) | [x] |
+| minimálně 5 testů odvozených z DD | [DD-T1–T11](evidence-and-evolution.md#tests-derived-from-dd) | [x] |
+| testy spuštěné | [běhy](evidence-and-evolution.md#unitcomponent-tests-executed), [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3) | [x] |
+| DD porovnáno s implementací | [mismatch](evidence-and-evolution.md#design--implementation-mismatch) | [x] |
+| commit + PR `c05` → `main` | PR #20, `055917c` | [x] |
+| tag `c05-detailed-design` | vytvořen lokálně na `055917c`, **čeká na push** | [ ] |
+| lidské review AI výstupů zapsané (A9) | [Lidské review A9](evidence-and-evolution.md#lidské-review-a9) — hotovo 26. 10. 2026 (Jarda, Honza) | [x] |
+| `node scripts/check-docs.mjs` projde | [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3) | [x] |

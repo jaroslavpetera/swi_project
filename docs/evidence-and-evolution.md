@@ -342,6 +342,9 @@ Ověřuje návrh v [C05 Detailed Design](architecture-and-decisions.md#c05-detai
 > - Testy ověřují návrhový záměr. Nejdřív se psaly proti kódu `7ba6a05` před N1/N2: tam DD-T7 selhal
 >   (`it.fails`) a DD-T8/T9 čekaly (`todo`).
 > - Po Jardově implementaci (`f24326a`) testy přešly na `Clock` a DD-T7–T9 jsou plnohodnotné testy.
+>
+> **Aktualizace 26. 10. 2026:** sloučeno do `main` (PR #20, `055917c`). Aktuální stav uzavření a
+> lidského review je v [Uzavření C05](#uzavření-c05-s3).
 
 ### Tests derived from DD
 
@@ -475,15 +478,25 @@ je ve sloupci *Před*.
 - Cancel (OP-04), Reject a Ordering jsou mimo DD. Používají stejnou transakční cestu a `Clock`, ale
   jejich pravidla nejsou v `LifecyclePolicy` (Reject a Cancel rozhodují přímo ve službě).
 - Pravidlo „stav mění jen Lifecycle“ hlídá dál textová kontrola L2 (`lifecycle-ownership.test.ts`), ne typy.
-- Testy a text připravila AI za Michala. **Lidské review zatím chybí (A9).**
+- Testy a text připravila AI za Michala. Lidské review A9 doplněno 26. 10. 2026 — viz [Lidské review A9](#lidské-review-a9).
 
 ### Commit/tag
 
-- DD kroky 1–3: `ef8257c` (Jarda). Krok 4 (Honza): commit „docs(c05): complete Honza behavior design and technical review“ (`git log -1 -- docs/architecture-and-decisions.md`).
-- Implementace N1/N2 + `MissingResourceError`: `f24326a` (Jarda).
-- Testy odvozené z DD (DD-T1–T10, fake store) + evidence M1–M3: commit „C05 M1–M3“ nad `f24326a`
-  (`git log -1 -- tests/domain/lifecyclePolicy.test.ts`).
-- Tag `c05-detailed-design`: *po S3 (krok 4 + lidské review)*.
+Větev `c05`, sloučená do `main` přes **PR #20** (merge commit **`055917c`**, 26. 10. 2026).
+
+| Commit | Autor | Obsah |
+|---|---|---|
+| `f5a4676` | Jarda | plán a rozdělení práce (`tasks-cv5.md`) |
+| `ef8257c` | Jarda | DD kroky 1–3: jednotka, DR1–DR7, ownership, kontrakty 1–4, strukturální pohled |
+| `f24326a` | Jarda | implementace N1 (`LifecyclePolicy`), N2 (`Clock`), `MissingResourceError`; testy převedené na `TestClock` |
+| `ad1ede6` | Michal | testy odvozené z DD (DD-T1–T10), fake `ReservationStore` (N3), první evidence |
+| `58600c2` | Michal | testy na Clock API, DD-T7–T9 plnohodnotné, mismatch před/po N1+N2, mutační kontrola |
+| `a48d2e0` | Honza | DD krok 4: H1 operace, H2 rozhodovací tabulky, H3 sekvence, H4 |
+| `600645c` | Michal | kontrola kroku 4 proti testům, DD-T3c (A-F4) |
+| `055917c` | Jarda | merge PR #20 `c05` → `main` |
+
+Tag **`c05-detailed-design`** → `055917c` (merge commit, stejně jako `c03-architecture` u C03).
+Uzavírací úprava dokumentace (tato sekce, checklist v `tasks-cv5.md`) je samostatný commit nad tagem.
 
 ### Honzova část — technická kontrola a předávka
 
@@ -529,3 +542,67 @@ zůstává následným krokem. Týmový průchod S2/S3, lidské review A9, tag a
 výsledek kontroly odkazů je v [C05 reportu](evidence/c05-document-links.json).
 Historický C03 report zachován. Nová C05 unit/component sada se v této dokumentační části
 nespouští; její implementace a běh patří Michalovi (M1–M3).
+
+### Uzavření C05 (S3)
+
+**Datum:** 26. 10. 2026. Připraveno s AI na pokyn Jardy; jde o technickou kontrolu, ne o lidské review A9.
+
+| Kontrola | Výsledek |
+|---|---|
+| Definition of Done ze zadání | kroky 1–6 obsahově hotové — [checklist](tasks-cv5.md#hotovo-je-když-kontrola-na-s3--definition-of-done-ze-zadání) |
+| Sloučení | PR #20 → `main`, `055917c` |
+| Testy na `main` po merge (`npm test`, embedded PostgreSQL 16.14, READ COMMITTED, base `055917c`, 26. 10. 2026 11:19 CET, Linux/WSL2, po opravě K4) | **138 passed / 0 failed** (14 souborů; +1 proti 137 = DD-T3c z `600645c`) — [`c05-main-postgres-tests.json`](evidence/c05-main-postgres-tests.json) |
+| Odkazy v dokumentech (`node scripts/check-docs.mjs`) | prošlo (exit 0); skript zapisuje report do `c03-document-links.json`, ten ponechán jako historický C03 report |
+| Tag | `c05-detailed-design` → `055917c` |
+| Lidské review A9 | **hotovo** 26. 10. 2026 — Jarda (krok 4, testy), Honza (kroky 1–3 a kód) — viz tabulka níže |
+
+Věty „PR a tag nejsou uzavřené“ v Honzově části a „Tag po S3“ v původní evidenci popisují stav
+12. 10. 2026 a jsou ponechány jako historie; platí tato sekce.
+
+#### Technická kontrola AI (26. 10. 2026)
+
+**Provedl:** Claude (AI) na pokyn Jardy. Nejde o lidské review A9; slouží jako podklad pro reviewery níže.
+Rozsah: DD kroky 1–4 v [C05 Detailed Design](architecture-and-decisions.md#c05-detailed-design) proti kódu
+`src/domain/lifecyclePolicy.ts`, `src/domain/clock.ts`, `src/services/reservationService.ts` a testům DD-T1–T11.
+
+Ověřeno beze změny:
+
+- tabulky H2 (C-F1…C-F5, A-F1…A-F4) odpovídají `decideConfirm` / `decideApprove` řádek po řádku;
+- sekvence H3 odpovídá skutečnému pořadí volání v `ReservationService.decide` / `allocate`;
+- kontrakty 2–4 odpovídají portu, fake store i Prisma adaptéru;
+- DD-T9 má 16 případů (7 + 5 + 4), jak uvádí evidence; pokrytí H2 v tabulce výše sedí;
+- mutace **M1** (3 failed: DD-T2, DD-T2b, DD-T8b) a **M3** (1 failed: DD-T8) zopakovány se stejným
+  výsledkem, kód poté vrácen; M2, M4, M5 neopakovány.
+
+| # | Nález | Závažnost | Řešení |
+|---|---|---|---|
+| K1 | Strukturální pohled neukazuje závislost `ReservationService → ReservationRules` (`isCancellable`, `isPastCancellationWindow`), kterou kód má kvůli Cancel. | nízká | Doplněna poznámka pod diagram: závislost je mimo hranici DD (OP-04). Diagram ponechán. |
+| K2 | Kontrakt 1 neříkal, co se stane při porušené precondition „Resource existuje“ — přesně scénář DD-T7. | nízká | Doplněno do *Failures* kontraktu 1: zámek nic nezamkne, Lifecycle odmítne `MissingResourceError` před zápisem. |
+| K3 | Confirm čte Resource před rozhodnutím o stavu, takže u rezervace mimo DRAFT bez Resource vyhraje `MissingResourceError` nad `InvalidStateError`. | informativní | Ponecháno: odpovídá H1 („nenalezené záznamy řeší H1 před dokončením rozhodnutí“) a nastat může jen při porušeném cizím klíči. |
+| K4 | DD-T8 ověřoval čtení hodin po zámku, ale ne **po opětovném načtení rezervace**, které H2 vyžaduje. | nízká | Do DD-T8 přidána aserce `tx.findById` < `clock.now`; 40/40 unit testů prochází. |
+| K5 | `tasks-cv5.md` uváděl u jednotky jen REQ-03, REQ-04; DD krok 1 uvádí i REQ-06. | nízká | Plán sjednocen s DD. |
+| K6 | Evidence 12. 10. žádá zopakovat `npm test` před tagem (běh 137 byl před DD-T3c). | — | Vyřešeno během 26. 10. (138 passed) v tabulce výše. Prostředí 12. 10. neuvádí verzi Node — ponecháno jako historie. |
+
+Blokující rozpor mezi DD, kódem a testy nalezen nebyl.
+
+#### Lidské review A9
+
+Pravidlo A9 (z C03): každý výstup připravený AI musí přečíst člověk, který ho nepsal, a zapsat se
+sem. Do vyplnění tohoto záznamu **lidské review C05 doloženo není**. Podkladem jsou nálezy K1–K6 výše:
+reviewer je ověří (souhlasí / nesouhlasí) a projde body níže.
+
+| Výstup | Autor (s AI) | Reviewer | Datum | Výsledek / nálezy |
+|---|---|---|---|---|
+| DD kroky 1–3 (`ef8257c`) + implementace N1/N2 (`f24326a`) | Jarda | Honza (Jan Kovařčík) | 26. 10. 2026 | přečetl výstup a technickou kontrolu AI; souhlasí se všemi nálezy K1–K6 a jejich řešením, další nálezy nemá (souhlas sdělen Jardovi osobně) |
+| DD krok 4 H1–H4 (`a48d2e0`) | Honza | Jarda (Jaroslav Petera) | 26. 10. 2026 | přečetl výstup a technickou kontrolu AI; souhlasí se všemi nálezy K1–K6 a jejich řešením, další nálezy nemá |
+| Testy DD-T1–T11, fake store, evidence M1–M3 (`ad1ede6`, `58600c2`, `600645c`) | Michal | Jarda (Jaroslav Petera) | 26. 10. 2026 | přečetl výstup a technickou kontrolu AI; souhlasí se všemi nálezy K1–K6 a jejich řešením, další nálezy nemá |
+
+Co má reviewer minimálně ověřit (stačí odškrtnout do sloupce *Výsledek*):
+
+- **Kroky 1–3:** DR1–DR7 odpovídají C03 C2 (R2/R3/R5/R6); kontrakty 1–4 sedí na kód
+  (`src/domain/lifecyclePolicy.ts`, `src/domain/clock.ts`, `ReservationService.decide`);
+  diagram neobsahuje závislost, která v kódu není.
+- **Krok 4:** řádky C-F1…C-F5 a A-F1…A-F4 odpovídají `decideConfirm` / `decideApprove`;
+  sekvence H3 odpovídá skutečnému pořadí volání (`findById` → zámek → `tx.findById` → `clock.now()`).
+- **Testy:** každý řádek DD-T* odkazuje na existující test; mutace M1–M5 jsou popsané
+  reprodukovatelně; tabulka mismatch neobsahuje řádek „update DD“ bez zdůvodnění.

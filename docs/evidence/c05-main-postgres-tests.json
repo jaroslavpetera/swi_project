@@ -1,0 +1,905 @@
+{
+  "startedAt": "2026-10-26T10:19:12.619Z",
+  "provider": "postgresql",
+  "steps": [
+    "Non-empty SQLite transfer: all six models, identical retry, refusal of differing target",
+    "PostgreSQL migrations deployed to a new database",
+    {
+      "migrationDrift": 0
+    }
+  ],
+  "baseCommit": "055917cde6210b79607880fd4b5012f152183c69",
+  "version": "PostgreSQL 16.14 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit",
+  "isolation": "read committed",
+  "tests": {
+    "passed": 138,
+    "failed": 0,
+    "total": 138,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "file": "tests/architecture/lifecycle-ownership.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ADR-03 — Reservation Lifecycle owns every Reservation state change only Reservation Persistence writes the Reservation table",
+          "status": "passed"
+        },
+        {
+          "name": "ADR-03 — Reservation Lifecycle owns every Reservation state change only the Reservation Lifecycle requests a Reservation state transition",
+          "status": "passed"
+        },
+        {
+          "name": "ADR-03 — Reservation Lifecycle owns every Reservation state change only the Reservation Lifecycle opens a resource-scoped transaction",
+          "status": "passed"
+        },
+        {
+          "name": "ADR-03 — Reservation Lifecycle owns every Reservation state change the Lifecycle transitions state only inside inResourceTransaction",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/domain/lifecyclePolicy.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state DRAFT, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state CONFIRMED, now 2027-06-01T17:30:00.000Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state PENDING_APPROVAL, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: true }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideConfirm — decision table (state → deadline → routing) DD-T9: state CANCELLED, now 2027-06-01T17:29:59.999Z, resource { id: 't1', requiresApproval: false }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: PENDING_APPROVAL at 2027-06-01T17:29:59.999Z → { kind: 'Allocate' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: PENDING_APPROVAL at 2027-06-01T17:30:00.000Z → { kind: 'Close', to: 'EXPIRED', cause: 'APPROVAL_DEADLINE' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: DRAFT at 2027-06-01T17:29:59.999Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: CONFIRMED at 2027-06-01T17:30:00.000Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideApprove — decision table (state → deadline) DD-T9: EXPIRED at 2027-06-01T17:30:00.000Z → { kind: 'InvalidState', expected: 'PENDING_APPROVAL' }",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: overlapping CONFIRMED → Conflict with its id",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: the candidate is never its own conflict",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: touching interval and non-CONFIRMED rows → Free",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T9 decideAllocation — BR-02 scope (BR-01 half-open) DD-T9: policy is pure — frozen inputs, no exception, same input → same decision",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/domain/ordering.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "BR-07 ordering window is open for a CONFIRMED reservation during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window opens exactly at the start of the slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window closes exactly at the end of the slot — [start,end) per BR-01",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed before the slot starts",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed for a DRAFT reservation even during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "BR-07 ordering window is closed for a CANCELLED reservation even during its slot",
+          "status": "passed"
+        },
+        {
+          "name": "order total sums quantity times the price captured at ordering time",
+          "status": "passed"
+        },
+        {
+          "name": "order total is zero for no lines",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/domain/rules.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "rangesOverlap detects overlapping ranges",
+          "status": "passed"
+        },
+        {
+          "name": "rangesOverlap does not flag back-to-back ranges as overlapping",
+          "status": "passed"
+        },
+        {
+          "name": "findOverlappingConfirmed ignores non-confirmed reservations",
+          "status": "passed"
+        },
+        {
+          "name": "findOverlappingConfirmed flags overlap with another confirmed reservation",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft expires a DRAFT reservation once inside the no-show grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft does not expire a DRAFT reservation outside the grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isExpiredDraft never expires a CONFIRMED reservation",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired expires a PENDING_APPROVAL reservation once inside the approval grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired does not expire a PENDING_APPROVAL reservation outside the grace window",
+          "status": "passed"
+        },
+        {
+          "name": "isApprovalExpired never expires a state other than PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "isCancellable allows cancelling DRAFT, CONFIRMED and PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "isCancellable does not allow cancelling REJECTED, EXPIRED or CANCELLED",
+          "status": "passed"
+        },
+        {
+          "name": "isPastCancellationWindow is false while now is before the reservation's start",
+          "status": "passed"
+        },
+        {
+          "name": "isPastCancellationWindow is true once now reaches or passes the reservation's start",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/http/app.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "POST /reservations validates, persists and returns the reservation ID",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations rejects an unknown resourceId with 400 and keeps the server alive",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm cannot confirm a cancelled reservation",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm returns 404 for an unknown reservation",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm confirms a DRAFT reservation with no conflict",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm rejects confirm when a CONFIRMED reservation already overlaps the same resource",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm, /approve, /reject — BR-05 approval workflow routes Confirm to PENDING_APPROVAL (202) for a resource that requires approval, then Approve confirms it",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/confirm, /approve, /reject — BR-05 approval workflow rejects a PENDING_APPROVAL reservation via /reject",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy cancels a CONFIRMED reservation before its start and frees the slot",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy rejects cancelling a reservation after its start time",
+          "status": "passed"
+        },
+        {
+          "name": "POST /reservations/:id/cancel — BR-03 cancellation policy is idempotent when cancelling an already-cancelled reservation",
+          "status": "passed"
+        },
+        {
+          "name": "GET /resources/:id/availability rejects missing or unparsable query parameters with 400",
+          "status": "passed"
+        },
+        {
+          "name": "GET /resources/:id/availability reports a confirmed slot as unavailable and a free slot as available",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/postgres/lock-mechanism.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) with the Resource lock, the second decision sees the committed winner",
+          "status": "passed"
+        },
+        {
+          "name": "ADR-03 — PostgreSQL lock mechanism (READ COMMITTED) removing only the lock reproduces two overlapping confirmations",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/concurrency.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.1: overlapping allocation has exactly one winner (approval=false)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.1: overlapping allocation has exactly one winner (approval=true)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.2: duplicate approval has one winner",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.3: cancellation cannot be overwritten by a stale allocation (approval=false)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.3: cancellation cannot be overwritten by a stale allocation (approval=true)",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.4: Approve and Reject cannot both succeed on the same pending request",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.5: simultaneous cancellations are idempotent",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.6: touching intervals can both be confirmed concurrently",
+          "status": "passed"
+        },
+        {
+          "name": "REQ-04 — coordinated races across independent SQLite clients V-04R.7: direct Confirm competes safely with a previously pending Approve",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/reservationLifecycle.unit.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "DD-T1 algorithm branch — BR-05 routing (DR5) DD-T1: DRAFT on a Resource requiring approval → PENDING_APPROVAL without evaluating BR-02",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T1 algorithm branch — BR-05 routing (DR5) DD-T1b: DRAFT on a Resource without approval → allocation decides → CONFIRMED",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T2 state transition — close on deadline, then report (DR4) DD-T2: Confirm at the BR-04 cutoff commits CANCELLED and only then throws NoShowExpiredError",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T2 state transition — close on deadline, then report (DR4) DD-T2b: Approve at the BR-06 deadline commits EXPIRED and only then throws ApprovalExpiredError",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T2 state transition — close on deadline, then report (DR4) DD-T2c: 1 ms before the cutoff the deadline branch is not taken (half-open boundary)",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7) DD-T3: Confirm overlapping a CONFIRMED reservation → OverlapError(conflicting id), stays DRAFT, rollback",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7) DD-T3b: Approve re-evaluates BR-02 at decision time → OverlapError, stays PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T3 failure behavior — BR-02 conflict writes nothing (DR6, DR7) DD-T3c (H2 A-F4): Approve before the deadline without conflict → CONFIRMED, exactly one write",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T4 collaboration — decide on state read under the lock (DR1) DD-T4: state changed while waiting for the lock → decision uses the reloaded state (InvalidStateError), nothing written",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T4 collaboration — decide on state read under the lock (DR1) DD-T4b: competing allocation committed while waiting → BR-02 sees it and refuses (OverlapError)",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T5 algorithm — decideAllocation scope (DR6, BR-01) DD-T5: touching CONFIRMED interval, overlapping non-CONFIRMED rows and other Resources do not block",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6: Confirm from CANCELLED → InvalidStateError(expected DRAFT), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6: Confirm from CONFIRMED → InvalidStateError(expected DRAFT), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6: Confirm from PENDING_APPROVAL → InvalidStateError(expected DRAFT), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6: Confirm from REJECTED → InvalidStateError(expected DRAFT), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6: Confirm from EXPIRED → InvalidStateError(expected DRAFT), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6b: Approve from DRAFT → InvalidStateError(expected PENDING_APPROVAL), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6b: Approve from CONFIRMED → InvalidStateError(expected PENDING_APPROVAL), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6b: Approve from CANCELLED → InvalidStateError(expected PENDING_APPROVAL), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6b: Approve from REJECTED → InvalidStateError(expected PENDING_APPROVAL), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T6 state transition — only allowed source states (DR3) DD-T6b: Approve from EXPIRED → InvalidStateError(expected PENDING_APPROVAL), state unchanged",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T7 interface contract — precondition: the Resource exists DD-T7: Confirm whose Resource is missing inside the transaction → MissingResourceError, nothing written",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T8 interface contract — Clock (N2) DD-T8: now() is read exactly once per command, inside the transaction, after the lock",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T8 interface contract — Clock (N2) DD-T8b: a deadline crossed while waiting for the lock counts → CANCELLED + NoShowExpiredError",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/reservationService.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-03 Confirm — BR-05 requiresApproval routing confirms directly to CONFIRMED when the resource does not require approval",
+          "status": "passed"
+        },
+        {
+          "name": "OP-03 Confirm — BR-05 requiresApproval routing routes to PENDING_APPROVAL when the resource requires approval",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation approves a PENDING_APPROVAL reservation with no conflict",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation re-checks BR-02 overlap at approve time, not just at request time",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation expires a PENDING_APPROVAL reservation once the approval deadline has passed",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Approve Reservation rejects approving a reservation that is not PENDING_APPROVAL",
+          "status": "passed"
+        },
+        {
+          "name": "OP-05 Reject Reservation moves a PENDING_APPROVAL reservation to REJECTED",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy cancels a CONFIRMED reservation before its start and frees the slot",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy allows cancelling a PENDING_APPROVAL reservation (B13 decision)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy rejects cancelling once the cancellation window has passed (R-4)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy is idempotent: cancelling an already-CANCELLED reservation succeeds without error (R-5)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-04 Cancel — BR-03 cancellation policy rejects cancelling a REJECTED reservation — cancel does not apply to a closed decision",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/services/reservationTx.contract.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "DD-T10 interface contract — ReservationTx.transition (REQ-04 second safeguard) DD-T10: transition from the stored state persists the new state and returns it",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T10 interface contract — ReservationTx.transition (REQ-04 second safeguard) DD-T10b: transition from a stale state → ReservationConflictError, the newer state is not overwritten",
+          "status": "passed"
+        },
+        {
+          "name": "DD-T10 interface contract — ReservationTx.transition (REQ-04 second safeguard) DD-T10c: findConfirmedForResource returns only CONFIRMED rows of that Resource",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/c02-completion.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "C02 v0.2 — requirement verification V-02.8: pending does not allocate; approval allocates; cancel releases (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-02.9: rejected and cancelled pending requests do not block (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.5: new competing approval rejects the older pending request without changing it (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-03.3: confirm one millisecond before deadline succeeds; at deadline cancels",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.6: approve before deadline succeeds; at deadline persists EXPIRED and leaves slot free",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.7: reads do not expire a pending request; reject after deadline still succeeds",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-04.3: repeat cancel succeeds after start; pending cancel between deadline and start succeeds",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-01.5: past interval can be created but never confirmed (HTTP)",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.8: HTTP expiry returns 410 with persisted EXPIRED, then 409 on retry",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-05.9: requiresApproval must be a JSON boolean, not a truthy string",
+          "status": "passed"
+        },
+        {
+          "name": "C02 v0.2 — requirement verification V-04R.8: concurrent HTTP confirmations return 200/409 and allocate once",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/op01-op02.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.1: valid Resource, User and interval → one DRAFT reservation with an identifier",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.2: start == end → rejected, nothing created (BR-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.3: unknown Resource → rejected, nothing created",
+          "status": "passed"
+        },
+        {
+          "name": "OP-01 Create Reservation (REQ-01) V-01.4: interval inside a CONFIRMED reservation → still accepted as DRAFT (D-02)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.1 / V-02.2: free slot → available, overlapping slot → unavailable",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.3 / V-02.4: touching intervals are available — [start,end) boundary (BR-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.5: a DRAFT reservation does not block the slot (D-01)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.6: invalid interval → rejected, never answered with 'available'",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) V-02.7: unknown Resource → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-02 Check Availability (REQ-02) availability is a pure query: no reservation is created or changed",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spec/op06-orders.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.1: CONFIRMED reservation during its slot → order is placed with a total",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.2: DRAFT reservation during its slot → rejected (NOT_CONFIRMED)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.3: CONFIRMED reservation that has not started yet → rejected (BEFORE_START)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.4: CONFIRMED reservation that already ended → rejected (AFTER_END)",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.5: unknown menu item → rejected, nothing ordered",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.6: an order without items → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.7: item marked as unavailable → rejected",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.8: unknown reservation → 404",
+          "status": "passed"
+        },
+        {
+          "name": "OP-06 Place Order (REQ-07, BR-07) V-06.9: a later price change does not alter an order already placed",
+          "status": "passed"
+        },
+        {
+          "name": "Tab (účet hosta) and order lifecycle V-06.10: placed order is unpaid, serving and paying move it to paid",
+          "status": "passed"
+        },
+        {
+          "name": "Tab (účet hosta) and order lifecycle V-06.11: an order cannot be paid before it is served",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "tests/spike/persistence.spike.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "C01 spike: persistence persists a reservation and reloads the same data from the database",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "status": "passed",
+  "completedAt": "2026-10-26T10:19:31.105Z",
+  "snapshot": {
+    "sha256": "1fd76e2dc7a0f46cc8f2862b932c2ea8c8712065648e45028f906555ba3b103b",
+    "inputs": [
+      {
+        "file": "docker-compose.yml",
+        "sha256": "92b70fbd0c862a4d7768f3527c0e8e18b92570d9d4e0ab1491c5438eb15aba94"
+      },
+      {
+        "file": "package-lock.json",
+        "sha256": "79ec3b3d3525b235c0d6ccd1c5c552977263720d793e592501edd254ca52d51d"
+      },
+      {
+        "file": "package.json",
+        "sha256": "9f3d61fa0a250f85139ba2c1a7e783c7541b6aac17a6fad7099a1b27d345ba04"
+      },
+      {
+        "file": "prisma/migrations/20261011153000_postgresql_init/migration.sql",
+        "sha256": "82c3631afa5052f8687160ccf6d884821f9a975bc68880fec3afb769c47e2cc0"
+      },
+      {
+        "file": "prisma/migrations/migration_lock.toml",
+        "sha256": "d6bae7899f05da956e1070ba5703455503208ef79e161acb18c93bfe3c6cd236"
+      },
+      {
+        "file": "prisma/schema.prisma",
+        "sha256": "519e3afedf857883a7f8f89f8dd7b53013aa75ce453220d66405aec5a48bd90c"
+      },
+      {
+        "file": "prisma/seed.ts",
+        "sha256": "2f5b583c5a59acf0466b4e87f68abb39d66563c52201e18dc50e312a1b0758c7"
+      },
+      {
+        "file": "prisma/sqlite/migrations/20260916164406_init/migration.sql",
+        "sha256": "7422952073f9111f618985ca9cc9670014f400754ecf8a1d2222cf06fda2efb9"
+      },
+      {
+        "file": "prisma/sqlite/migrations/20260921130912_add_requires_approval/migration.sql",
+        "sha256": "7d8c3b89ea64ab2e13817e841f2adda96cacb458f6cde27fcf2bd6966e4a2469"
+      },
+      {
+        "file": "prisma/sqlite/migrations/20260921131639_add_orders/migration.sql",
+        "sha256": "ef430a373eb0085609d75b91340ba7879c4d92dc2bba801f98a3b5c05f4a46ba"
+      },
+      {
+        "file": "prisma/sqlite/migrations/migration_lock.toml",
+        "sha256": "299b191f637fd153d78bf4dabffc59ac9b5e4c7dcea7c644b7d111e9bd5a5fc4"
+      },
+      {
+        "file": "prisma/sqlite/schema.prisma",
+        "sha256": "8df2bf83a279bfda83d975826b2c6e5b128640c4b62efa1829340568f0cd999f"
+      },
+      {
+        "file": "public/app.js",
+        "sha256": "58ac805e9ab44715bff31afbb28bcb8092ae1537ee6e58d735e757f1462b6fcc"
+      },
+      {
+        "file": "public/favicon.svg",
+        "sha256": "a1d03afc19f418500381d50a6994ed0cdf0071a1cadac899699214ab190dee49"
+      },
+      {
+        "file": "public/index.html",
+        "sha256": "6fd301b46d20e50169e7a04c27f0c207af98457c549eba71d635c209bf39f5cc"
+      },
+      {
+        "file": "public/styles.css",
+        "sha256": "07a0ad7958c506c7c90992dddf19b733db3e6f55518e432850622f44de651e66"
+      },
+      {
+        "file": "scripts/check-browser-syntax.mjs",
+        "sha256": "7f7da662f66ac52402888f564a93e111645fea3768c7b91eae3c2692e641dad4"
+      },
+      {
+        "file": "scripts/check-docs.mjs",
+        "sha256": "25690065800eae30de2baeca8ea5e511ffc9246c2a92546dbe4657c1f1df749b"
+      },
+      {
+        "file": "scripts/dev-local.mjs",
+        "sha256": "53b975c4e21c67d3a069960e0acab3b4542a547f2c322e3c4140a16b4a445188"
+      },
+      {
+        "file": "scripts/generate-clients.mjs",
+        "sha256": "6bc7fc291ee0700f2750f810b2925e9720f65498199f38260f2c5ed612cffb0c"
+      },
+      {
+        "file": "scripts/lib/data-transfer.mjs",
+        "sha256": "4405ac1567b51dbcc33ee5637d336ee06950992c56285ce8dd45aefc82cb9cd2"
+      },
+      {
+        "file": "scripts/lib/postgres.mjs",
+        "sha256": "cb23d09140d905ae649eb91de9b02944992d09b257c58a5dfbec7eb6b21bab30"
+      },
+      {
+        "file": "scripts/lib/runtime.mjs",
+        "sha256": "f1bf2fa92fe88f251560dd855a632abf04f6c36cc0aa2514892577b73436ad66"
+      },
+      {
+        "file": "scripts/migrate-local-sqlite.mjs",
+        "sha256": "21cdab143082d06b6e200d23acba205f8eda12570dab1838d610dd6381414247"
+      },
+      {
+        "file": "scripts/postgres-load.ts",
+        "sha256": "9f3969fdc98f5ca9d8e0c0d0e42b2246133855638c2f791493a121a317221c3b"
+      },
+      {
+        "file": "scripts/verify-c02.mjs",
+        "sha256": "d855948d03ce7f6f217b46352dd4e234bf2b88990683c7983c8debf8933606e3"
+      },
+      {
+        "file": "scripts/verify-data-transfer.mjs",
+        "sha256": "37b1d1c95b8f2c73a633b52c370eb27e44c3242e9d8d575ea90e364851f499a4"
+      },
+      {
+        "file": "scripts/verify-frontend.mjs",
+        "sha256": "9f3dbd67a3935fdfc9d87a2619c25a3d098ba63b42b9d4023d9a263aaab7a24f"
+      },
+      {
+        "file": "scripts/verify-postgres.mjs",
+        "sha256": "f0073be61579c91fc349917ff9dcb2ba0d7c212a1e8c039ca242bde06559b088"
+      },
+      {
+        "file": "src/database.ts",
+        "sha256": "772ca80645d1acc586a6ed27325e4c88be99c45241f98f054ad7b08625843a1b"
+      },
+      {
+        "file": "src/domain/clock.ts",
+        "sha256": "6a83b508f83e7d2cf39fadf5e3e4e7429e12df3a2719db2afed519b5c2c5becf"
+      },
+      {
+        "file": "src/domain/lifecyclePolicy.ts",
+        "sha256": "36536f3190dbd56768ccbd6d8b8da083fa74f5c2d99963a636e69c490b0fdec4"
+      },
+      {
+        "file": "src/domain/rules.ts",
+        "sha256": "6f7b1cc46371f8cafe29c7b9b4b89dcaf40b233ae111be58526370ee83488d68"
+      },
+      {
+        "file": "src/domain/types.ts",
+        "sha256": "18749e13e6956874cb4a8b87868296abbd18ffa105af1efefd6f4059b2d96725"
+      },
+      {
+        "file": "src/http/app.ts",
+        "sha256": "0173789abb9f79336c3a5984274a5926118bc6e7ba3d0a415191157ed3675a2f"
+      },
+      {
+        "file": "src/index.ts",
+        "sha256": "fb0b6a4e7f15d89c3a2dfe73ae11139fcd5030c77d9173df1192c6094b3d9253"
+      },
+      {
+        "file": "src/repositories/orderRepository.ts",
+        "sha256": "a68c311def84a9c65dde80fbeab3c41a9b9c65427e44a0a4d229bc1b9211bb13"
+      },
+      {
+        "file": "src/repositories/reservationRepository.ts",
+        "sha256": "dc9d36f4b35ee17acab41956c7e8b7e8775c79fc2920fa355995c970a1f8806e"
+      },
+      {
+        "file": "src/services/availabilityService.ts",
+        "sha256": "916028d638ab5e4af3bc66b85d87bbd02f2f003768f1cc12ae28b77dbc149b6b"
+      },
+      {
+        "file": "src/services/orderService.ts",
+        "sha256": "1804c6c40a14dde811ebfe17e674a57176c0999414a824074500ce9f5d5cb220"
+      },
+      {
+        "file": "src/services/reservationService.ts",
+        "sha256": "296fb6d530488be7d81c9ba6adacf45b23fa5b8c4737b4572dd69fbea7cfc1fd"
+      },
+      {
+        "file": "tests/architecture/lifecycle-ownership.test.ts",
+        "sha256": "0c628208f202f8309dab335180fe99102b36bd1535cc01141633a5df1cb58c96"
+      },
+      {
+        "file": "tests/domain/lifecyclePolicy.test.ts",
+        "sha256": "306eb20eef5bf6e2041d7274d0d79aafcb3c7bd096593fb6316587756f21fe1e"
+      },
+      {
+        "file": "tests/domain/ordering.test.ts",
+        "sha256": "3ce4547fdd25e97971af097207f15e775e869a02cca473e58f5fe4df427825a2"
+      },
+      {
+        "file": "tests/domain/rules.test.ts",
+        "sha256": "1eafa19eb26a0cc92754bf7a2435d559d95dee5104d5efb669932edb61269832"
+      },
+      {
+        "file": "tests/http/app.test.ts",
+        "sha256": "d1c8ed82d77a07c9992c6a833ef253a4b3f99b963975f22b808c2be330b142e7"
+      },
+      {
+        "file": "tests/postgres/lock-mechanism.test.ts",
+        "sha256": "73297d07be7efe3db98ac43246c07087e14b7147e0b526d62729d5c117f285bc"
+      },
+      {
+        "file": "tests/services/concurrency.test.ts",
+        "sha256": "106ce3a062c43355c4df08db4341f9b57f1d5ae67c92210464ecfba98af9cb52"
+      },
+      {
+        "file": "tests/services/reservationLifecycle.unit.test.ts",
+        "sha256": "c85affbcb26c65394850c9eb923b5f088deaacf7a1c77a5f2ac37139f304b471"
+      },
+      {
+        "file": "tests/services/reservationService.test.ts",
+        "sha256": "3a867bd516fa34e717223fde0e62335ac6294f632390a777b6225afc7c06de86"
+      },
+      {
+        "file": "tests/services/reservationTx.contract.test.ts",
+        "sha256": "f01ca804012741ef5a1def195104ba7dd184970663b35d2eda0d4486739be0c1"
+      },
+      {
+        "file": "tests/spec/c02-completion.test.ts",
+        "sha256": "1d4a795810d9fb2460dee1abd7dd71e87f505114018621221a455b8fc32e753e"
+      },
+      {
+        "file": "tests/spec/op01-op02.test.ts",
+        "sha256": "438e56ea2fb710a5630a751c6b35a73c83c49b5a52c4b9e2fc171d01a8d4677e"
+      },
+      {
+        "file": "tests/spec/op06-orders.test.ts",
+        "sha256": "fba507d06f1e61e5ec9a470f249729549fbb1df9f80f6d1ac5db4236bd959a57"
+      },
+      {
+        "file": "tests/spike/persistence.spike.test.ts",
+        "sha256": "9e9eb77c6ac0d324607cc30ee064a53fbe69b8ab8596110137f07effe830425f"
+      },
+      {
+        "file": "tests/support/clock.ts",
+        "sha256": "e7aaf563ad9bde971fb25a6f435aa2c87543cbcbeed8fff2e6e3aa2b50ed4f58"
+      },
+      {
+        "file": "tests/support/inMemoryReservationStore.ts",
+        "sha256": "ccca7f83dec48c091ea3853cde4dcc9f0e7f4954d15393e908185c5ddb617bdd"
+      },
+      {
+        "file": "tsconfig.json",
+        "sha256": "0324c71c38e18131acee138200c91d645df98c7650953ecdc7fb7dc1a28e48da"
+      },
+      {
+        "file": "tsconfig.verify.json",
+        "sha256": "6e4fba9000493d7196288fae8ac14ca1e10128d76c6a26737f4ae966c1aafeff"
+      },
+      {
+        "file": "vitest.config.ts",
+        "sha256": "2d4ac4b984c9b3891a9eabb63b9b5c9e6164b291453e8071055a56d68d67bfda"
+      }
+    ]
+  }
+}
