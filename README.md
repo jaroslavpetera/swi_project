@@ -106,8 +106,9 @@ do `docs/evidence/frontend/`. Vývojovou databázi z `.env` nepoužívá.
 Historické ověření instalace z 21. 9. 2026 je v evidenci C01. Aktuální integrované
 ověření C02, počty testů a vazby na požadavky jsou v
 [`docs/c02-completion-evidence.md`](docs/c02-completion-evidence.md).
-Specifikace v0.2 je technicky dokončený kandidát; týmový podpis a křížové lidské
-review zůstávají explicitně otevřené.
+Specifikace v0.2 je schválená baseline (křížové review a schválení Jarda + Michal
+26. 10. 2026); původní pořadí analýzy C02 je přiznaná procesní mezera, viz
+[uzavření procesních bodů](docs/c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026).
 
 ## API
 
@@ -140,7 +141,7 @@ Approve/Reject a objednávky. Garance souběhu je nyní opakovatelně ověřena 
 PostgreSQL 16 včetně 10× zátěže. ADR-04 zachovává expiraci při Approve podle R-16;
 lidské review C03 A9/HC3 dokončil Honza 11. 10. 2026
 ([záznam](docs/architecture-and-decisions.md#review-a9--hc3--technická-kontrola)).
-Křížové review C02 a týmové podpisy baseline zůstávají otevřené.
+Křížové review C02 a schválení baseline v0.1/v0.2 doplněny 26. 10. 2026.
 
 ## Historické splnění C01 — kde co najdete
 

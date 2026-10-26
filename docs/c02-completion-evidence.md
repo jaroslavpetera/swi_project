@@ -6,6 +6,9 @@ větev `codex/c02-completion`.
 
 ## Přijatá baseline
 
+> **Aktualizace 26. 10. 2026:** v0.1 a v0.2 schválili Jarda a Michal, křížové review hotovo —
+> [Uzavření procesních bodů](#uzavření-procesních-bodů-26-10-2026). Text níže je stav z 22. 9.
+
 Aktuální `specification.md` je **technicky ověřený kandidát v0.2**, který zachovává
 vymezení v0.1 a doplňuje schvalování/objednávky. Explicitní týmový podpis není
 doložen a tento dokument jej nenahrazuje. Technická kontrola všech devíti otázek
@@ -169,19 +172,56 @@ se při úklidu neměnily a testovací sada nebyla znovu spouštěna.
 |---|---|
 | 1, 3, 4, 5, 8, 9, 12, 16 | Nadále splněné a ověřené. |
 | **6, 11, 13, 15** | **Dokončené:** konzistence, úplný dopad, oba diagramy v0.2, integrovaná reprodukovatelná evidence. |
-| **2** | Všech 8 požadavků technicky zkontrolováno přes 9 otázek; lidské křížové review dle původního plánu ještě chybí. |
-| 7 | Týmový podpis v0.1 stále nedoložen. |
-| 10 | Původní předchozí analýza nedoložena; dnešní změna má vlastní předchozí analýzu. |
-| 14 | Běžící kandidát v0.2 a REQ-04 ověřeny; slovo „schválené“ čeká na skutečný týmový podpis. |
+| **2** | **Dokončené 26. 10. 2026:** lidské křížové review REQ-01…08 — Jarda a Michal ([záznam](#uzavření-procesních-bodů-26-10-2026)). |
+| **7** | **Dokončené 26. 10. 2026:** týmové schválení v0.1 — Jarda a Michal. |
+| **10** | **Uzavřeno týmem jako přiznaná procesní mezera** 26. 10. 2026; původní pořadí analýzy nedoloženo, náprava doložena. Potvrzení vyučujícím zatím chybí. |
+| **14** | **Dokončené 26. 10. 2026:** týmové schválení v0.2 — Jarda a Michal; specifikace je schválená baseline. |
 
-Celkem **12 plně doložených bodů**; u zbývajících čtyř je přesně pojmenovaná
-procesní mezera. Issue nebylo na GitHubu uzavřeno ani označeno za plně dokončené.
+Stav 26. 10. 2026: **15 bodů doloženo**, bod 10 uzavřen jako přiznaná mezera
+(viz níže). Stav issue #9 na GitHubu tento dokument nemění.
 
 ### Technické navázání 11. 10. 2026
 
 Aktuální aplikace již používá PostgreSQL 16; nová ověření jsou oddělená od výše
 uvedených historických běhů v [technickém dokončení C03](c03-technical-completion.md).
 [Kontrola dostupné Git historie](c02-process-history-check.md) původní časové
-pořadí analýzy neprokázala. Body 2/7/10/14 proto zůstávají procesně otevřené:
+pořadí analýzy neprokázala. Body 2/7/10/14 proto zůstávaly procesně otevřené
+(uzavřeny 26. 10. 2026, viz níže):
 technické dokončení nepředstavuje křížové lidské review, podpis ani přijetí nápravy
 vyučujícím. Stav na GitHubu se v tomto technickém kroku nemění.
+
+## Uzavření procesních bodů (26. 10. 2026)
+
+Záznam zapsal AI agent na pokyn Jardy podle toho, co tým sdělil 26. 10. 2026. Předchozí
+dokumenty (22. 9. a 11. 10.) zůstávají beze změny jako záznam tehdejšího stavu; tato sekce
+je nepřepisuje, jen doplňuje pozdější rozhodnutí. **Schválení proběhlo 26. 10. 2026, tedy
+po C03 a C05 — není zpětně datováno.**
+
+### Body 2, 7, 14 — křížové review a schválení baseline
+
+| Krok | Kdo | Datum | Rozsah | Výsledek |
+|---|---|---|---|---|
+| Křížové review REQ-01…08 (bod 2) | Jaroslav Petera (původně B: Confirm, Cancel, Approve) a Michal Křižák (původně A: Create, Availability, objednávky) — společný průchod, každý cizí část | 26. 10. 2026 | REQ-01…08 v [`specification.md`](specification.md) a technická kontrola v [`c02-requirement-review.md`](c02-requirement-review.md) | souhlasí se vším, nové nálezy nemají |
+| Schválení v0.1 (bod 7) | Jaroslav Petera, Michal Křižák | 26. 10. 2026 | rozsah v0.1: OP-01…04, BR-01…04 | schváleno |
+| Schválení v0.2 (bod 14) | Jaroslav Petera, Michal Křižák | 26. 10. 2026 | v0.2: OP-05, BR-05/06; zachované OP-06, BR-07/08, REQ-07/08 | schváleno → specifikace je **schválená baseline v0.2** |
+
+Schvalují původní vlastníci částí A a B. Honza není autorem C02 požadavků a jeho souhlas
+se schválením zde zapsán není.
+
+### Bod 10 — původní pořadí analýzy
+
+**Rozhodnutí (návrh AI, přijal Jarda za tým, 26. 10. 2026):** bod se uzavírá jako
+**přiznaná procesní mezera**, ne jako doložený splněný bod.
+
+- **Fakt:** [kontrola historie](c02-process-history-check.md) neprokázala, že analýza dopadu
+  C02 vznikla před implementací 21. 9. 2026. Jiný soudobý podklad tým nemá.
+- **Co se nedělá:** žádný nový dokument se nevydává za původní analýzu a nic se zpětně nedatuje
+  — nový text by minulé pořadí neprokázal.
+- **Náprava, doložená v historii:**
+  - dokončovací změny C02 mají analýzu dopadu zapsanou před změnami
+    ([`c02-completion-impact.md`](c02-completion-impact.md), `d41668f`, 22. 9. 2026);
+  - C03: cross-view kontrola I a delta J před implementací K
+    ([architektura](architecture-and-decisions.md#i-cross-view-kontrola));
+  - C05: DD kroky 1–3 (`ef8257c`, 12. 10. 14:38) před implementací (`f24326a`, 14:46).
+- **Otevřené:** přijetí této nápravy vyučujícím. Pokud vyučující požaduje jinou nápravu, zapsat
+  ji sem.

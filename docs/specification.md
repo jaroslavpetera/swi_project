@@ -1,6 +1,6 @@
 # Specification — Table Reservation System
 
-**Status: v0.2 candidate, technically reviewed; team sign-off pending.**
+**Status: v0.2 approved baseline — team sign-off 26 October 2026 (Jaroslav Petera, Michal Křižák).**
 
 Updated 22 September 2026 by Codex under the instruction to complete issue #9.
 Authoritative behaviour is defined here; earlier drafts remain in Git.
@@ -14,7 +14,7 @@ Executed results: [completion evidence](c02-completion-evidence.md).
 | v0.2 change | Resource.requiresApproval; OP-05 Approve/Reject, waiting and expiry; BR-05/06 |
 | Retained extension | OP-06 ordering/tab, BR-07/08, REQ-07/08 |
 | Original owners | A: Michal Křižák (Create, Availability, ordering); B: Jaroslav Petera (Confirm, Cancel, Approve) |
-| Approval | Technical review is by Codex. Cross-review by another team member and explicit team approval of v0.1/v0.2 are still required. No new human signature is asserted. |
+| Approval | Technical review by Codex (22 Sep 2026). Human cross-review of REQ-01…08 and team approval of v0.1 and v0.2 by Jaroslav Petera and Michal Křižák on 26 Oct 2026 — [record](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026). |
 
 ## Decisions and scope
 
@@ -281,7 +281,7 @@ Technical review by Codex; not team approval.
 | K-4 Intervals | OK: BR-01/07, V-02.3/4, V-04R.6 and ordering boundary tests. |
 | K-5 Actors/goals | OK: v0.2 use cases cover OP-01…06, including Approver and order lifecycle; R-7 bounds identity. |
 | K-6 Requirement vs mechanism | OK: outcomes here; SQLite mechanism in architecture; R-13 explicitly a design decision. |
-| K-7 Uncertainty | OK: deadlines are team-chosen; scope bounded by R-7/15; signature pending. |
+| K-7 Uncertainty | OK: deadlines are team-chosen; scope bounded by R-7/15; signature was pending at this check (signed 26 Oct 2026). |
 | K-8 Ordering vs lifecycle | OK: CONFIRMED only, no Reservation transitions; V-06.2/3/4. |
 | K-9 Expiry | OK: Approve is the trigger in BR-06/text/diagram; V-05.7/8. |
 | K-10 Concurrency | Original 22 September review: OK for SQLite, V-04R.1…8. PostgreSQL revalidation completed 11 October in the separate C03 technical evidence. |
@@ -324,3 +324,8 @@ are recorded in [technical completion](c03-technical-completion.md). This is
 implementation evidence, not a new team signature or a change to R-16. ADR-04
 retains approval-triggered expiry. The available Git history still does not
 establish the original prior-analysis sequence; see [history check](c02-process-history-check.md).
+
+Process update, 26 October 2026: items 3 and 4 above are closed. The team cross-reviewed
+and approved v0.1/v0.2; the missing proof of prior analysis is acknowledged as a process
+gap with documented remediation, pending instructor acceptance — see the
+[closure record](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026).

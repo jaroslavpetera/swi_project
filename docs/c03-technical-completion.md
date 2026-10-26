@@ -68,4 +68,7 @@ Historické reporty C02 z 22. 9. se nepřepisují; aktuální SQLite regrese zap
 3. Tým: dodat případný původní podklad analýzy C02 nebo dohodnout nápravu s vyučujícím.
 4. Po těchto krocích aktualizovat procesní checklist a stav issue #9.
 
+**26. 10. 2026:** body 2 (část C02) a 3 uzavřeny —
+[záznam](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026). Podpis C03 tím zapsán není.
+
 Technické provedení neuděluje podpis za žádného člena týmu a neuzavírá issue #9.

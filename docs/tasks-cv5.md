@@ -1,6 +1,6 @@
 # C05 Detailed Design — rozdělení práce (Jarda + Honza + Michal)
 
-> ## ⏳ Co ještě zbývá (stav 26. 10. 2026)
+> ## ✅ C05 uzavřeno (stav 26. 10. 2026)
 >
 > Kroky 1–6 jsou hotové a sloučené do `main` (PR #20, `055917c`). Přehled commitů a uzavření:
 > [C05 Commit/tag](evidence-and-evolution.md#committag) a [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3).
@@ -8,7 +8,7 @@
 > | # | Úkol | Kdo | Detail |
 > |---|---|---|---|
 > | 1 | ~~**Lidské review A9**~~ — hotovo 26. 10. 2026 (Jarda, Honza) | Jarda, Honza | [Lidské review A9](evidence-and-evolution.md#lidské-review-a9) |
-> | 2 | Pushnout tag `c05-detailed-design` (→ `055917c`) | Jarda | `git push origin c05-detailed-design` |
+> | 2 | ~~Pushnout tag `c05-detailed-design`~~ — hotovo 26. 10. 2026 (→ `055917c`) | Jarda | — |
 
 Zadání: *SWI C05 — Detailed Design: od architektury k návrhovému záměru a unit testům*.
 Vstup: C03 architektura v [`architecture-and-decisions.md`](architecture-and-decisions.md)
@@ -250,6 +250,6 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 | testy spuštěné | [běhy](evidence-and-evolution.md#unitcomponent-tests-executed), [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3) | [x] |
 | DD porovnáno s implementací | [mismatch](evidence-and-evolution.md#design--implementation-mismatch) | [x] |
 | commit + PR `c05` → `main` | PR #20, `055917c` | [x] |
-| tag `c05-detailed-design` | vytvořen lokálně na `055917c`, **čeká na push** | [ ] |
+| tag `c05-detailed-design` | na `055917c`, pushnut 26. 10. 2026 | [x] |
 | lidské review AI výstupů zapsané (A9) | [Lidské review A9](evidence-and-evolution.md#lidské-review-a9) — hotovo 26. 10. 2026 (Jarda, Honza) | [x] |
 | `node scripts/check-docs.mjs` projde | [Uzavření C05](evidence-and-evolution.md#uzavření-c05-s3) | [x] |
