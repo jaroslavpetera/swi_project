@@ -156,7 +156,6 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 - [x] **Rozhodovací tabulka** Confirm: vstupy *stav × lhůta BR-04 × requiresApproval × konflikt BR-02* → výsledek (cílový stav / chyba / zda se zapisuje). Totéž pro Approve (*stav × lhůta BR-06 × konflikt*).
 - [x] Pořadí vyhodnocení podmínek explicitně (stav → lhůta → BR-05 → BR-02) a **proč** zrovna v tomto pořadí.
 - [x] Pseudocode `allocate` (BR-02, polouzavřený interval BR-01, vynechání sebe sama).
-- [ ] Volitelně: výřez stavového automatu jen pro přechody této jednotky.
 
 ### H3 — Detailed sequence
 - [x] Jeden významný scénář **uvnitř jednotky**, ne HTTP → DB. Doporučuji Approve s konfliktem BR-02:
@@ -206,7 +205,7 @@ Pořadí závislostí: **1–3 → 4 → 5 → (commit DD) → 6**. Honza může
 - [x] *Design ↔ implementation mismatch* (po implementaci N1/N2) — tabulka *DD decision / Implemented? (YES/PARTLY/NO) / Evidence (file/test) / Action (keep / update DD / update code)*. Podklady dodá Jarda (co z N1/N2 udělal) a Honza (review kódu proti krokům 3–4).
 - [x] *Resolution* — u každého rozdílu, **proč** jsme rozhodli tak, jak jsme rozhodli.
 - [x] *Remaining design risk* — např. Ordering a Cancel mimo DD; SQLite nerozliší zámek; disciplína „stav mění jen Lifecycle“ (L2).
-- [ ] *Commit/tag* — hash commitu s DD, hash commitu s implementací, tag `c05-detailed-design`.
+- [x] *Commit/tag* — hash commitu s DD, hash commitu s implementací, tag `c05-detailed-design`.
 
 ---
 
