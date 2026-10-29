@@ -208,10 +208,12 @@ Result: REJECTED CANDIDATE — implementace odpovídá ADR-03.
 
 ## Owner disposition
 
-*Vyplní vlastníci projektu (Hospoda Devs).*
+*Vyplnili vlastníci projektu (Hospoda Devs), 29. 10. 2026 — návrh připravený s AI, potvrzení
+týmu viz [Lidské review C07](evidence-and-evolution.md#lidské-review-c07). Podrobnosti a
+closure evidence: [C06 Internal Evidence Assessment](evidence-and-evolution.md#c06-internal-evidence-assessment).*
 
 | Finding | ACCEPTED / REJECTED / DEFERRED | Reason/evidence | Action / no-change |
 |---|---|---|---|
-| F1 | | | |
-| F2 | | | |
-| F3 | — (REJECTED CANDIDATE, není třeba reagovat) | | |
+| F1 | ACCEPTED — change required | Zopakováno: práh pro „úzké hrdlo“ v ADR-03 nikde není. | Kritérium p95 ≤ 500 ms (horký stůl, souběh 50, 2 ze 3 opakování) ve `scripts/postgres-load.ts` + ADR-03; měření 29. 10.: 145–239 ms → ADR-03 ponecháno (`docs/evidence/c07-postgres-verification.json`). Vlastník Jarda. |
+| F2 | ACCEPTED — change required | Reprodukováno: `"2027-06-01T18:00:00"` → 18:00Z (UTC) vs. 16:00Z (Europe/Prague); `"1"` přijato. | `src/http/app.ts`: povinný offset, jinak 400; BR-01 zpřesněno; testy V-01.6, V-01.7, V-02.6; 142/142 (`docs/evidence/c07-postgres-tests.json`). Vlastník Michal. |
+| F3 | — (REJECTED CANDIDATE, není třeba reagovat) | Souhlasíme se zdůvodněním hodnotitelů. | Žádná změna. |

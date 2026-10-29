@@ -20,7 +20,12 @@ const evidence = {
   startedAt: new Date().toISOString(),
   baselineConcurrency: 5, scaledConcurrency: 50, multiplier: 10, repetitions: 3,
   scope: 'Local HTTP requests through Express, Reservation Lifecycle and PostgreSQL; not a production SLA benchmark.',
-  results: [] as object[],
+  results: [] as { scenario: string; concurrency: number; p95Ms: number }[],
+  // C06 F1: rozhodnutelné kritérium pro „úzké hrdlo“ z ADR-03 (podmínka znovuotevření).
+  latencyCriterion: {
+    rule: 'Hot table (hot-confirm, hot-mixed) at concurrency 50: p95 <= 500 ms in at least 2 of 3 repetitions per scenario; otherwise the Resource lock is a bottleneck and ADR-03 is reopened.',
+    p95BudgetMs: 500,
+  },
 };
 
 function percentile(values: number[], fraction: number) {
@@ -80,7 +85,18 @@ try {
       await sample(scenario, 50, repetition);
     }
   }
-  writeFileSync(output, `${JSON.stringify({ ...evidence, completedAt: new Date().toISOString(), status: 'passed' }, null, 2)}\n`);
+  // Verdikt je rozhodnutí o ADR-03, ne selhání ověření: build kvůli latenci nepadá.
+  const latencyVerdicts = (['hot-confirm', 'hot-mixed'] as const).map((scenario) => {
+    const p95Ms = evidence.results.filter((r) => r.scenario === scenario && r.concurrency === 50).map((r) => r.p95Ms);
+    const withinBudget = p95Ms.filter((value) => value <= evidence.latencyCriterion.p95BudgetMs).length;
+    return { scenario, p95Ms, withinBudget, passed: withinBudget >= 2 };
+  });
+  const latencyDecision = latencyVerdicts.every((v) => v.passed)
+    ? 'ADR-03 kept: Resource lock is not a bottleneck'
+    : 'ADR-03 reopen: Resource lock is a bottleneck';
+  console.log(JSON.stringify({ latencyVerdicts, latencyDecision }));
+  writeFileSync(output, `${JSON.stringify({ ...evidence, latencyVerdicts, latencyDecision,
+    completedAt: new Date().toISOString(), status: 'passed' }, null, 2)}\n`);
 } finally {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   await db.reservation.deleteMany({ where: { resourceId: { in: resources } } });

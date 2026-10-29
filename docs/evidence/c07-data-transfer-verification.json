@@ -1,0 +1,19 @@
+{
+  "completedAt": "2026-10-29T10:14:02.121Z",
+  "status": "passed",
+  "rowCounts": {
+    "user": 1,
+    "resource": 1,
+    "menuItem": 1,
+    "reservation": 1,
+    "order": 1,
+    "orderItem": 1
+  },
+  "fullRowEquality": true,
+  "reused": false,
+  "dataSha256": "436af77101310a50bc6c90f8c0845bffad67d9c8269ab5b7ad78c9c82869690a",
+  "preservesIdsTimestampsMoneyAndRelations": true,
+  "identicalRetryAccepted": true,
+  "differingTargetRefused": true,
+  "overlappingConfirmedRefused": true
+}

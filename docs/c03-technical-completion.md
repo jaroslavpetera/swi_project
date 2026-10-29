@@ -41,7 +41,9 @@ Pro vytížený stůl očekáváme jeden úspěch a zbytek 409; pro různé stol
 Report ukládá p50/p95/max, dobu dávky a propustnost po každém opakování.
 
 Jde o lokální krátký benchmark, nikoli produkční SLA. Budoucí ověření s velkým
-objemem dat, sítí, více procesy a konkrétním limitem latence zůstává provozní prací.
+objemem dat, sítí a více procesy zůstává provozní prací. Limit latence pro podmínku
+znovuotevření ADR-03 doplněn v C07 (C06 nález F1): p95 ≤ 500 ms na horkém stole při souběhu 50 —
+[evidence](evidence-and-evolution.md#c06-internal-evidence-assessment).
 Přímé SQL mimo Lifecycle stále může obejít BR-02; architektonická kontrola je textová.
 
 ## Opakování
@@ -64,11 +66,12 @@ Historické reporty C02 z 22. 9. se nepřepisují; aktuální SQLite regrese zap
 1. **Dokončeno 11. 10. 2026:** Honza provedl review Části A proti `b4f597c`,
    C03 a současných změn; záznam obsahuje jméno, datum, rozsah a nálezy.
    A9/HC3 je odškrtnuto; [záznam review](architecture-and-decisions.md#review-a9--hc3--technická-kontrola).
-2. Michal + Jarda / tým: křížové review REQ-01…08 a podpisy v0.1/v0.2/C03.
+2. **Dokončeno 26. 10. 2026 (C02 část):** Michal + Jarda — křížové review REQ-01…08 a schválení v0.1/v0.2.
+   Samostatný podpis C03 zadání nevyžaduje; lidské review C03 je bod 1.
 3. Tým: dodat případný původní podklad analýzy C02 nebo dohodnout nápravu s vyučujícím.
-4. Po těchto krocích aktualizovat procesní checklist a stav issue #9.
+4. **Dokončeno:** issue #9 je na GitHubu uzavřené; checklist aktualizován 26. 10. 2026.
 
 **26. 10. 2026:** body 2 (část C02) a 3 uzavřeny —
-[záznam](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026). Podpis C03 tím zapsán není.
+[záznam](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026).
 
 Technické provedení neuděluje podpis za žádného člena týmu a neuzavírá issue #9.

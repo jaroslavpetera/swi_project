@@ -27,19 +27,23 @@ import { ReservationState } from "../domain/types.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
+// BR-01 / R-6: čas musí nést časovou zónu (`Z` nebo `±hh:mm`). Bez ní by se
+// vyložil v zóně serveru a stejný požadavek by se uložil jako jiný okamžik (C06 F2).
+const timestamp = z.string().datetime({ offset: true }).transform((value) => new Date(value));
+
 const reservationInputSchema = z
   .object({
     resourceId: z.string().min(1),
     userId: z.string().min(1),
-    startsAt: z.coerce.date(),
-    endsAt: z.coerce.date(),
+    startsAt: timestamp,
+    endsAt: timestamp,
   })
   .refine((v) => v.endsAt > v.startsAt, { message: "endsAt must be after startsAt" });
 
 const availabilityQuerySchema = z
   .object({
-    start: z.coerce.date(),
-    end: z.coerce.date(),
+    start: timestamp,
+    end: timestamp,
   })
   .refine((v) => v.end > v.start, { message: "end must be after start" });
 
