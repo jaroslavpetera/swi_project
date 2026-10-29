@@ -1,4 +1,4 @@
-# Hospoda Devs — rezervační systém (SWI, C02)
+# Hospoda Devs — rezervační systém (SWI)
 
 *„Budete pracovat nebo dostanete bídu!!!!!“*
 
@@ -21,11 +21,12 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 
 | Dokument | Co v něm najdete |
 |---|---|
-| [Specifikace](docs/specification.md) | Aktuální kandidát v0.2: požadavky, operace, pravidla a odkazy na diagramy. |
+| [Specifikace](docs/specification.md) | Schválená baseline v0.2 (26. 10. 2026): požadavky, operace, pravidla a odkazy na diagramy. |
 | [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, PostgreSQL, ADR-03/04, drivery a historické AS-IS mapování Confirm Reservation. |
 | [C05 Detailed Design](docs/architecture-and-decisions.md#c05-detailed-design) a [evidence](docs/evidence-and-evolution.md#c05-dd-verification-evidence) | Detailní návrh Reservation Lifecycle (Confirm/Approve), testy odvozené z DD a porovnání s kódem; [checklist](docs/tasks-cv5.md). |
-| [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a zbývající lidské body. |
-| [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a zbývající body issue #9. |
+| [C06 dispozice a rizika C07](docs/evidence-and-evolution.md#c06-internal-evidence-assessment) | Reakce na nezávislé hodnocení C06, opravy F1/F2, registr rizik, plán obhajoby a [status report C08](docs/c08-project-status.pptx); [checklist](docs/tasks-cv7.md). |
+| [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a záznam uzavření lidských bodů. |
+| [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a uzavření issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
 | [Analýza dopadu](docs/c02-completion-impact.md) | Podklad zapsaný před dokončovacími změnami C02. |
 | [Project Frame C01](docs/intent-and-change.md) | Původní vymezení domény a future pressure. |

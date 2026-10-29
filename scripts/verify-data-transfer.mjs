@@ -30,9 +30,16 @@ try {
   changed.menuItem[0].priceCents++;
   await assert.rejects(importRows(changed, target), /refusing to overwrite/);
   assert.deepEqual(await readRows(target), data, 'Refused import must leave target untouched');
+  // C07 R-03: zdroj se dvěma překrývajícími se CONFIRMED téhož stolu se neimportuje.
+  const overlapping = structuredClone(data);
+  overlapping.reservation.push({ ...overlapping.reservation[0], id: randomUUID(),
+    startsAt: new Date('2027-06-01T19:00:00.000Z'), endsAt: new Date('2027-06-01T21:00:00.000Z') });
+  await assert.rejects(importRows(overlapping, target), /BR-02 violated/);
+  assert.deepEqual(await readRows(target), data, 'BR-02 refusal must leave target untouched');
   report('docs/evidence/c03-data-transfer-verification.json', {
     completedAt: new Date().toISOString(), status: 'passed', ...result,
     preservesIdsTimestampsMoneyAndRelations: true, identicalRetryAccepted: true, differingTargetRefused: true,
+    overlappingConfirmedRefused: true,
   });
 } finally {
   await Promise.all([source.$disconnect(), target.$disconnect()]);

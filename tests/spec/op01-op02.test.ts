@@ -110,6 +110,29 @@ describe("OP-01 Create Reservation (REQ-01)", () => {
     expect(overlapping.status).toBe(201);
     expect(overlapping.body.state).toBe("DRAFT");
   });
+
+  // C06 F2: výsledek nesmí záviset na časové zóně serveru (BR-01, R-6).
+  it.each([
+    ["2027-03-07T18:00:00", "2027-03-07T20:00:00"],
+    ["1", "2"],
+    ["2027-03-07", "2027-03-08"],
+  ])("V-01.6: timestamp without an explicit offset (%s) → 400, nothing created (BR-01, R-6)", async (startsAt, endsAt) => {
+    const resourceId = await freshResource();
+    const { status } = await create(resourceId, startsAt, endsAt);
+
+    expect(status).toBe(400);
+    expect(await prisma.reservation.count({ where: { resourceId } })).toBe(0);
+  });
+
+  it("V-01.7: explicit offset is stored as the same UTC instant (BR-01, R-6)", async () => {
+    const resourceId = await freshResource();
+    const { status, body } = await create(resourceId, "2027-03-07T20:00:00+02:00", "2027-03-07T22:00:00+02:00");
+
+    expect(status).toBe(201);
+    const stored = await prisma.reservation.findUniqueOrThrow({ where: { id: body.id! } });
+    expect(stored.startsAt.toISOString()).toBe("2027-03-07T18:00:00.000Z");
+    expect(stored.endsAt.toISOString()).toBe("2027-03-07T20:00:00.000Z");
+  });
 });
 
 describe("OP-02 Check Availability (REQ-02)", () => {
@@ -174,6 +197,11 @@ describe("OP-02 Check Availability (REQ-02)", () => {
       "2027-03-09T18:00:00Z"
     );
     expect(reversed.status).toBe(400);
+
+    // C06 F2: dotaz bez časové zóny by se vyložil v zóně serveru.
+    const withoutOffset = await availability(resourceId, "2027-03-09T18:00:00", "2027-03-09T20:00:00");
+    expect(withoutOffset.status).toBe(400);
+    expect(withoutOffset.body).not.toEqual({ available: true });
   });
 
   it("V-02.7: unknown Resource → rejected", async () => {

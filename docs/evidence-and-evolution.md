@@ -606,3 +606,102 @@ Co má reviewer minimálně ověřit (stačí odškrtnout do sloupce *Výsledek*
   sekvence H3 odpovídá skutečnému pořadí volání (`findById` → zámek → `tx.findById` → `clock.now()`).
 - **Testy:** každý řádek DD-T* odkazuje na existující test; mutace M1–M5 jsou popsané
   reprodukovatelně; tabulka mismatch neobsahuje řádek „update DD“ bez zdůvodnění.
+
+## C06 Internal Evidence Assessment
+
+> **Stav 29. 10. 2026:** připraveno s AI na pokyn Michala jako **návrh dispozice**. Rozhodnutí
+> ACCEPT / REJECT a vlastníky musí potvrdit tým (Jarda, Honza, Michal) a zapsat se do
+> [Lidského review C07](#lidské-review-c07). Dokud se tak nestane, platí jako návrh.
+
+**Assessed baseline:** `a8f1052` (`main`, „c05 kompletne hotovy“), 26. 10. 2026. Hodnocení od
+nezávislého týmu: [`SWI_C06_Assessment_Hospoda_Devs.md`](SWI_C06_Assessment_Hospoda_Devs.md)
+(B1–B2 YES, R1–R3 YES, R4–R5 PARTLY, A1–A4 YES, Q1/Q3 PARTLY, Q2 YES, D1–D5 YES).
+**Reporting baseline (opravy):** větev `c07`, tag `c07-reporting-baseline` (commit v
+[Commit/tag](#committag-c07)).
+
+### Verified findings
+
+Každý nález jsme nezávisle zopakovali proti `a8f1052` (C07, „Verify“).
+
+| ID | Claim (náš artefakt) | Expected ↔ Observed | Naše ověření | Výsledek |
+|---|---|---|---|---|
+| **F2** | BR-01 „parsable UTC timestamps“, R-6 „Boundaries must be reproducible“ (`specification.md`) | Expected: stejný požadavek = stejný okamžik bez ohledu na TZ serveru. Observed: `z.coerce.date()` v `src/http/app.ts` vyloží čas bez offsetu v zóně serveru, přijme i `"1"`. | Skript se Zod schématem z `a8f1052` (29. 10.): `"2027-06-01T18:00:00"` → `18:00Z` při `TZ=UTC`, `16:00Z` při `Europe/Prague`; `"1"` → rok 2001. Žádný test vstup bez `Z` nepokrýval. | **VERIFIED FINDING** (defekt specifikace ↔ kód) |
+| **F1** | ADR-03 „znovu otevřít, když měření ukáže zámek Resource jako úzké hrdlo při 10× zátěži“; Q — 10× souběh (`intent-and-change.md`) | Expected: rozhodnutelné kritérium pro „úzké hrdlo“ a zapsané rozhodnutí z měření. Observed: kritérium jen pro korektnost; p95 se ukládalo bez prahu, rozhodnutí o ADR-03 chybělo. | Prohledání `docs/`: práh latence nikde; `scripts/postgres-load.ts` asertoval jen počty 200/409 a BR-02. | **VERIFIED FINDING** (chybějící evidence kvality) |
+| F3 | ADR-03 „jedna chybová cesta při konfliktu“ | Hodnotitelé sami zamítli: `ReservationConflictError` se přes aplikaci nemůže uplatnit. | Nepřezkoumáváme — souhlasíme s jejich ověřením (V-04R.1/7, L2). | REJECTED CANDIDATE |
+
+### Owner disposition
+
+| Nález | Rozhodnutí | Zdůvodnění | Vlastník (návrh) |
+|---|---|---|---|
+| F2 | **ACCEPTED — change required** | Reprodukováno. Výsledek závisí na prostředí, což přímo odporuje R-6; ovlivňuje i BR-02 a lhůty BR-04/06. UI posílá `toISOString()`, takže změna nerozbije frontend. | Michal |
+| F1 | **ACCEPTED — change required (evidence, ne kód Lifecycle)** | Přijatý negativní důsledek ADR-03 bez měřitelné podmínky nejde vyhodnotit. Doplňujeme práh a rozhodnutí; implementace Lifecycle se nemění. | Jarda |
+| F3 | **NO CHANGE REQUIRED** | Zamítnuto hodnotiteli; guard v `transition` je záměrně druhá pojistka (ADR-03, DD kontrakt 2). | — |
+
+### Actions / justified no-change decisions
+
+| Nález | Akce | Closure evidence | Stav |
+|---|---|---|---|
+| F2 | `src/http/app.ts`: `startsAt`/`endsAt` i `start`/`end` dostupnosti = ISO 8601 s povinným offsetem (`z.string().datetime({ offset: true })`), jinak 400. BR-01 zpřesněno (`specification.md`), nové příklady V-01.6 / V-01.7. | `tests/spec/op01-op02.test.ts` › V-01.6 (3 vstupy bez offsetu → 400, nic nevytvořeno), V-01.7 (`+02:00` uloženo jako stejný UTC okamžik), V-02.6 (dostupnost bez offsetu → 400). Před opravou by V-01.6 vracel 201. `npm test` 142/142 — [`c07-postgres-tests.json`](evidence/c07-postgres-tests.json). | **Uzavřeno** (čeká na lidské review) |
+| F1 | Kritérium: *na horkém stole (`hot-confirm`, `hot-mixed`) při souběhu 50 musí být p95 ≤ 500 ms aspoň ve 2 ze 3 opakování; jinak je zámek úzké hrdlo a ADR-03 se znovu otevře.* Verdikt počítá `scripts/postgres-load.ts` (`latencyDecision`), build kvůli latenci nepadá. ADR-03 a `c03-technical-completion.md` odkazují na práh. | `npm run verify:postgres` 29. 10. 2026 (Windows 11, PostgreSQL 16.14, READ COMMITTED): p95 hot-confirm 239 / 173 / 176 ms, hot-mixed 147 / 154 / 145 ms; různé stoly 57–94 ms; 495 požadavků v 18 dávkách, 0 porušení BR-02 → **„ADR-03 kept“** — [`c07-postgres-verification.json`](evidence/c07-postgres-verification.json). | **Uzavřeno** (čeká na lidské review) |
+| F3 | Žádná změna. | Zdůvodnění hodnotitelů v assessmentu. | — |
+
+Proč 500 ms: Confirm/Approve provádí obsluha v UI a 0,5 s je běžná hranice „okamžité“ odezvy;
+souběh 50 na **jeden** stůl je extrémní případ (10× výchozích 5). Práh je **rozhodnutí týmu**,
+ne odvozený limit — měření ukazuje rezervu zhruba 2×.
+
+### Remaining evidence gaps
+
+- Měření latence je lokální, jeden proces, krátké dávky — není to produkční SLA (beze změny proti C03).
+- Kritérium F1 se vyhodnocuje jen při `verify:postgres`, ne v běžném `npm test`.
+- Hodnotitelé si všimli, že tag `c05-detailed-design` (`055917c`) neobsahuje aserci K4 přidanou
+  v `7e62f78`; evidence C05 tedy odpovídá `a8f1052`, ne tagu. Neopravujeme přesunem tagu
+  (historie), uvádíme to zde.
+- Bod 10 C02 (původní pořadí analýzy) čeká na vyjádření vyučujícího.
+- Skripty `npm test` / `verify:docs` přepisují sledované `docs/evidence/c03-*.json` — viz issue I-01.
+
+## C07 Risk Assessment
+
+> Návrh připravený s AI 29. 10. 2026 z reálného stavu repozitáře; L/I, strategie a vlastníky
+> potvrdí tým v [Lidském review C07](#lidské-review-c07). Termíny „do 2. 11. 2026“ = před C08
+> (navrženo, potvrdit podle termínu cvičení).
+
+Stupnice podle zadání: L, I ∈ {1, 2, 3}; priorita L × I: 1–2 LOW, 3–4 MEDIUM, 6–9 HIGH.
+Počáteční riziko = před opatřením. Skutečné zbytkové = jen pokud je opatření provedené a ověřené,
+jinak **NOT VERIFIED**.
+
+| ID | Kategorie | Příčina → nejistá událost → důsledek | Počáteční L / I / priorita + zdůvodnění |
+|---|---|---|---|
+| **R-01** | People / Resources | Většinu implementace a uzavírání (C03 K, C05 N1/N2, PostgreSQL setup, merge, tagy) dělal jeden člen (Jarda: 28 ze 46 ne-merge commitů na `main`) a velkou část textů připravila AI → při obhajobě CP1 nebo v nepřítomnosti Jardy ostatní nevysvětlí mechanismus ADR-03, DD nebo nálezy C06 → ztráta bodů v kritériu *Engineering Review & Defence*, zpoždění CP2. | L=2 (koncentrace je doložená; nepřítomnost všech na C06 ukázala, že výpadek nastává), I=3 (obhajoba je hodnocené kritérium) → **HIGH (6)** |
+| **R-02** | Technical / Quality | BR-02 vynucuje jen Reservation Lifecycle (ADR-03, bez DB constraint), kontrola L2 je textová a `npm run db:import-sqlite` zapisuje rezervace přímo (`createMany`) → zápis mimo Lifecycle uloží dvě překrývající se CONFIRMED téhož stolu → porušení hlavního invariantu (dvojitá rezervace). | L=1 (žádná známá cesta se nepoužívá, ale import existuje), I=3 (hlavní invariant domény) → **MEDIUM (3)** |
+| **R-03** | Release / Operation | Spuštění závisí na `npm ci` se sítí a na platformním balíčku `embedded-postgres` 16.14.0-beta.17 → na prezentačním počítači (jiná platforma, bez sítě, blokovaný port 55432) se aplikace ani testy nespustí → živá ukázka *Working Solution* při C08 selže. | L=2 (beta závislost, škola/síť mimo naši kontrolu), I=2 (lze nahradit uloženými reporty, ale ztratí se přesvědčivost) → **MEDIUM (4)** |
+| **R-04** | Schedule / Integration | Výstupy se integrují těsně před termínem (C05 merge 26. 10., v den odevzdání; C07 29. 10.) → nálezy z obhajoby C08 nebo z review nestihneme opravit a ověřit před CP2 → do CP2 vstoupí otevřené nálezy. | L=2 (opakovaný vzorec C03/C05), I=2 (náprava realistická, ale tlačí rozsah) → **MEDIUM (4)** |
+| **R-05** | Scope / Requirements | Vypršení PENDING_APPROVAL se detekuje jen při dalším Approve (R-16, ADR-04) → v CP2 se objeví požadavek na aktivní expiraci (např. seznam čekajících obsahuje propadlé) → přepracování BR-06, OP-05, V-05.7 a DD. | L=1 (v0.2 to výslovně nepožaduje), I=2 (lokální změna Lifecycle) → **LOW (2)** |
+
+| ID | Strategie | Opatření, vlastník, termín | Doklad opatření | Očekávané zbytkové | Skutečné zbytkové | Akceptace / trigger |
+|---|---|---|---|---|---|---|
+| R-01 | MITIGATE | Každý člen přednese v části A část, kterou **nepsal** (Michal: Verification & C06, Honza: architektura ADR-03, Jarda: DD); generálka s kontrolními otázkami. Vlastník: Michal, do 2. 11. 2026. | Plán v [`tasks-cv7.md`](tasks-cv7.md); generálka zatím neproběhla. | L=1 / I=3 → MEDIUM (3) | **NOT VERIFIED** | Akceptuje tým; trigger: člen při generálce nezodpoví kontrolní otázku ke své části. |
+| R-02 | MITIGATE | Import odmítne zdroj s překrývajícími se CONFIRMED (`assertExclusiveConfirmed` v `scripts/lib/data-transfer.mjs`). Ruční SQL zůstává (přijatý důsledek ADR-03). Vlastník: Jarda, hotovo 29. 10. 2026. | `scripts/verify-data-transfer.mjs`: zdroj se dvěma překrývajícími se CONFIRMED → odmítnuto, cíl beze změny — `overlappingConfirmedRefused: true` v [`c07-data-transfer-verification.json`](evidence/c07-data-transfer-verification.json). | L=1 / I=3 → MEDIUM (3) | **L=1 / I=3 → MEDIUM (3)** — cesta importem uzavřena a ověřena; dopad zůstává 3, protože ruční SQL je dál možné. | Akceptuje Jarda (ADR-03); trigger: nový skript / admin nástroj zapisující `Reservation`, selhání L2 testu. |
+| R-03 | MITIGATE | Den před C08 `npm ci` + `npm test` na **prezentačním** notebooku; zálohou uložené reporty `docs/evidence/c07-*.json` a `docker compose` (`npm run dev:external`). Vlastník: Honza, do 2. 11. 2026. | Čistý běh existuje na 3 platformách: Windows 11 (Michal, 29. 10., 142/142), macOS (hodnotitelé C06, 26. 10.), Linux/WSL2 (Jarda, 26. 10.). Prezentační stroj zatím neověřen. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Honza; trigger: `npm ci` nebo start PostgreSQL selže na prezentačním stroji. |
+| R-04 | MITIGATE | PR `c07` → `main` sloučit do 30. 10. 2026; nálezy z C08 zapsat jako issues se lhůtou týden před CP2. Vlastník: Jarda. | Zatím jen plán. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Jarda; trigger: PR otevřený déle než 2 dny nebo issue po lhůtě. |
+| R-05 | ACCEPT | Bez změny; rozhodnutí ADR-04 (lazy detekce, žádný worker). Vlastník: Honza. | ADR-04 v `architecture-and-decisions.md`, test V-05.7. | L=1 / I=2 → LOW (2) | LOW (2) — přijato, opatření se neprovádí | Akceptuje Honza; trigger: požadavek na automatický přechod podle času v zadání CP2 nebo od vyučujícího. |
+
+### Open issues (ne rizika)
+
+| ID | Problém (už nastal) | Dopad | Vlastník / další krok |
+|---|---|---|---|
+| I-01 | `npm test`, `verify:postgres` a `verify:docs` přepisují sledované `docs/evidence/c03-*.json`; každý běh se musí ručně vracet. | Riziko nechtěně commitnuté změny historické evidence (zmínili hodnotitelé C06, B2). | Jarda — výstupy zapisovat do souboru podle běhu, ne do historických C03 reportů; do CP2. |
+| I-02 | Bod 10 C02 (původní pořadí analýzy) uzavřen týmem jako přiznaná mezera. | Bez potvrzení vyučujícího zůstává procesní otázka otevřená. | Tým — zeptat se na C08. |
+
+### Lidské review C07
+
+| Výstup | Připravil | Reviewer | Datum | Výsledek |
+|---|---|---|---|---|
+| Dispozice F1–F3 a opravy (`src/http/app.ts`, testy V-01.6/7, `postgres-load.ts`, import) | Michal (s AI) | *doplní tým* | | |
+| Registr rizik R-01…R-05, issues | Michal (s AI) | *doplní tým* | | |
+| Status report C08 (`docs/c08-project-status.pptx`) | Michal (s AI) | *doplní tým* | | |
+
+### Commit/tag C07
+
+Větev `c07`. Reporting baseline pro části A a C = commit „C07: dispozice nálezů C06, oprava F2,
+kritérium F1, rizika“ s tagem **`c07-reporting-baseline`**. Ověření běželo nad stejným obsahem
+zdrojů (`baseCommit` v reportu je předchozí `1393c70` + tyto změny; SHA-256 souborů je v reportu).

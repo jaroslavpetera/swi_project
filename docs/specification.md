@@ -53,6 +53,9 @@ These are the authoritative definitions; operations and diagrams reference them.
 
 An interval is `[startsAt, endsAt)` with parsable UTC timestamps and `startsAt < endsAt`.
 Overlap means `A.start < B.end && B.start < A.end`. Adjacent intervals do not overlap.
+*Clarification (C07, 29 Oct 2026, C06 finding F2):* an API timestamp is ISO 8601 with an explicit
+offset (`Z` or `±hh:mm`) and is stored as that UTC instant; a value without an offset is
+rejected with 400 instead of being read in the server's time zone (R-6).
 
 ### BR-02 — Exclusive Resource
 
@@ -123,7 +126,8 @@ integrity; create DRAFT; return identifier/state.
 created. Overlap or a past interval alone is accepted.
 **Concurrency:** independent creations can both succeed because neither allocates.
 **Examples:** V-01.1 success; V-01.2 zero duration; V-01.3 unknown Resource;
-V-01.4 overlap accepted; V-01.5 past interval followed by rejected Confirm.
+V-01.4 overlap accepted; V-01.5 past interval followed by rejected Confirm;
+V-01.6 timestamp without offset → 400; V-01.7 `+02:00` offset stored as the same UTC instant.
 **Rationale:** abandoned intent must not hold capacity.
 **Scope / TBD:** R-7; no unresolved behaviour inside this operation.
 

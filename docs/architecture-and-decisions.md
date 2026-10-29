@@ -508,7 +508,11 @@ implementaci portu, ne pravidla (D2). Zámek po Resource omezuje čekání na so
 
 - do stejné databáze začne zapisovat jiný systém nebo administrátorský nástroj → zvážit A
   (DB constraint) jako doplněk;
-- měření po migraci na PostgreSQL ukáže čekání na zámek Resource jako úzké hrdlo při 10× zátěži;
+- měření po migraci na PostgreSQL ukáže čekání na zámek Resource jako úzké hrdlo při 10× zátěži.
+  *Zpřesněno v C07 (C06 nález F1):* úzké hrdlo = na horkém stole (`hot-confirm`, `hot-mixed`) při
+  souběhu 50 je p95 > 500 ms ve 2 ze 3 opakování. Verdikt počítá `scripts/postgres-load.ts`
+  (`latencyDecision`); měření 29. 10. 2026: p95 145–239 ms → ADR-03 ponecháno
+  ([evidence](evidence-and-evolution.md#c06-internal-evidence-assessment));
 - rezervace přestane být vázaná na jeden konkrétní stůl (předpoklad v `intent-and-change.md`) —
   zámek po Resource by pak nestačil;
 - přibude Notification Service nebo jiný externí krok v Confirm (dnes vyloučeno R-15) — nesmí
@@ -852,7 +856,7 @@ zapíší terminální stav a commitnou ho před odpovědí 410.
 
 **Důsledky:** PENDING_APPROVAL může zůstat uložen po deadline; nikdy neblokuje stůl.
 Technická regrese triggeru běží na obou providerech. Lidské schválení baseline
-zůstává samostatný otevřený procesní bod.
+proběhlo 26. 10. 2026 ([záznam](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026)).
 
 **Znovu otevřít:** pokud tým schválí automatický přechod podle času. Před workerem
 pak změnit R-16, BR-06, OP-05, diagramy a V-05.7; určit retry, metriku backlogu a
