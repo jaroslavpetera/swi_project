@@ -25,6 +25,7 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 | [Architektura a rozhodnutí](docs/architecture-and-decisions.md) | Tech stack, PostgreSQL, ADR-03/04, drivery a historické AS-IS mapování Confirm Reservation. |
 | [C05 Detailed Design](docs/architecture-and-decisions.md#c05-detailed-design) a [evidence](docs/evidence-and-evolution.md#c05-dd-verification-evidence) | Detailní návrh Reservation Lifecycle (Confirm/Approve), testy odvozené z DD a porovnání s kódem; [checklist](docs/tasks-cv5.md). |
 | [C06 dispozice a rizika C07](docs/evidence-and-evolution.md#c06-internal-evidence-assessment) | Reakce na nezávislé hodnocení C06, opravy F1/F2, registr rizik, plán obhajoby a [status report C08](docs/c08-project-status.pptx); [checklist](docs/tasks-cv7.md). |
+| [C08 řízená změna](docs/intent-and-change.md#c08--cr-c08-01--controlled-change-card) a [test cases](docs/evidence-and-evolution.md#c08-controlled-change--baseline-a-test-cases) | Change Request CR-C08-01, dopady, varianty, rozhodnutí a předávka do C09; krokované testy `tests/spec/c08-baseline.test.ts`; [checklist](docs/tasks-cv8.md). |
 | [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a záznam uzavření lidských bodů. |
 | [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a uzavření issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
