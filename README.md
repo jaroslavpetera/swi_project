@@ -123,6 +123,10 @@ Specifikace v0.2 je schválená baseline (křížové review a schválení Jarda
 | Objednávka k rezervaci | `POST /reservations/:id/orders`, `GET /reservations/:id/orders` |
 | Účet hosta | `GET /reservations/:id/tab` |
 | Průběh objednávky | `POST /orders/:id/serve`, `POST /orders/:id/pay` |
+| Pomocné pro UI a ruční testování | `GET/POST /users`, `GET/POST /resources`, `GET /resources/:id/reservations` |
+
+Časy (`startsAt`, `endsAt`, `start`, `end`) musí být ISO 8601 s časovou zónou (`Z` nebo
+`±hh:mm`), jinak API vrátí 400 (BR-01, oprava nálezu C06 F2).
 
 ## CP1 walking skeleton
 
@@ -130,7 +134,7 @@ End-to-end cesta definovaná v C01 pro CP1 (po C03 / před C04):
 
 ```
 POST /reservations
-→ validate   (Zod schema: resourceId, userId, startsAt < endsAt)
+→ validate   (Zod schema: resourceId, userId, časy s offsetem, startsAt < endsAt)
 → persist    (Prisma → DB, stav DRAFT)
 → return reservation ID   (201, { id, state })
 → automated check         (tests/spike/persistence.spike.test.ts + tests/domain/rules.test.ts)

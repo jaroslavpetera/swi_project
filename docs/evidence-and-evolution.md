@@ -616,8 +616,8 @@ Co má reviewer minimálně ověřit (stačí odškrtnout do sloupce *Výsledek*
 **Assessed baseline:** `a8f1052` (`main`, „c05 kompletne hotovy“), 26. 10. 2026. Hodnocení od
 nezávislého týmu: [`SWI_C06_Assessment_Hospoda_Devs.md`](SWI_C06_Assessment_Hospoda_Devs.md)
 (B1–B2 YES, R1–R3 YES, R4–R5 PARTLY, A1–A4 YES, Q1/Q3 PARTLY, Q2 YES, D1–D5 YES).
-**Reporting baseline (opravy):** větev `c07`, tag `c07-reporting-baseline` (commit v
-[Commit/tag](#committag-c07)).
+**Reporting baseline (opravy):** tag `c07-reporting-baseline` (`2460003`), sloučeno do `main`
+29. 10. 2026 (PR #21, merge `e8ca781`) — viz [Commit/tag](#committag-c07).
 
 ### Verified findings
 
@@ -662,8 +662,8 @@ ne odvozený limit — měření ukazuje rezervu zhruba 2×.
 ## C07 Risk Assessment
 
 > Návrh připravený s AI 29. 10. 2026 z reálného stavu repozitáře; L/I, strategie a vlastníky
-> potvrdí tým v [Lidském review C07](#lidské-review-c07). Termíny „do 2. 11. 2026“ = před C08
-> (navrženo, potvrdit podle termínu cvičení).
+> potvrdí tým v [Lidském review C07](#lidské-review-c07). Opatření a termíny R-01, R-03 a R-04
+> sjednoceny 2. 11. 2026 se status reportem C08, který tým upravil (`65bdc22`, `a27bdad`).
 
 Stupnice podle zadání: L, I ∈ {1, 2, 3}; priorita L × I: 1–2 LOW, 3–4 MEDIUM, 6–9 HIGH.
 Počáteční riziko = před opatřením. Skutečné zbytkové = jen pokud je opatření provedené a ověřené,
@@ -679,10 +679,10 @@ jinak **NOT VERIFIED**.
 
 | ID | Strategie | Opatření, vlastník, termín | Doklad opatření | Očekávané zbytkové | Skutečné zbytkové | Akceptace / trigger |
 |---|---|---|---|---|---|---|
-| R-01 | MITIGATE | Každý člen přednese v části A část, kterou **nepsal** (Michal: Verification & C06, Honza: architektura ADR-03, Jarda: DD); generálka s kontrolními otázkami. Vlastník: Michal, do 2. 11. 2026. | Plán v [`tasks-cv7.md`](tasks-cv7.md); generálka zatím neproběhla. | L=1 / I=3 → MEDIUM (3) | **NOT VERIFIED** | Akceptuje tým; trigger: člen při generálce nezodpoví kontrolní otázku ke své části. |
+| R-01 | MITIGATE | Společné projití kódu a osnovy části A před obhajobou: každý vysvětlí i část, kterou **nepsal**, a odpoví na kontrolní otázky z [`tasks-cv7.md`](tasks-cv7.md). Vlastník: Michal, 2. 11. 2026. | Plán v [`tasks-cv7.md`](tasks-cv7.md); provedení zatím nezapsáno (kdo, kdy, které otázky). | L=1 / I=3 → MEDIUM (3) | **NOT VERIFIED** | Akceptuje tým; trigger: člen při generálce nezodpoví kontrolní otázku ke své části. |
 | R-02 | MITIGATE | Import odmítne zdroj s překrývajícími se CONFIRMED (`assertExclusiveConfirmed` v `scripts/lib/data-transfer.mjs`). Ruční SQL zůstává (přijatý důsledek ADR-03). Vlastník: Jarda, hotovo 29. 10. 2026. | `scripts/verify-data-transfer.mjs`: zdroj se dvěma překrývajícími se CONFIRMED → odmítnuto, cíl beze změny — `overlappingConfirmedRefused: true` v [`c07-data-transfer-verification.json`](evidence/c07-data-transfer-verification.json). | L=1 / I=3 → MEDIUM (3) | **L=1 / I=3 → MEDIUM (3)** — cesta importem uzavřena a ověřena; dopad zůstává 3, protože ruční SQL je dál možné. | Akceptuje Jarda (ADR-03); trigger: nový skript / admin nástroj zapisující `Reservation`, selhání L2 testu. |
-| R-03 | MITIGATE | Den před C08 `npm ci` + `npm test` na **prezentačním** notebooku; zálohou uložené reporty `docs/evidence/c07-*.json` a `docker compose` (`npm run dev:external`). Vlastník: Honza, do 2. 11. 2026. | Čistý běh existuje na 3 platformách: Windows 11 (Michal, 29. 10., 142/142), macOS (hodnotitelé C06, 26. 10.), Linux/WSL2 (Jarda, 26. 10.). Prezentační stroj zatím neověřen. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Honza; trigger: `npm ci` nebo start PostgreSQL selže na prezentačním stroji. |
-| R-04 | MITIGATE | PR `c07` → `main` sloučit do 30. 10. 2026; nálezy z C08 zapsat jako issues se lhůtou týden před CP2. Vlastník: Jarda. | Zatím jen plán. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Jarda; trigger: PR otevřený déle než 2 dny nebo issue po lhůtě. |
+| R-03 | MITIGATE | Den před C08 `npm ci` + `npm test` na **prezentačním** notebooku; zálohou uložené reporty `docs/evidence/c07-*.json` a `docker compose` (`npm run dev:external`). Vlastník: Honza, do 4. 11. 2026. | Čistý běh existuje na 3 platformách: Windows 11 (Michal, 29. 10., 142/142), macOS (hodnotitelé C06, 26. 10.), Linux/WSL2 (Jarda, 26. 10.). Prezentační stroj zatím neověřen. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Honza; trigger: `npm ci` nebo start PostgreSQL selže na prezentačním stroji. |
+| R-04 | MITIGATE | PR `c07` → `main` sloučit do 30. 10. 2026; plán CP2 s vlastníky do 6. 11. 2026; nálezy z C08 zapsat jako issues se lhůtou týden před CP2. Vlastník: Jarda. | PR #21 sloučen 29. 10. 2026 (`e8ca781`). Plán CP2 zatím neexistuje. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Jarda; trigger: PR otevřený déle než 2 dny nebo issue po lhůtě. |
 | R-05 | ACCEPT | Bez změny; rozhodnutí ADR-04 (lazy detekce, žádný worker). Vlastník: Honza. | ADR-04 v `architecture-and-decisions.md`, test V-05.7. | L=1 / I=2 → LOW (2) | LOW (2) — přijato, opatření se neprovádí | Akceptuje Honza; trigger: požadavek na automatický přechod podle času v zadání CP2 nebo od vyučujícího. |
 
 ### Open issues (ne rizika)
@@ -705,3 +705,5 @@ jinak **NOT VERIFIED**.
 Větev `c07`. Reporting baseline pro části A a C = commit „C07: dispozice nálezů C06, oprava F2,
 kritérium F1, rizika“ s tagem **`c07-reporting-baseline`**. Ověření běželo nad stejným obsahem
 zdrojů (`baseCommit` v reportu je předchozí `1393c70` + tyto změny; SHA-256 souborů je v reportu).
+Tag ukazuje na `2460003`; PR #21 sloučen merge commitem `e8ca781` 29. 10. 2026, tag je v historii `main`.
+Pozdější commity `65bdc22`, `9698284`, `a27bdad` (2. 11.) mění jen `docs/c08-project-status.pptx`.

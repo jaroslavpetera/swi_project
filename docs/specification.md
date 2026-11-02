@@ -3,6 +3,7 @@
 **Status: v0.2 approved baseline — team sign-off 26 October 2026 (Jaroslav Petera, Michal Křižák).**
 
 Updated 22 September 2026 by Codex under the instruction to complete issue #9.
+Last change: 29 October 2026 (C07) — BR-01 offset clarification and V-01.6/7 after C06 finding F2.
 Authoritative behaviour is defined here; earlier drafts remain in Git.
 Prior analysis: [completion impact](c02-completion-impact.md).
 Review: [requirement acceptance](c02-requirement-review.md).

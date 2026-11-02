@@ -9,7 +9,7 @@ export async function readRows(client) {
   return data;
 }
 
-// Import zapisuje mimo Reservation Lifecycle (ADR-03, riziko R-03 z C07), proto
+// Import zapisuje mimo Reservation Lifecycle (ADR-03, riziko R-02 z C07), proto
 // BR-02 ověří sám: dvě CONFIRMED téhož stolu se nesmí překrývat (BR-01 [start, end)).
 export function assertExclusiveConfirmed(reservations) {
   const confirmed = reservations.filter((r) => r.state === 'CONFIRMED');
