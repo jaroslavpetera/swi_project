@@ -272,7 +272,8 @@ transitions; repeated Cancel on CANCELLED is a no-op.
 Views: [use cases](diagrams/use-case.md), [states](diagrams/state-diagram.md),
 [Create/Availability](diagrams/activity-create-and-availability.md),
 [Confirm/Cancel/Approve](diagrams/activity-confirm-cancel.md),
-[ordering](diagrams/activity-place-order.md).
+[ordering](diagrams/activity-place-order.md),
+[sequences Create/Availability/Confirm/BR-02](diagrams/sequence-diagrams.md).
 
 ## Consistency check — 22 September 2026
 
