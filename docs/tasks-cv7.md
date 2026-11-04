@@ -15,7 +15,7 @@ Připraveno s AI na pokyn Michala, 29. 10. 2026. Rozdělení a termíny jsou **n
 | C07 dnes | dispozice F1–F3, akce, closure evidence | [C06 Internal Evidence Assessment](evidence-and-evolution.md#c06-internal-evidence-assessment), [assessment](SWI_C06_Assessment_Hospoda_Devs.md#owner-disposition) | hotovo (návrh) |
 | B | 5 rizik v 5 kategoriích, opatření, zbytkové, trigger; 2 issues | [C07 Risk Assessment](evidence-and-evolution.md#c07-risk-assessment) | hotovo (návrh) |
 | C | 6 slajdů status reportu | [`c08-project-status.pptx`](c08-project-status.pptx) | hotovo (návrh) |
-| A | osnova technické obhajoby | níže | připraveno, **společné projití nezapsáno** |
+| A | osnova technické obhajoby + podpůrné slajdy (10, poznámky pro řečníka, záložní otázky) | níže, [`c08-technical-review.pptx`](c08-technical-review.pptx) | připraveno, přednáší Michal; **společné projití nezapsáno** |
 | — | lidské review výstupů C07 | [Lidské review C07](evidence-and-evolution.md#lidské-review-c07) | **chybí** |
 | — | PR `c07` → `main` | PR #21 | sloučeno 29. 10. 2026 (`e8ca781`) |
 
