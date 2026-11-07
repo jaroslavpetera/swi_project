@@ -12,23 +12,23 @@ Připraveno s AI na pokyn Michala, 29. 10. 2026. Rozdělení a termíny jsou **n
 
 | Část | Výstup | Kde | Stav |
 |---|---|---|---|
-| C07 dnes | dispozice F1–F3, akce, closure evidence | [C06 Internal Evidence Assessment](evidence-and-evolution.md#c06-internal-evidence-assessment), [assessment](SWI_C06_Assessment_Hospoda_Devs.md#owner-disposition) | hotovo (návrh) |
-| B | 5 rizik v 5 kategoriích, opatření, zbytkové, trigger; 2 issues | [C07 Risk Assessment](evidence-and-evolution.md#c07-risk-assessment) | hotovo (návrh) |
-| C | 6 slajdů status reportu | [`c08-project-status.pptx`](c08-project-status.pptx) | hotovo (návrh) |
-| A | osnova technické obhajoby | níže | připraveno, **společné projití nezapsáno** |
-| — | lidské review výstupů C07 | [Lidské review C07](evidence-and-evolution.md#lidské-review-c07) | **chybí** |
+| C07 dnes | dispozice F1–F3, akce, closure evidence | [C06 Internal Evidence Assessment](evidence-and-evolution.md#c06-internal-evidence-assessment), [assessment](SWI_C06_Assessment_Hospoda_Devs.md#owner-disposition) | hotovo, potvrzeno týmem 7. 11. 2026 |
+| B | 5 rizik v 5 kategoriích, opatření, zbytkové, trigger; 2 issues | [C07 Risk Assessment](evidence-and-evolution.md#c07-risk-assessment) | hotovo, potvrzeno týmem 7. 11. 2026 |
+| C | 6 slajdů status reportu | [`c08-project-status.pptx`](c08-project-status.pptx) | hotovo, potvrzeno týmem 7. 11. 2026 |
+| A | osnova technické obhajoby | níže | připraveno; společné projití nahrazeno křížovými review (R-01) |
+| — | lidské review výstupů C07 | [Lidské review C07](evidence-and-evolution.md#lidské-review-c07) | hotovo 7. 11. 2026 (Jarda, Honza, Michal) |
 | — | PR `c07` → `main` | PR #21 | sloučeno 29. 10. 2026 (`e8ca781`) |
 
 ## Co zbývá týmu (do C08)
 
 Termíny podle status reportu C08 (upraven týmem 2. 11. 2026).
 
-1. **Review a potvrzení** dispozic F1/F2, rizik R-01…R-05 a status reportu; zapsat jména do tabulky Lidské review C07. — Jarda, do 3. 11.
+1. ~~Review a potvrzení dispozic F1/F2, rizik R-01…R-05 a status reportu~~ — hotovo 7. 11. (Jarda, Honza, Michal; termín byl 3. 11.).
 2. ~~Sloučit PR `c07`~~ — hotovo 29. 10. (PR #21).
-3. **R-03:** den před C08 `npm ci` + `npm test` na notebooku, ze kterého se bude prezentovat. — Honza, do 4. 11.
-4. **R-01:** společné projití kódu a části A, každý vysvětlí část, kterou nepsal; projít kontrolní otázky a zapsat, kdo co zodpověděl. — Michal, 2. 11.
-5. **R-04 / I-01:** plán CP2 s vlastníky a oddělení výstupů testů od `c03-*.json`. — Jarda, do 6. 11.
-6. Na C08 se zeptat vyučujícího na bod 10 C02 (I-02).
+3. ~~**R-03:** `npm ci` + `npm test` na notebooku, ze kterého se bude prezentovat~~ — hotovo 3. 11. (Honza); log zatím není v repozitáři.
+4. ~~**R-01:** společné projití kódu~~ — nahrazeno 7. 11. křížovými review C02–C07, viz [C07 Risk Assessment](evidence-and-evolution.md#c07-risk-assessment). — Michal
+5. **R-04 / I-01:** plán CP2 s vlastníky a oddělení výstupů testů od `c03-*.json`. — Jarda, do 30. 11. (posunuto ze 6. 11.; řešení I-01 zatím nerozhodnuto).
+6. ~~Zeptat se vyučujícího na bod 10 C02 (I-02)~~ — vyučující nápravu přijal (zapsáno 7. 11.).
 
 ## A — Technical Design Review (8–10 min)
 

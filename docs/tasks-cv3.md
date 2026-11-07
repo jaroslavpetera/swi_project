@@ -14,7 +14,7 @@
 > | 3 | ~~**Tag `c03-architecture`** na finálním commitu + zapsat do M~~ — hotovo: tag na merge commitu `a04be34` | Michal | [JC2](#jc2--k-zápis-implementace) |
 > | 4 | ~~PR `c03` → `main`~~ — hotovo: PR #15 mergnut 11. 10. 2026 | Michal | — |
 > | 5 | ~~Křížové lidské review REQ-01…08 a schválení baseline v0.1/v0.2~~ — hotovo 26. 10. 2026 | Michal + Jarda | [stav C02](c02-completion-evidence.md#aktualizovaný-stav-issue-9) |
-> | 6 | ~~Původní pořadí analýzy C02: pokud důkaz není, dohodnout nápravu s vyučujícím~~ — uzavřeno 26. 10. 2026 jako přiznaná mezera, čeká na vyučujícího | tým | [rozhodnutí](c02-completion-evidence.md#bod-10--původní-pořadí-analýzy) |
+> | 6 | ~~Původní pořadí analýzy C02: pokud důkaz není, dohodnout nápravu s vyučujícím~~ — uzavřeno 26. 10. 2026 jako přiznaná mezera, vyučující přijal (zapsáno 7. 11. 2026) | tým | [rozhodnutí](c02-completion-evidence.md#bod-10--původní-pořadí-analýzy) |
 
 ## Technicky dokončeno 11. 10. 2026
 

@@ -174,7 +174,7 @@ se při úklidu neměnily a testovací sada nebyla znovu spouštěna.
 | **6, 11, 13, 15** | **Dokončené:** konzistence, úplný dopad, oba diagramy v0.2, integrovaná reprodukovatelná evidence. |
 | **2** | **Dokončené 26. 10. 2026:** lidské křížové review REQ-01…08 — Jarda a Michal ([záznam](#uzavření-procesních-bodů-26-10-2026)). |
 | **7** | **Dokončené 26. 10. 2026:** týmové schválení v0.1 — Jarda a Michal. |
-| **10** | **Uzavřeno týmem jako přiznaná procesní mezera** 26. 10. 2026; původní pořadí analýzy nedoloženo, náprava doložena. Potvrzení vyučujícím zatím chybí. |
+| **10** | **Uzavřeno týmem jako přiznaná procesní mezera** 26. 10. 2026; původní pořadí analýzy nedoloženo, náprava doložena. Nápravu přijal vyučující (zapsáno 7. 11. 2026). |
 | **14** | **Dokončené 26. 10. 2026:** týmové schválení v0.2 — Jarda a Michal; specifikace je schválená baseline. |
 
 Stav 26. 10. 2026: **15 bodů doloženo**, bod 10 uzavřen jako přiznaná mezera
@@ -223,5 +223,5 @@ se schválením zde zapsán není.
   - C03: cross-view kontrola I a delta J před implementací K
     ([architektura](architecture-and-decisions.md#i-cross-view-kontrola));
   - C05: DD kroky 1–3 (`ef8257c`, 12. 10. 14:38) před implementací (`f24326a`, 14:46).
-- **Otevřené:** přijetí této nápravy vyučujícím. Pokud vyučující požaduje jinou nápravu, zapsat
-  ji sem.
+- **Výsledek:** vyučující tuto nápravu přijal, jinou nepožaduje (podle sdělení Jardy, zapsáno
+  7. 11. 2026). Bod je uzavřený.

@@ -21,7 +21,7 @@ Původní tag `c03-architecture` se neposouvá.
 | Start lokální aplikace | Lokální PostgreSQL → migrace → seed → HTTP menu/400/404; procesy se po smoke testu ukončí. [Report](evidence/c03-local-startup.json). |
 | Dokumentace | Opraveno mapování BR-02 ve stavovém diagramu a realizace `ReservationTx` v H2. Setup, aktuální rizika a checklist rozlišují dnešní a historickou evidenci. |
 | Expirace | ADR-04 zachovává R-16 a současné ověřitelné chování: EXPIRED se detekuje při Approve, čtení nemění stav. Worker by vyžadoval změnu baseline. |
-| Původní proces C02 | [Dostupná historie prozkoumána](c02-process-history-check.md), původní pořadí nedoloženo; další nápravu řeší tým s vyučujícím. |
+| Původní proces C02 | [Dostupná historie prozkoumána](c02-process-history-check.md), původní pořadí nedoloženo; nápravu vyučující přijal (zapsáno 7. 11. 2026). |
 
 ## Ověření a zátěž
 
@@ -68,7 +68,7 @@ Historické reporty C02 z 22. 9. se nepřepisují; aktuální SQLite regrese zap
    A9/HC3 je odškrtnuto; [záznam review](architecture-and-decisions.md#review-a9--hc3--technická-kontrola).
 2. **Dokončeno 26. 10. 2026 (C02 část):** Michal + Jarda — křížové review REQ-01…08 a schválení v0.1/v0.2.
    Samostatný podpis C03 zadání nevyžaduje; lidské review C03 je bod 1.
-3. Tým: dodat případný původní podklad analýzy C02 nebo dohodnout nápravu s vyučujícím.
+3. **Dokončeno:** bod uzavřen jako přiznaná mezera, nápravu vyučující přijal (zapsáno 7. 11. 2026).
 4. **Dokončeno:** issue #9 je na GitHubu uzavřené; checklist aktualizován 26. 10. 2026.
 
 **26. 10. 2026:** body 2 (část C02) a 3 uzavřeny —

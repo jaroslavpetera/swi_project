@@ -609,9 +609,8 @@ Co má reviewer minimálně ověřit (stačí odškrtnout do sloupce *Výsledek*
 
 ## C06 Internal Evidence Assessment
 
-> **Stav 29. 10. 2026:** připraveno s AI na pokyn Michala jako **návrh dispozice**. Rozhodnutí
-> ACCEPT / REJECT a vlastníky musí potvrdit tým (Jarda, Honza, Michal) a zapsat se do
-> [Lidského review C07](#lidské-review-c07). Dokud se tak nestane, platí jako návrh.
+> **Stav 7. 11. 2026:** připraveno s AI na pokyn Michala 29. 10. 2026; rozhodnutí ACCEPT / REJECT
+> a vlastníky potvrdil tým (Jarda, Honza, Michal) v [Lidském review C07](#lidské-review-c07).
 
 **Assessed baseline:** `a8f1052` (`main`, „c05 kompletne hotovy“), 26. 10. 2026. Hodnocení od
 nezávislého týmu: [`SWI_C06_Assessment_Hospoda_Devs.md`](SWI_C06_Assessment_Hospoda_Devs.md)
@@ -656,14 +655,15 @@ ne odvozený limit — měření ukazuje rezervu zhruba 2×.
 - Hodnotitelé si všimli, že tag `c05-detailed-design` (`055917c`) neobsahuje aserci K4 přidanou
   v `7e62f78`; evidence C05 tedy odpovídá `a8f1052`, ne tagu. Neopravujeme přesunem tagu
   (historie), uvádíme to zde.
-- Bod 10 C02 (původní pořadí analýzy) čeká na vyjádření vyučujícího.
+- Bod 10 C02 (původní pořadí analýzy): nápravu vyučující přijal (zapsáno 7. 11. 2026), viz I-02.
 - Skripty `npm test` / `verify:docs` přepisují sledované `docs/evidence/c03-*.json` — viz issue I-01.
 
 ## C07 Risk Assessment
 
-> Návrh připravený s AI 29. 10. 2026 z reálného stavu repozitáře; L/I, strategie a vlastníky
-> potvrdí tým v [Lidském review C07](#lidské-review-c07). Opatření a termíny R-01, R-03 a R-04
-> sjednoceny 2. 11. 2026 se status reportem C08, který tým upravil (`65bdc22`, `a27bdad`).
+> Připraveno s AI 29. 10. 2026 z reálného stavu repozitáře; L/I, strategie a vlastníky
+> potvrdil tým (Jarda, Honza, Michal) 7. 11. 2026 v [Lidském review C07](#lidské-review-c07). Opatření a termíny R-01, R-03 a R-04
+> sjednoceny 2. 11. 2026 se status reportem C08, který tým upravil (`65bdc22`, `a27bdad`), a znovu
+> 7. 11. 2026 po změně opatření R-01, provedení R-03 a posunu plánu CP2.
 
 Stupnice podle zadání: L, I ∈ {1, 2, 3}; priorita L × I: 1–2 LOW, 3–4 MEDIUM, 6–9 HIGH.
 Počáteční riziko = před opatřením. Skutečné zbytkové = jen pokud je opatření provedené a ověřené,
@@ -671,7 +671,7 @@ jinak **NOT VERIFIED**.
 
 | ID | Kategorie | Příčina → nejistá událost → důsledek | Počáteční L / I / priorita + zdůvodnění |
 |---|---|---|---|
-| **R-01** | People / Resources | Většinu implementace a uzavírání (C03 K, C05 N1/N2, PostgreSQL setup, merge, tagy) dělal jeden člen (Jarda: 28 ze 46 ne-merge commitů na `main`) a velkou část textů připravila AI → při obhajobě CP1 nebo v nepřítomnosti Jardy ostatní nevysvětlí mechanismus ADR-03, DD nebo nálezy C06 → ztráta bodů v kritériu *Engineering Review & Defence*, zpoždění CP2. | L=2 (koncentrace je doložená; nepřítomnost všech na C06 ukázala, že výpadek nastává), I=3 (obhajoba je hodnocené kritérium) → **HIGH (6)** |
+| **R-01** | People / Resources | Většinu implementace a uzavírání (C03 K, C05 N1/N2, merge, tagy) dělal jeden člen (Jarda: 28 ze 46 ne-merge commitů na `main`) a velkou část textů připravila AI → při obhajobě CP1 nebo v nepřítomnosti Jardy ostatní nevysvětlí mechanismus ADR-03, DD nebo nálezy C06 → ztráta bodů v kritériu *Engineering Review & Defence*, zpoždění CP2. | L=2 (koncentrace je doložená; nepřítomnost všech na C06 ukázala, že výpadek nastává), I=3 (obhajoba je hodnocené kritérium) → **HIGH (6)** |
 | **R-02** | Technical / Quality | BR-02 vynucuje jen Reservation Lifecycle (ADR-03, bez DB constraint), kontrola L2 je textová a `npm run db:import-sqlite` zapisuje rezervace přímo (`createMany`) → zápis mimo Lifecycle uloží dvě překrývající se CONFIRMED téhož stolu → porušení hlavního invariantu (dvojitá rezervace). | L=1 (žádná známá cesta se nepoužívá, ale import existuje), I=3 (hlavní invariant domény) → **MEDIUM (3)** |
 | **R-03** | Release / Operation | Spuštění závisí na `npm ci` se sítí a na platformním balíčku `embedded-postgres` 16.14.0-beta.17 → na prezentačním počítači (jiná platforma, bez sítě, blokovaný port 55432) se aplikace ani testy nespustí → živá ukázka *Working Solution* při C08 selže. | L=2 (beta závislost, škola/síť mimo naši kontrolu), I=2 (lze nahradit uloženými reporty, ale ztratí se přesvědčivost) → **MEDIUM (4)** |
 | **R-04** | Schedule / Integration | Výstupy se integrují těsně před termínem (C05 merge 26. 10., v den odevzdání; C07 29. 10.) → nálezy z obhajoby C08 nebo z review nestihneme opravit a ověřit před CP2 → do CP2 vstoupí otevřené nálezy. | L=2 (opakovaný vzorec C03/C05), I=2 (náprava realistická, ale tlačí rozsah) → **MEDIUM (4)** |
@@ -679,10 +679,10 @@ jinak **NOT VERIFIED**.
 
 | ID | Strategie | Opatření, vlastník, termín | Doklad opatření | Očekávané zbytkové | Skutečné zbytkové | Akceptace / trigger |
 |---|---|---|---|---|---|---|
-| R-01 | MITIGATE | Společné projití kódu a osnovy části A před obhajobou: každý vysvětlí i část, kterou **nepsal**, a odpoví na kontrolní otázky z [`tasks-cv7.md`](tasks-cv7.md). Vlastník: Michal, 2. 11. 2026. | Plán v [`tasks-cv7.md`](tasks-cv7.md); provedení zatím nezapsáno (kdo, kdy, které otázky). | L=1 / I=3 → MEDIUM (3) | **NOT VERIFIED** | Akceptuje tým; trigger: člen při generálce nezodpoví kontrolní otázku ke své části. |
+| R-01 | MITIGATE | Křížová review C02–C07: výstupy kontroluje i někdo jiný než autor. Nahrazuje původně plánované společné projití kódu (změna 7. 11. 2026). Vlastník: Michal, 7. 11. 2026. | Záznamy review: [C02](c02-completion-evidence.md#uzavření-procesních-bodů-26-10-2026) (Jarda, Michal), [C03](architecture-and-decisions.md#review-a9--hc3--technická-kontrola) (Honza), [C05](#lidské-review-a9) (Jarda, Honza), [C07](#lidské-review-c07) (tým). Review nedokládá, že člen část obhájí, proto skutečné zbytkové zůstává neověřené. | L=1 / I=3 → MEDIUM (3) | **NOT VERIFIED** | Akceptuje tým; trigger: výstup se dostane do `main` bez zapsaného křížového review. |
 | R-02 | MITIGATE | Import odmítne zdroj s překrývajícími se CONFIRMED (`assertExclusiveConfirmed` v `scripts/lib/data-transfer.mjs`). Ruční SQL zůstává (přijatý důsledek ADR-03). Vlastník: Jarda, hotovo 29. 10. 2026. | `scripts/verify-data-transfer.mjs`: zdroj se dvěma překrývajícími se CONFIRMED → odmítnuto, cíl beze změny — `overlappingConfirmedRefused: true` v [`c07-data-transfer-verification.json`](evidence/c07-data-transfer-verification.json). | L=1 / I=3 → MEDIUM (3) | **L=1 / I=3 → MEDIUM (3)** — cesta importem uzavřena a ověřena; dopad zůstává 3, protože ruční SQL je dál možné. | Akceptuje Jarda (ADR-03); trigger: nový skript / admin nástroj zapisující `Reservation`, selhání L2 testu. |
-| R-03 | MITIGATE | Den před C08 `npm ci` + `npm test` na **prezentačním** notebooku; zálohou uložené reporty `docs/evidence/c07-*.json` a `docker compose` (`npm run dev:external`). Vlastník: Honza, do 4. 11. 2026. | Čistý běh existuje na 3 platformách: Windows 11 (Michal, 29. 10., 142/142), macOS (hodnotitelé C06, 26. 10.), Linux/WSL2 (Jarda, 26. 10.). Prezentační stroj zatím neověřen. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Honza; trigger: `npm ci` nebo start PostgreSQL selže na prezentačním stroji. |
-| R-04 | MITIGATE | PR `c07` → `main` sloučit do 30. 10. 2026; plán CP2 s vlastníky do 6. 11. 2026; nálezy z C08 zapsat jako issues se lhůtou týden před CP2. Vlastník: Jarda. | PR #21 sloučen 29. 10. 2026 (`e8ca781`). Plán CP2 zatím neexistuje. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Jarda; trigger: PR otevřený déle než 2 dny nebo issue po lhůtě. |
+| R-03 | MITIGATE | Den před C08 `npm ci` + `npm test` na **prezentačním** notebooku; zálohou uložené reporty `docs/evidence/c07-*.json` a `docker compose` (`npm run dev:external`). Vlastník: Honza, provedeno 3. 11. 2026. | Čistý běh existuje na 3 platformách: Windows 11 (Michal, 29. 10., 142/142), macOS (hodnotitelé C06, 26. 10.), Linux/WSL2 (Jarda, 26. 10.). Prezentační stroj: běh provedl Honza 3. 11. 2026, log v repozitáři zatím není. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Honza; trigger: `npm ci` nebo start PostgreSQL selže na prezentačním stroji. |
+| R-04 | MITIGATE | PR `c07` → `main` sloučit do 30. 10. 2026; plán CP2 s vlastníky do 30. 11. 2026 (posunuto ze 6. 11.); nálezy z C08 zapsat jako issues se lhůtou týden před CP2. Vlastník: Jarda. | PR #21 sloučen 29. 10. 2026 (`e8ca781`). Plán CP2 zatím neexistuje. | L=1 / I=2 → LOW (2) | **NOT VERIFIED** | Akceptuje Jarda; trigger: PR otevřený déle než 2 dny nebo issue po lhůtě. |
 | R-05 | ACCEPT | Bez změny; rozhodnutí ADR-04 (lazy detekce, žádný worker). Vlastník: Honza. | ADR-04 v `architecture-and-decisions.md`, test V-05.7. | L=1 / I=2 → LOW (2) | LOW (2) — přijato, opatření se neprovádí | Akceptuje Honza; trigger: požadavek na automatický přechod podle času v zadání CP2 nebo od vyučujícího. |
 
 ### Open issues (ne rizika)
@@ -690,15 +690,15 @@ jinak **NOT VERIFIED**.
 | ID | Problém (už nastal) | Dopad | Vlastník / další krok |
 |---|---|---|---|
 | I-01 | `npm test`, `verify:postgres` a `verify:docs` přepisují sledované `docs/evidence/c03-*.json`; každý běh se musí ručně vracet. | Riziko nechtěně commitnuté změny historické evidence (zmínili hodnotitelé C06, B2). | Jarda — výstupy zapisovat do souboru podle běhu, ne do historických C03 reportů; do CP2. |
-| I-02 | Bod 10 C02 (původní pořadí analýzy) uzavřen týmem jako přiznaná mezera. | Bez potvrzení vyučujícího zůstává procesní otázka otevřená. | Tým — zeptat se na C08. |
+| I-02 | Bod 10 C02 (původní pořadí analýzy) uzavřen týmem jako přiznaná mezera. | Procesní otázka čekala na potvrzení vyučujícího. | **Uzavřeno:** vyučující přijal (zapsáno 7. 11. 2026). |
 
 ### Lidské review C07
 
 | Výstup | Připravil | Reviewer | Datum | Výsledek |
 |---|---|---|---|---|
-| Dispozice F1–F3 a opravy (`src/http/app.ts`, testy V-01.6/7, `postgres-load.ts`, import) | Michal (s AI) | *doplní tým* | | |
-| Registr rizik R-01…R-05, issues | Michal (s AI) | *doplní tým* | | |
-| Status report C08 (`docs/c08-project-status.pptx`) | Michal (s AI) | *doplní tým* | | |
+| Dispozice F1–F3 a opravy (`src/http/app.ts`, testy V-01.6/7, `postgres-load.ts`, import) | Michal (s AI) | Jarda, Honza, Michal | 7. 11. 2026 | schváleno bez výhrad |
+| Registr rizik R-01…R-05, issues | Michal (s AI) | Jarda, Honza, Michal | 7. 11. 2026 | schváleno bez výhrad |
+| Status report C08 (`docs/c08-project-status.pptx`) | Michal (s AI) | Jarda, Honza, Michal | 7. 11. 2026 | schváleno bez výhrad |
 
 ### Commit/tag C07
 

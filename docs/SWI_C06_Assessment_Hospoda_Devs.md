@@ -208,8 +208,8 @@ Result: REJECTED CANDIDATE — implementace odpovídá ADR-03.
 
 ## Owner disposition
 
-*Vyplnili vlastníci projektu (Hospoda Devs), 29. 10. 2026 — návrh připravený s AI, potvrzení
-týmu viz [Lidské review C07](evidence-and-evolution.md#lidské-review-c07). Podrobnosti a
+*Vyplnili vlastníci projektu (Hospoda Devs), 29. 10. 2026 — připraveno s AI, potvrdil tým
+7. 11. 2026, viz [Lidské review C07](evidence-and-evolution.md#lidské-review-c07). Podrobnosti a
 closure evidence: [C06 Internal Evidence Assessment](evidence-and-evolution.md#c06-internal-evidence-assessment).*
 
 | Finding | ACCEPTED / REJECTED / DEFERRED | Reason/evidence | Action / no-change |

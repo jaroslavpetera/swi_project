@@ -28,7 +28,7 @@ git show --stat 0fa81a1
 ## Zbývající lidský krok
 
 > **26. 10. 2026:** tým bod uzavřel jako přiznanou procesní mezeru s doloženou nápravou;
-> přijetí vyučujícím zatím chybí — [rozhodnutí](c02-completion-evidence.md#bod-10--původní-pořadí-analýzy).
+> nápravu vyučující přijal (zapsáno 7. 11. 2026) — [rozhodnutí](c02-completion-evidence.md#bod-10--původní-pořadí-analýzy).
 
 Tým může dodat současně vzniklý podklad mimo prozkoumanou historii. Pokud není,
 má skutečně dohodnout nápravu procesní mezery s vyučujícím a zapsat výsledek.
