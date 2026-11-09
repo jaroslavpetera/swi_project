@@ -1,5 +1,17 @@
 # Architecture & Decisions
 
+> **Runtime pohled na aktuální kód:** [sekvenční diagramy SD-1–SD-4](diagrams/sequence-diagrams.md) ukazují, jak se
+> architektura z tohoto dokumentu (G2, ADR-03, C05 DD) skutečně vykonává.
+>
+> | Sekce tady | Odpovídající sekvenční diagram |
+> |---|---|
+> | [G2 TO-BE statická architektura](#g2-to-be-statická-architektura) — účastníci | [tabulka účastníků](diagrams/sequence-diagrams.md) |
+> | OP-01 Create (mimo C03/C05 slice) | [SD-1](diagrams/sequence-diagrams.md#sd-1--op-01-create-reservation-req-01) |
+> | OP-02 Availability (mimo C03/C05 slice) | [SD-2](diagrams/sequence-diagrams.md#sd-2--op-02-check-availability-req-02) |
+> | [H1 Confirm (C03 návrh, historický)](#h1-návrhový-sekvenční-diagram--confirm-reservation) | [SD-3 — aktuální Confirm](diagrams/sequence-diagrams.md#sd-3--op-03-confirm-reservation-req-03) |
+> | [C05 Detailed sequence (H3 Approve s konfliktem)](#detailed-sequence) | [SD-3](diagrams/sequence-diagrams.md#sd-3--op-03-confirm-reservation-req-03), poznámka o Approve |
+> | [E3 souběžný Confirm](#e3-průchod-scénářem--souběžný-confirm-dvou-překrývajících-se-rezervací), [ADR-03](#f-adr-03--kde-se-rozhoduje-alokace-br-02-při-souběhu) | [SD-4 — BR-02 při souběhu](diagrams/sequence-diagrams.md#sd-4--business-rule--invariant-br-02-při-souběhu-req-04) |
+
 ## Tech stack
 
 | Vrstva | Volba | Zdůvodnění |
@@ -458,6 +470,8 @@ chvíli (V-04R.1 / V-04R.8). Druhá polovina tabulky sleduje větev s approval.
 | souběžný Approve R2 a Confirm R3 (V-04R.7) | Jeden commit projde, druhý `23P01`. Aplikace musí obě chybové cesty sjednotit. | Serializováno zámkem stolu; druhý dostane `OverlapError`. Jedna chybová cesta. |
 | vypršení bez dalšího Approve (D3) | Neřešeno — obě varianty zachovávají lazy detekci (R-16). | Neřešeno stejně. Rozhodnutí o aktivní expiraci není předmětem tohoto ADR. |
 
+Průběh alternativy B v aktuálním kódu (zpráva po zprávě) ukazuje [SD-4](diagrams/sequence-diagrams.md#sd-4--business-rule--invariant-br-02-při-souběhu-req-04).
+
 Obě varianty realizují požadované chování REQ-03/04 i OP-05. Liší se v tom, **kdo** rozhoduje a
 **kolik** chybových cest musí aplikace obsloužit.
 
@@ -487,6 +501,9 @@ rozhoduje uvnitř transakce serializované podle Resource, kterou poskytuje pers
   stejně jako `SELECT … FOR UPDATE` a je přenositelný i na SQLite.
 - Podmínka očekávaného stavu v `UPDATE` zůstává jako druhá pojistka proti přepsání novějšího stavu.
 - Konflikt má jednu chybovou cestu (`OverlapError` → 409).
+
+**Realizace rozhodnutí v kódu:** [SD-3](diagrams/sequence-diagrams.md#sd-3--op-03-confirm-reservation-req-03) (všechny větve Confirm pod zámkem) a
+[SD-4](diagrams/sequence-diagrams.md#sd-4--business-rule--invariant-br-02-při-souběhu-req-04) (dva souběžné Confirm, právě jeden vítěz).
 
 **Důvod:** jediná varianta, která řeší D4 (jeden vlastník, jedna chyba) a D1 zároveň; je
 ověřitelná na současné databázi dnešními testy `V-04R.*`; přechod na PostgreSQL mění jen
@@ -619,6 +636,10 @@ contains:
 procesu → funguje i pro více instancí aplikace nad stejnou DB (ADR-03 nezavádí globální mutex v procesu).
 
 ### H1. Návrhový sekvenční diagram — Confirm Reservation
+
+> **Historický návrh C03.** Po C05 se kód změnil (`Clock.now()` po zámku, `LifecyclePolicy`,
+> větve BR-04/BR-05). Aktuální tok je v [SD-3](diagrams/sequence-diagrams.md#sd-3--op-03-confirm-reservation-req-03); rozdíly popisuje
+> [kontrola konzistence SQ-4](diagrams/sequence-diagrams.md#kontrola-konzistence-s-předchozí-dokumentací-3-11-2026).
 
 ```mermaid
 sequenceDiagram
@@ -1212,6 +1233,9 @@ sequenceDiagram
 ReservationTx.findById → Clock.now → LifecyclePolicy.decideApprove →
 ReservationTx.findConfirmedForResource → LifecyclePolicy.decideAllocation →
 ReservationRules.findOverlappingConfirmed → OverlapError (rollback)`.
+
+Stejné pořadí volání pro Confirm ukazuje [SD-3](diagrams/sequence-diagrams.md#sd-3--op-03-confirm-reservation-req-03) (včetně HTTP vrstvy a kódů odpovědí),
+souběh dvou rozhodnutí [SD-4](diagrams/sequence-diagrams.md#sd-4--business-rule--invariant-br-02-při-souběhu-req-04) (kontrola SQ-5).
 
 Při `Close` by sekvence měla jiný závěr: `tx.transition(current, EXPIRED)` → návrat hodnoty
 obsahující příčinu expirace z `work` → **commit** → teprve potom `ApprovalExpiredError`

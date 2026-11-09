@@ -7,12 +7,12 @@ prvkům z C03 G2 a třídám z C05 DD.
 
 | Účastník | Prvek architektury | Kód |
 |---|---|---|
-| Reservation API | HTTP vrstva, validace vstupu, mapování chyb | [`src/http/app.ts`](../../src/http/app.ts) |
-| ReservationService | Reservation Lifecycle (jediný vlastník přechodů, ADR-03) | [`src/services/reservationService.ts`](../../src/services/reservationService.ts) |
+| Reservation API | [G2](../architecture-and-decisions.md#g2-to-be-statická-architektura) HTTP vrstva, validace vstupu, mapování chyb | [`src/http/app.ts`](../../src/http/app.ts) |
+| ReservationService | Reservation Lifecycle (jediný vlastník přechodů, [ADR-03](../architecture-and-decisions.md#f-adr-03--kde-se-rozhoduje-alokace-br-02-při-souběhu)) | [`src/services/reservationService.ts`](../../src/services/reservationService.ts) |
 | AvailabilityService | Availability (read-only OP-02) | [`src/services/availabilityService.ts`](../../src/services/availabilityService.ts) |
-| LifecyclePolicy | čisté rozhodnutí přechodu (C05 N1) | [`src/domain/lifecyclePolicy.ts`](../../src/domain/lifecyclePolicy.ts) |
+| LifecyclePolicy | čisté rozhodnutí přechodu ([C05 N1](../architecture-and-decisions.md#design-elements-and-ownership)) | [`src/domain/lifecyclePolicy.ts`](../../src/domain/lifecyclePolicy.ts) |
 | ReservationRules | BR-01 … BR-04 predikáty | [`src/domain/rules.ts`](../../src/domain/rules.ts) |
-| Clock | jediný zdroj „now“ (C05 N2) | [`src/domain/clock.ts`](../../src/domain/clock.ts) |
+| Clock | jediný zdroj „now“ ([C05 N2](../architecture-and-decisions.md#design-elements-and-ownership)) | [`src/domain/clock.ts`](../../src/domain/clock.ts) |
 | ReservationRepository / ReservationTx | Reservation Persistence (Prisma adaptér portu `ReservationStore`) | [`src/repositories/reservationRepository.ts`](../../src/repositories/reservationRepository.ts) |
 | Reservation DB | PostgreSQL 16 (výchozí), SQLite (historický profil) | [`prisma/schema.prisma`](../../prisma/schema.prisma) |
 
@@ -118,6 +118,9 @@ DRAFT, PENDING_APPROVAL, CANCELLED, REJECTED a EXPIRED (V-02.5, V-02.8, V-02.9, 
 
 ## SD-3 — OP-03 Confirm Reservation (REQ-03)
 
+Návrh: [C03 H1](../architecture-and-decisions.md#h1-návrhový-sekvenční-diagram--confirm-reservation) (historický),
+[C05 Algorithm / decision logic](../architecture-and-decisions.md#algorithm--decision-logic), [C05 Detailed sequence](../architecture-and-decisions.md#detailed-sequence).
+
 Kompletní tok včetně všech větví rozhodnutí `decideConfirm` (pořadí: stav → BR-04 → BR-05 → BR-02).
 Rozhodnutí probíhá výhradně nad stavem načteným **pod zámkem Resource** a čas se čte až po zámku.
 
@@ -221,6 +224,9 @@ Testy: V-03.x, DD-T1…T9 (`tests/services/reservationLifecycle.unit.test.ts`,
 ---
 
 ## SD-4 — Business rule / invariant BR-02 při souběhu (REQ-04)
+
+Návrh: [E3 průchod scénářem](../architecture-and-decisions.md#e3-průchod-scénářem--souběžný-confirm-dvou-překrývajících-se-rezervací),
+[ADR-03](../architecture-and-decisions.md#f-adr-03--kde-se-rozhoduje-alokace-br-02-při-souběhu), [G4 runtime mapping](../architecture-and-decisions.md#g4-runtime--deployment-mapping).
 
 **Invariant BR-02:** žádný commitnutý stav nesmí obsahovat dvě překrývající se CONFIRMED rezervace
 téhož Resource. **REQ-04:** ze souběžných Confirm/Approve na překrývající se intervaly téhož stolu
