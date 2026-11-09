@@ -707,3 +707,77 @@ kritérium F1, rizika“ s tagem **`c07-reporting-baseline`**. Ověření běže
 zdrojů (`baseCommit` v reportu je předchozí `1393c70` + tyto změny; SHA-256 souborů je v reportu).
 Tag ukazuje na `2460003`; PR #21 sloučen merge commitem `e8ca781` 29. 10. 2026, tag je v historii `main`.
 Pozdější commity `65bdc22`, `9698284`, `a27bdad` (2. 11.) mění jen `docs/c08-project-status.pptx`.
+
+## C08 Controlled Change — baseline a test cases
+
+> Připraveno s AI na pokyn Michala 2. 11. 2026. Karta změny (CR, dopady, varianty, rozhodnutí)
+> je v [`intent-and-change.md`](intent-and-change.md#c08--cr-c08-01--controlled-change-card);
+> zde je výchozí baseline a krokované test cases s výsledky. Checklist: [`tasks-cv8.md`](tasks-cv8.md).
+
+### Krok 0 — výchozí baseline (before)
+
+| Položka | Hodnota |
+|---|---|
+| Commit | `ff027e3` (`main`, 2. 11. 2026; obsahuje tag `c07-reporting-baseline`) — tag **`c08-before`** |
+| Specifikace | v0.2: BR-01, BR-02, BR-05, BR-06, OP-05, R-16 ([`specification.md`](specification.md)), poslední změna 29. 10. 2026 (C07 F2) |
+| Architektura | ADR-03 (Lifecycle + zámek Resource), ADR-04 (lazy expiry při Approve) — [`architecture-and-decisions.md`](architecture-and-decisions.md) |
+| Schéma DB | jediná migrace `prisma/migrations/20261011153000_postgresql_init` |
+| Runtime | Node.js 24.14.0, Windows 11; PostgreSQL 16.14 (embedded-postgres 16.14.0-beta.17), READ COMMITTED; Prisma 5.20.0; Vitest 2.1.1 |
+| Testovací DB | nová izolovaná databáze v dočasném clusteru pro každý běh; heslo náhodné, nikde neuložené; vývojová DB z `.env` se nepoužívá |
+| Data | migrace + `prisma/seed.ts` (jídelní lístek); fixture každého testu vzniká v testu (vlastní stůl, host) |
+| Příkaz | `npm test` (celá sada na PostgreSQL) |
+
+Běh 2. 11. 2026: **147/147 passed** (dosavadních 142 + 5 nových C08) — [`c08-postgres-tests.json`](evidence/c08-postgres-tests.json),
+`baseCommit` = `ff027e3`, jediná necommitnutá změna byl nový soubor `tests/spec/c08-baseline.test.ts`
+(SHA-256 v `snapshot`). Produkční kód se neměnil. Omezení: běh používal stejné kroky jako `npm test`,
+jen bez přegenerování Prisma klientů, protože běžící `npm run dev` držel zamčený query engine
+(schéma i klienti jsou beze změny od C03).
+
+### TC-C08-01 — pozitivní: sousední interval se schválí
+
+**Test basis:** BR-01 (půlotevřený interval), BR-02, BR-05, OP-05 Approve; spec v0.2 @ `ff027e3`. Riziko: N/A.
+**Předpoklady:** stůl R1 s `requiresApproval = true`; B1 CONFIRMED R1 `[2027-04-01T10:00Z, 11:00Z)`;
+B2 PENDING_APPROVAL R1 `[11:00Z, 12:00Z)`. B1 i B2 vznikají skutečným API (Create → Confirm 202 → u B1 Approve).
+Čas v UTC, termín schválení (start − 30 min) leží v budoucnu. Role: R-7 — API identitu neověřuje.
+**Kód:** `tests/spec/c08-baseline.test.ts` › TC-C08-01 (run 1, run 2).
+
+| # | Akce | Expected (před během, ze specifikace) | Actual (po běhu) | Evidence |
+|---|---|---|---|---|
+| 1 | Nový stůl R1, B1 a B2 přes API | B1 CONFIRMED, B2 PENDING_APPROVAL | Confirm B1 → 202, Approve B1 → 200, Confirm B2 → 202 | test, krok 1 |
+| 2 | Samostatné čtení z DB (druhé spojení) | `[10,11)` CONFIRMED, `[11,12)` PENDING_APPROVAL, nic jiného | přesně tyto 2 řádky | `storedState` |
+| 3 | `POST /reservations/B2/approve` | uspěje: 200 CONFIRMED (sousední intervaly se nepřekrývají) | 200, `state = CONFIRMED` | HTTP odpověď |
+| 4 | Znovu načíst commitnutý stav | obě CONFIRMED, 0 překryvů | obě CONFIRMED, 0 překryvů | `confirmedOverlaps` |
+| 5 | Opakovat na nových datech (run 2) | stejný výsledek | stejný výsledek | run 2 passed |
+
+**Verdikt: PASS** (2/2 běhy). **Nepokrývá:** souběžné Approve (to ověřuje V-04R.* a `lock-mechanism.test.ts`).
+
+### TC-C08-02 — negativní: překrývající se interval se neschválí
+
+**Test basis:** BR-02, OP-05 „overlap → 409, overlap refusal retains PENDING_APPROVAL“; spec v0.2 @ `ff027e3`.
+**Předpoklady:** jako TC-C08-01, ale B2 = `[10:30Z, 11:30Z)`. HTTP kód 409 je náš přijatý kontrakt OP-05.
+
+| # | Akce | Expected (před během) | Actual (po běhu) | Evidence |
+|---|---|---|---|---|
+| 1 | Nový stůl R1, B1 a B2 přes API | jen B1 CONFIRMED | Confirm B1 → 202, Approve B1 → 200, Confirm B2 → 202 | test, krok 1 |
+| 2 | Samostatné čtení z DB | intervaly se překrývají, potvrzená jen B1 | B1 CONFIRMED, B2 PENDING_APPROVAL | `storedState` |
+| 3 | `POST /reservations/B2/approve` | odmítnuto 409, nic se nealokuje | 409 | HTTP odpověď |
+| 4 | Načíst stav po rollbacku | B1 beze změny, B2 PENDING_APPROVAL, 0 překryvů | uložený stav identický s krokem 2, 0 překryvů | `after == before` |
+| 5 | Opakovat po resetu (run 2) | stejný výsledek | stejný výsledek | run 2 passed |
+
+**Verdikt: PASS** (2/2 běhy). **Nepokrývá:** zápis mimo Lifecycle (ruční SQL) — přijatý důsledek ADR-03, riziko R-02.
+
+### TC-C08-03 — pozorování výchozího chování pro CR-C08-01
+
+**Test basis:** BR-06 (lazy detekce), R-16 (čtení je čisté), `GET /resources/:id/reservations`.
+**Předpoklady:** stůl s `requiresApproval = true`; čekající žádost s `startsAt = now + 10 min`
+(termín schválení uplynul před 20 min) založená přímo v DB — žádost, která čekala a nikdo ji neposoudil
+(stejný postup fixture jako V-04R.7).
+
+| # | Akce | Expected (před během) | Actual (po běhu) |
+|---|---|---|---|
+| 1 | `GET /resources/:id/reservations` (zdroj přehledu obsluhy) | `state = PENDING_APPROVAL`; odpověď nenese žádnou informaci o termínu | `PENDING_APPROVAL`, jen pole modelu (`id`, `resourceId`, `userId`, `startsAt`, `endsAt`, `state`, `createdAt`, `updatedAt`) |
+| 2 | Samostatné čtení z DB | čtení nic nezměnilo (R-16) | PENDING_APPROVAL |
+| 3 | `POST …/approve` | 410, uložen EXPIRED (BR-06) | 410, v DB EXPIRED |
+
+**Verdikt: PASS** — potvrzuje **omezení**, na které reaguje CR-C08-01: UI (`public/app.js`) počítá takovou
+žádost mezi „Čeká na schválení“ a nabízí tlačítko **Schválit**, které skončí 410.
