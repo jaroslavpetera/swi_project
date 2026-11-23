@@ -26,6 +26,7 @@ import {
 import { ReservationState } from "../domain/types.js";
 import { Clock, systemClock } from "../domain/clock.js";
 import { isApprovalExpired } from "../domain/rules.js";
+import { describeError, logEvent } from "../logging.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
@@ -291,7 +292,7 @@ export function createApp(prisma: PrismaClient, clock: Clock = systemClock): Exp
 }
 
 // Jediné místo, kde se doménové a DB chyby překládají na HTTP status kódy.
-function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ReservationConflictError) return res.status(409).json({ error: err.message });
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof ResourceNotFoundError) return res.status(404).json({ error: err.message });
@@ -314,6 +315,11 @@ function errorMiddleware(err: unknown, _req: Request, res: Response, _next: Next
     return res.status(400).json({ error: "Unknown resourceId or userId" });
   }
 
-  console.error(err);
+  // C10: technická porucha → jeden diagnostický řádek. Operace jako vzor routy (bez ID a těla).
+  logEvent("error", "http", "request_failed", {
+    operation: `${req.method} ${req.baseUrl}${req.route?.path ?? req.path}`,
+    status: 500,
+    ...describeError(err),
+  });
   return res.status(500).json({ error: "Internal server error" });
 }
