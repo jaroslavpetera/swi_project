@@ -14,6 +14,8 @@
     "verify:c02": "node scripts/verify-c02.mjs",
     "verify:postgres": "node scripts/verify-postgres.mjs",
     "verify:docs": "node scripts/check-docs.mjs",
+    "validation:env": "node scripts/validation-env.mjs",
+    "validation:readback": "node scripts/validation-env.mjs --readback",
     "db:import-sqlite": "node scripts/migrate-local-sqlite.mjs",
     "prisma:generate": "node scripts/generate-clients.mjs",
     "prisma:migrate": "prisma migrate dev",

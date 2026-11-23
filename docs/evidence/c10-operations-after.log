@@ -1,0 +1,16 @@
+2026-11-23T13:38:33.154Z [harness] Start aplikace
+2026-11-23T13:38:33.889Z [app stdout] {"time":"2026-11-23T13:38:33.888Z","level":"info","component":"process","event":"startup","port":55848,"pid":21096}
+2026-11-23T13:38:33.890Z [app stdout] Reservation service listening on port 55848
+2026-11-23T13:38:33.890Z [app stdout] Index route: http://localhost:55848/
+2026-11-23T13:38:34.131Z [harness] S1: create + confirm platné rezervace
+2026-11-23T13:38:34.208Z [harness] S2: confirm překrývající se rezervace [19:00, 21:00)
+2026-11-23T13:38:34.304Z [harness] S3: zastavuji PostgreSQL (pg_ctl stop -m fast)
+2026-11-23T13:38:35.798Z [app stderr] {"time":"2026-11-23T13:38:35.798Z","level":"error","component":"http","event":"request_failed","operation":"POST /reservations","status":500,"errorType":"PrismaClientKnownRequestError","code":"P1017","cause":"Server has closed the connection.","where":"src/repositories/reservationRepository.ts:77"}
+2026-11-23T13:38:35.799Z [harness] S3: odpověď během výpadku: 500 za 13 ms
+2026-11-23T13:38:35.799Z [harness] S3: spouštím PostgreSQL znovu
+2026-11-23T13:38:36.473Z [harness] S4: zastavuji aplikaci
+2026-11-23T13:38:36.489Z [harness] S4: aplikace skončila, exit code null, signal SIGTERM
+2026-11-23T13:38:36.489Z [harness] S4: start aplikace znovu
+2026-11-23T13:38:37.235Z [app stdout] {"time":"2026-11-23T13:38:37.234Z","level":"info","component":"process","event":"startup","port":55848,"pid":37764}
+2026-11-23T13:38:37.235Z [app stdout] Reservation service listening on port 55848
+2026-11-23T13:38:37.235Z [app stdout] Index route: http://localhost:55848/

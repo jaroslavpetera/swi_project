@@ -781,3 +781,122 @@ B2 PENDING_APPROVAL R1 `[11:00Z, 12:00Z)`. B1 i B2 vznikají skutečným API (Cr
 
 **Verdikt: PASS** — potvrzuje **omezení**, na které reaguje CR-C08-01: UI (`public/app.js`) počítá takovou
 žádost mezi „Čeká na schválení“ a nabízí tlačítko **Schválit**, které skončí 410.
+
+## C09 — Integration, CI and Release Record
+
+> Připraveno s AI na pokyn Michala 23. 11. 2026. Implementace, testy a CI proběhly skutečně (odkazy níže).
+> **Lidské kroky (peer review, nezávislá reprodukce) zatím chybí** — jsou označené BLOCKED/NOT RUN,
+> ne PASS. Checklist: [`tasks-cv9.md`](tasks-cv9.md).
+
+| Položka | Záznam |
+|---|---|
+| C08 Change Card a rozhodnutí | [CR-C08-01](intent-and-change.md#c08--cr-c08-01--controlled-change-card) — **ACCEPT varianta A** (odvozený příznak při čtení na serveru), C = DEFER. Rozhodnutí je stále **návrh**: řádek *Peer reviewer* v kartě není vyplněn → podmínka pro RC níže. |
+| Before / after | before = `ff027e3` (tag `c08-before`); after = **`a3da8be`** (tag **`c09-rc1`**, větev `c09`): `d490daf` změna CR-C08-01 + CI, `8d244a2` a `a3da8be` provozní log C10. |
+| Dotčená tvrzení a nová AC | BR-06 / OP-05 (spec): čtení smí vrátit `approvalOverdue`; nový příklad **V-05.10**. AC-01…AC-05 z karty změny. Beze změny: BR-02, R-16, ADR-03, ADR-04, stavový model. |
+| Změněno | `src/http/app.ts` (`createApp(prisma, clock = systemClock)`, pole `approvalOverdue` přes `rules.ts::isApprovalExpired`), `public/app.js` + `styles.css` (počítadlo, štítek „Po termínu schválení“, bez **Schválit**), `specification.md` BR-06/OP-05, poznámka k ADR-04, README API, `frontend.md`, `.github/workflows/ci.yml`. |
+| N/A (se zdůvodněním) | Schéma DB a migrace — příznak se počítá, neukládá. Stavový diagram — žádný nový stav ani přechod. Availability (OP-02) — PENDING ani EXPIRED stůl neblokuje. Konfigurace — lhůta 30 min zůstává konstantou. |
+| Peer review | **BLOCKED** — čeká na Jardu nebo Honzu (review PR `c09` → `main`). Ke kritice: (1) stačí příznak, nebo je potřeba EXPIRED v DB (reporty)? (2) Tlačítko **Zrušit** v UI dál používá hodiny prohlížeče (`Date.now()`), jen u BR-03 — mimo rozsah CR, ale stejná třída rizika jako C06 F2. |
+
+### Testy (expected stanovené v C08 před implementací)
+
+| Test ID | Accepted oracle | Příkaz / data | Expected | Actual | Výsledek | Evidence |
+|---|---|---|---|---|---|---|
+| V-05.10 AC-01 | karta C08 AC-01, BR-06 | `tests/spec/c09-approval-overdue.test.ts`, pevné hodiny `startsAt − 30:01` | `approvalOverdue: false`; Approve 200; v DB CONFIRMED | false; 200; CONFIRMED | PASS | [`c09-postgres-tests.json`](evidence/c09-postgres-tests.json) |
+| V-05.10 AC-03 + AC-05 | AC-03 (hranice `now ≥ deadline`), R-16 | tamtéž, `startsAt − 30:00` | `true`; po GET v DB stále PENDING_APPROVAL | true; PENDING_APPROVAL | PASS | tamtéž |
+| V-05.10 AC-02 | AC-02, BR-06 | tamtéž, `startsAt − 29:00` | `true`; Approve 410; v DB EXPIRED; pak příznak false | true; 410; EXPIRED; false | PASS | tamtéž |
+| V-05.10 ostatní | spec BR-06 (V-05.10) | po `startsAt`; stav DRAFT / CONFIRMED | true; false / false | true; false / false | PASS | tamtéž |
+| C08 TC-01 (×2) | BR-01/02, OP-05 | `tests/spec/c08-baseline.test.ts` | Approve sousedního intervalu 200, 2× CONFIRMED, 0 překryvů | shodně | PASS | tamtéž |
+| C08 TC-02 (×2) | BR-02, OP-05 | tamtéž | Approve překryvu 409, stav beze změny | shodně | PASS | tamtéž |
+| C08 TC-03 | BR-06, R-16; **plánovaná úprava kroku 1** | tamtéž | GET vrací PENDING_APPROVAL **a nově `approvalOverdue: true`**; Approve 410 → EXPIRED | shodně | PASS | tamtéž |
+| Regrese AC-04 | BR-02, ADR-03 | V-04R.*, `lock-mechanism.test.ts`, `lifecycle-ownership.test.ts` | bez dvou CONFIRMED; Lifecycle jediný zapisovač | shodně | PASS | tamtéž |
+| UI CR-C08-01 | AC-02 v přehledu obsluhy | `npm run test:frontend`, propadlá žádost založená v izolované DB | štítek, bez **Schválit**, se **Zamítnout**, počítadlo 0, v DB PENDING_APPROVAL | shodně | PASS | [`frontend-verification.json`](evidence/frontend-verification.json), [snímek](evidence/frontend/approval-overdue.png) |
+| Celá sada | — | `npm test` na `a3da8be` (čistý strom) | vše projde | **155/155** (17 souborů) | PASS | [`c09-postgres-tests.json`](evidence/c09-postgres-tests.json), `baseCommit` = `a3da8be` |
+
+**Skutečná integrační hranice a stav po commitu:** HTTP API (`createApp`) → Prisma → PostgreSQL 16.14 (READ COMMITTED,
+nová izolovaná DB). Uložený stav čte druhé spojení (`oracle = new PrismaClient()`) po commitu, ne HTTP odpověď.
+
+### Release identity
+
+| Položka | Hodnota |
+|---|---|
+| Kód | commit `a3da8be630e97e588e5d8c193961bbff057a4b17`, tag `c09-rc1` |
+| Artefakt | zdrojový archiv `git archive --format=tar c09-rc1` — SHA-256 `fc5de14da28d938ca766963d0401fe6ec8e6468fedd6810019763591a0ee7b6d` (git 2.45.2). Aplikace se nesestavuje do balíčku; běží `tsx src/index.ts`, `npm run build` slouží jako typová kontrola. |
+| Závislosti | `package-lock.json` blob `d62f89909dbd…`; instalace jen `npm ci` (161 balíčků v CI) |
+| Runtime | lokálně Node.js 24.14.0 / Windows 11; CI Node.js 24.22.3 / Ubuntu 24.04; PostgreSQL 16.14 (embedded-postgres 16.14.0-beta.17) |
+| Schéma / migrace | `prisma/schema.prisma` blob `5a7f4f9b2383…`; jediná migrace `20261011153000_postgresql_init` (blob `ae215bfdb904…`) — **beze změny od C03**, žádná nová migrace |
+| Ne-tajná konfigurace | `.env.example`: `DATABASE_URL` (lokální výchozí DB), `PORT=3000`. Testy si tvoří vlastní DB s náhodným heslem, `.env` nepoužívají. |
+| CI | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) při push na `main`/`c*` a při PR: `npm ci` → `npm test`; `npm ci` → `playwright install` → `npm run test:frontend`. Běh [45185464459](https://github.com/jaroslavpetera/swi_project/actions/runs/45185464459) nad `d490daf`: **oba joby success**, 153/153 + 9/9 kontrol prohlížeče, artefakty s reporty. Běh nad `c09-rc1` proběhne s PR. |
+| Rollback | revert commitů `d490daf`…`a3da8be`; bez migrace, nic se neukládá → vrácení neovlivní data. Klient, který začal číst `approvalOverdue`, po revertu pole nedostane (UI pak zobrazí stav jako před C09). |
+
+### Reprodukce na čistém checkoutu
+
+| Pokus | Prostředí | Příkazy | Výsledek |
+|---|---|---|---|
+| CI (čistý runner, žádné lokální soubory) | Ubuntu 24.04, Node 24.22.3 | `npm ci`, `npm test`, `npm run test:frontend` | PASS (běh 45185464459) — dokládá, že není potřeba nezdokumentovaný lokální soubor |
+| Jiný člen týmu podle README | — | `git clone` → `git checkout c09-rc1` → `npm ci` → `npm test` → `npm run dev` → otevřít `http://localhost:3000` | **NOT RUN** — provede Jarda nebo Honza a zapíše OS, Node, výsledek a případnou skrytou opravu sem |
+
+**Známá omezení:** propadlé žádosti zůstávají v DB jako PENDING_APPROVAL, dokud je nikdo nezkusí schválit (R-05,
+varianta C odložena); přímé dotazy do DB je počítají jako čekající. Tlačítko **Zrušit** v UI používá hodiny prohlížeče.
+
+**Dopad na riziko R-05 (C07):** dosud nebylo ošetřené. Teď je ošetřená viditelnost: obsluha propadlou žádost
+pozná a nenabízí se jí ke schválení. Fyzická expirace v DB zůstává ACCEPT (ADR-04). Trigger beze změny.
+Navrhovaná úroveň zůstává LOW (2); potvrdí vlastník Honza.
+
+### Rozhodnutí o release candidate
+
+**CONDITIONAL** (navrhuje Michal, 23. 11. 2026). Všechny AC a regrese prošly lokálně i v CI.
+Podmínky pro změnu na **READY**:
+
+1. peer review rozhodnutí C08 zapsané v kartě změny;
+2. code review PR `c09` → `main` od Jardy nebo Honzy;
+3. čistý checkout a `npm test` jiným členem týmu (řádek výše).
+
+Zelená CI není souhlas s nasazením. **HOLD**, pokud review odhalí, že obsluha potřebuje EXPIRED fyzicky v DB
+(pak varianta C).
+
+## C10 — Provozní situace a logy
+
+> Připraveno s AI na pokyn Michala 23. 11. 2026. Vše běželo skutečně na izolované instanci: vlastní cluster
+> PostgreSQL 16.14 v temp adresáři, aplikace jako samostatný proces (`node --import tsx src/index.ts`).
+> Vývojová DB z `.env` se nepoužila. Skript: [`scripts/c10-operations.mjs`](../scripts/c10-operations.mjs).
+> Expected je zapsané ve skriptu před během. Stav se ověřuje novým spojením přímo do DB.
+
+**Testovaný commit:** 1. běh `d490daf` (původní logování) — [JSON](evidence/c10-operations-before.json),
+[log](evidence/c10-operations-before.log); 2. běh **`a3da8be`** (doplněný log) — [JSON](evidence/c10-operations-after.json),
+[log](evidence/c10-operations-after.log). Windows 11, Node.js 24.14.0. Výsledky obou běhů jsou shodné.
+
+| Situace | Očekávaný a skutečný výsledek | Jak jsme správnost ověřili | Co ukazují logy / je log potřeba? |
+|---|---|---|---|
+| Úspěšné potvrzení | Exp: create 201 DRAFT, confirm 200 CONFIRMED. **Act:** 201, 200 CONFIRMED. **PASS** | Čtení z DB: právě 1 řádek, stav CONFIRMED. | Log nevzniká a **není potřeba**: výsledek nese odpověď a uložený stav. Logovat každý úspěch by byl šum. |
+| Zamítnutá kolize | Exp: confirm `[19:00, 21:00)` vedle CONFIRMED `[18:00, 20:00)` → 409 s ID konfliktní rezervace, R2 zůstane DRAFT. **Act:** 409 „overlaps with confirmed reservation …“, R1 CONFIRMED, R2 DRAFT. **PASS** | Čtení z DB: na stole právě 1 CONFIRMED (R1), R2 DRAFT. | Log nevzniká a **vědomě ho nepřidáváme**. Je to očekávaný doménový výsledek (BR-02), ne technická chyba. Odpověď 409 ho klientovi popíše úplně. Auditní stopu nevyžaduje žádný požadavek (R-7 bez identity). Kdyby přibyl požadavek na audit, patří do DB, ne do provozního logu. |
+| Technická porucha a obnova | Exp: po zastavení DB (`pg_ctl stop -m fast`) vrátí create 5xx, proces nespadne a nic se nezapíše; po startu DB další operace projde bez restartu aplikace. **Act:** 500 za 11–13 ms, proces běží, 0 zapsaných řádků; po obnově create 201 a confirm 200. **PASS** | Výsledek zápisu během výpadku je pro klienta neznámý → **neopakovali jsme ho naslepo**, nejdřív jsme z DB ověřili, že řádek nevznikl (0). Teprve pak nový pokus. | **Před:** víceřádkový stack trace bez času a bez HTTP operace (route šla vyčíst jen z řádku `app.ts:169`); kód `P1017` „Server has closed the connection“ byl vidět. **Po:** jeden řádek `{"time":"…","level":"error","component":"http","event":"request_failed","operation":"POST /reservations","status":500,"errorType":"PrismaClientKnownRequestError","code":"P1017","cause":"Server has closed the connection.","where":"src/repositories/reservationRepository.ts:77"}`. Čas, komponenta, operace i typ problému jsou tedy v logu. **Log je potřeba.** |
+| Restart aplikace | Exp: po zastavení a novém startu je R1 stále CONFIRMED a lze vytvořit i potvrdit další rezervaci. **Act:** R1 CONFIRMED přes API i v DB; R4 201 → 200. **PASS** | Přehled stolu přes API a samostatně čtení z DB (R1, R4 CONFIRMED). | **Před:** jen „Reservation service listening on port …“ bez času. **Po:** `{"event":"startup","port":…,"pid":…}` s časem. Restart je vidět jako nový `startup` s jiným `pid`. Zastavení: na Windows `kill()` proces ukončí okamžitě, takže řádek `shutdown_requested` se nezapíše. Zapíše se při Ctrl+C nebo SIGTERM na Linuxu (handler v `src/index.ts`). Na Windows **NOT VERIFIED**. V logu PostgreSQL je u restartu vidět „connection was forcibly closed by the remote host“ ve stejný okamžik. |
+
+**Co logovat a co jsme zjistili:**
+
+- **Logovat má smysl** technické chyby (500) a start/zastavení procesu: čas, komponentu, operaci (vzor routy bez ID a těla),
+  kód a příčinu. Úspěchy ani doménová zamítnutí (409/410) nelogujeme — nesou je odpovědi a stav v DB.
+- **Z logů jsme skutečně zjistili:**
+  - kdy a kde porucha nastala: `POST /reservations` v `reservationRepository.ts:77`;
+  - co ji způsobilo: spojení s DB zavřeno (P1017);
+  - že aplikace odpověděla 500 a běžela dál;
+  - kdy proběhl restart (nový `startup`/`pid`).
+
+  Log PostgreSQL (`server.log` clusteru) ukázal přesný čas zastavení („database system is shut down“) i znovu připravené
+  DB („ready to accept connections“). Píše ale v místním čase (CET), kdežto aplikace v UTC — při diagnostice je
+  potřeba časy převést.
+- **Jinak jsme museli ověřit:**
+  - že se během výpadku nic nezapsalo — jen dotaz do DB;
+  - že potvrzená rezervace přežila restart — API + DB;
+  - že kolize nezaložila druhou CONFIRMED — DB.
+
+  Log říká, jak aplikace reagovala, ne jaký je stav dat.
+- **Bez tajných údajů:** log neobsahuje tělo požadavku, e-maily ani `DATABASE_URL` (ověřeno v uložených logech).
+  Jednotkový test formátu je `tests/logging.test.ts`.
+
+## C11 — Plán validace
+
+Interní protokol čtyř metod (A pozorované úlohy, B rozhovor a sonda, C scénářové akceptační posouzení,
+D pilot směny) je v [`c11-validation-plan.md`](c11-validation-plan.md). Karty pro účastníka jsou zvlášť
+v [`c11-participant-cards.md`](c11-participant-cards.md). Prostředí s testovacími daty: `npm run validation:env`,
+nezávislý readback: `npm run validation:readback`. Výsledky jsou do C12 `NOT RUN`.

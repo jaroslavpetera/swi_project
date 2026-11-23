@@ -170,5 +170,8 @@ vyučující požaduje fyzický stav EXPIRED bez akce (trigger R-05).
 | Riziko | Rozdíl hodin klient × server už nehraje roli (rozhoduje server); zbývá omezení „DB obsahuje propadlé PENDING“ — R-05, actual **NOT VERIFIED** do C09. |
 | C09 handoff | PR se změnou, `npm test` na čistém checkoutu, `test:frontend`, záznam release a aktualizace R-05. |
 
+**Implementace (C09):** provedeno na větvi `c09` (`d490daf`), release candidate `c09-rc1`; testy a rozhodnutí
+o RC v [C09 evidenci](evidence-and-evolution.md#c09--integration-ci-and-release-record).
+
 **Open uncertainty and next trigger:** zda bude CP2 vyžadovat fyzickou expiraci (→ varianta C);
 trigger: požadavek na reporty / export čekajících žádostí nebo zadání CP2.
