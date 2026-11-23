@@ -504,9 +504,13 @@ td small {
 }
 .state-CANCELLED,
 .state-REJECTED,
-.state-EXPIRED {
+.state-EXPIRED,
+.state-overdue {
   background: #faeaea;
   color: #993943;
+}
+.badge + .state-overdue {
+  margin: 4px 0 0 6px;
 }
 .state-SERVED {
   background: #e8eef9;

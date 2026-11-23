@@ -1,0 +1,80 @@
+{
+  "completedAt": "2026-11-23T13:38:37.780Z",
+  "commit": "a3da8be630e97e588e5d8c193961bbff057a4b17",
+  "uncommittedSourceChanges": null,
+  "platform": "win32-x64",
+  "node": "v24.14.0",
+  "situations": [
+    {
+      "id": "S1",
+      "expected": "create 201 DRAFT, confirm 200 CONFIRMED, v DB právě 1 řádek CONFIRMED",
+      "actual": {
+        "create": 201,
+        "confirm": 200,
+        "confirmState": "CONFIRMED",
+        "db": [
+          "CONFIRMED"
+        ]
+      },
+      "pass": true
+    },
+    {
+      "id": "S2",
+      "expected": "confirm 409 s odkazem na konfliktní rezervaci; R2 zůstává DRAFT; právě 1 CONFIRMED na stole",
+      "actual": {
+        "confirm": 409,
+        "body": {
+          "error": "Reservation overlaps with confirmed reservation 51caaf2c-e433-476b-99b5-af47aa9e716b"
+        },
+        "db": [
+          [
+            "R1",
+            "CONFIRMED"
+          ],
+          [
+            "R2",
+            "DRAFT"
+          ]
+        ]
+      },
+      "pass": true
+    },
+    {
+      "id": "S3",
+      "expected": "během výpadku 5xx bez pádu procesu a bez zápisu; po obnově DB další operace projde bez restartu aplikace",
+      "actual": {
+        "duringStatus": 500,
+        "duringBody": {
+          "error": "Internal server error"
+        },
+        "duringMs": 13,
+        "rowsWrittenDuringOutage": 0,
+        "appAlive": true,
+        "afterCreate": 201,
+        "afterConfirm": 200
+      },
+      "pass": true
+    },
+    {
+      "id": "S4",
+      "expected": "po restartu R1 stále CONFIRMED (API i DB); nová rezervace se vytvoří a potvrdí",
+      "actual": {
+        "r1ViaApi": "CONFIRMED",
+        "db": [
+          [
+            "R1",
+            "CONFIRMED"
+          ],
+          [
+            "R4",
+            "CONFIRMED"
+          ]
+        ],
+        "create": 201,
+        "confirm": 200
+      },
+      "pass": true
+    }
+  ],
+  "log": "docs/evidence/c10-operations-after.log"
+}

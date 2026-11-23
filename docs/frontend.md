@@ -28,6 +28,9 @@ navigace může zalomit, místo aby se zmenšoval.
   vyhledávání podle jména/e-mailu, filtr stavů a akce podle stavu rezervace.
   Čísla v přehledu zahrnují všechny termíny vybraného stolu, nikoliv celou hospodu
   nebo pouze dnešek. Výchozí termín je alespoň hodinu dopředu.
+  Žádost, které uplynul termín schválení (BR-06), má štítek **Po termínu schválení**,
+  nenabízí **Schválit** a nepočítá se mezi čekající (C09, CR-C08-01). Termín určuje
+  server příznakem `approvalOverdue`, ne hodiny prohlížeče.
 - **Objednávky a účet:** výběr stolu a rezervace, lístek rozdělený na jídlo a pití,
   množství a součet, nedostupné položky, podání objednávky a evidence zaplacení.
   Objednávání je dostupné jen během potvrzené návštěvy; server pravidlo dále
@@ -66,6 +69,7 @@ schvalování, objednávky a změny stavů provádí přes UI.
 
 Ověřuje prázdné stavy, vytváření hostů/stolů, bezpečné vykreslení HTML v názvu,
 rezervace a intervaly, potvrzení, kolizi, schválení, zamítnutí, zrušení,
+žádost po termínu schválení (bez **Schválit**, uložený stav beze změny),
 dostupnost, hledání, filtry, součty objednávek, podání a zaplacení, reset účtu,
 opožděné odpovědi, chyby spojení a obnovu. Kontroluje šířky 320, 390, 768,
 1024 a 1440 px. Výstup je v [reportu prohlížeče](evidence/frontend-verification.json).

@@ -127,12 +127,17 @@ describe("C08 baseline — krokované test cases", () => {
       data: { userId, resourceId: resource.id, startsAt, endsAt: new Date(startsAt.getTime() + 60 * 60_000), state: "PENDING_APPROVAL" },
     });
 
-    // Čtení, které používá přehled obsluhy: stav je pořád PENDING_APPROVAL, nic nenaznačuje propadnutí.
+    // Čtení, které používá přehled obsluhy: uložený stav je pořád PENDING_APPROVAL.
+    // Před C09 (`c08-before`) odpověď obsahovala jen pole modelu — propadnutí nešlo poznat.
+    // C09 (CR-C08-01, varianta A) přidává odvozený příznak `approvalOverdue` (plánovaná úprava kroku 1).
     const list = await fetch(`${baseUrl}/resources/${resource.id}/reservations`);
     const rows = (await list.json()) as Record<string, unknown>[];
     expect(rows).toHaveLength(1);
     expect(rows[0].state).toBe("PENDING_APPROVAL");
-    expect(Object.keys(rows[0]).sort()).toEqual(["createdAt", "endsAt", "id", "resourceId", "startsAt", "state", "updatedAt", "userId"].sort());
+    expect(Object.keys(rows[0]).sort()).toEqual(
+      ["approvalOverdue", "createdAt", "endsAt", "id", "resourceId", "startsAt", "state", "updatedAt", "userId"].sort()
+    );
+    expect(rows[0].approvalOverdue).toBe(true);
     // R-16: čtení je čisté — uložený stav se nezměnil.
     expect((await oracle.reservation.findUniqueOrThrow({ where: { id: pending.id } })).state).toBe("PENDING_APPROVAL");
 

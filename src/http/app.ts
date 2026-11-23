@@ -24,6 +24,9 @@ import {
   UnknownMenuItemError,
 } from "../services/orderService.js";
 import { ReservationState } from "../domain/types.js";
+import { Clock, systemClock } from "../domain/clock.js";
+import { isApprovalExpired } from "../domain/rules.js";
+import { describeError, logEvent } from "../logging.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
@@ -86,9 +89,11 @@ function asyncRoute(handler: (req: Request, res: Response) => Promise<unknown>):
   };
 }
 
-export function createApp(prisma: PrismaClient): Express {
+// `clock` je jediný zdroj „teď“ pro Lifecycle i pro odvozené údaje při čtení (R-6);
+// testy ho nahrazují pevným časem.
+export function createApp(prisma: PrismaClient, clock: Clock = systemClock): Express {
   const reservationRepository = new ReservationRepository(prisma);
-  const service = new ReservationService(reservationRepository);
+  const service = new ReservationService(reservationRepository, clock);
   const availability = new AvailabilityService(reservationRepository);
   const orderService = new OrderService(new OrderRepository(prisma), reservationRepository);
   const app = express();
@@ -142,7 +147,15 @@ export function createApp(prisma: PrismaClient): Express {
         where: { resourceId: req.params.id },
         orderBy: { startsAt: "asc" },
       });
-      return res.json(reservations);
+      // CR-C08-01 (C09): příznak, že čekající žádosti uplynul termín schválení (BR-06).
+      // Jen se počítá — čtení nic nezapisuje (R-16); EXPIRED uloží až pokus o Approve (ADR-04).
+      const now = clock.now();
+      return res.json(
+        reservations.map((r) => ({
+          ...r,
+          approvalOverdue: isApprovalExpired({ state: r.state as ReservationState, startsAt: r.startsAt }, now),
+        }))
+      );
     })
   );
 
@@ -279,7 +292,7 @@ export function createApp(prisma: PrismaClient): Express {
 }
 
 // Jediné místo, kde se doménové a DB chyby překládají na HTTP status kódy.
-function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ReservationConflictError) return res.status(409).json({ error: err.message });
   if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
   if (err instanceof ResourceNotFoundError) return res.status(404).json({ error: err.message });
@@ -302,6 +315,11 @@ function errorMiddleware(err: unknown, _req: Request, res: Response, _next: Next
     return res.status(400).json({ error: "Unknown resourceId or userId" });
   }
 
-  console.error(err);
+  // C10: technická porucha → jeden diagnostický řádek. Operace jako vzor routy (bez ID a těla).
+  logEvent("error", "http", "request_failed", {
+    operation: `${req.method} ${req.baseUrl}${req.route?.path ?? req.path}`,
+    status: 500,
+    ...describeError(err),
+  });
   return res.status(500).json({ error: "Internal server error" });
 }

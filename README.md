@@ -26,6 +26,7 @@ Předobjednávka před začátkem rezervace ani skutečné platby zatím v rozsa
 | [C05 Detailed Design](docs/architecture-and-decisions.md#c05-detailed-design) a [evidence](docs/evidence-and-evolution.md#c05-dd-verification-evidence) | Detailní návrh Reservation Lifecycle (Confirm/Approve), testy odvozené z DD a porovnání s kódem; [checklist](docs/tasks-cv5.md). |
 | [C06 dispozice a rizika C07](docs/evidence-and-evolution.md#c06-internal-evidence-assessment) | Reakce na nezávislé hodnocení C06, opravy F1/F2, registr rizik, plán obhajoby a [status report C08](docs/c08-project-status.pptx); [checklist](docs/tasks-cv7.md). |
 | [C08 řízená změna](docs/intent-and-change.md#c08--cr-c08-01--controlled-change-card) a [test cases](docs/evidence-and-evolution.md#c08-controlled-change--baseline-a-test-cases) | Change Request CR-C08-01, dopady, varianty, rozhodnutí a předávka do C09; krokované testy `tests/spec/c08-baseline.test.ts`; [checklist](docs/tasks-cv8.md). |
+| [C09 integrace a release](docs/evidence-and-evolution.md#c09--integration-ci-and-release-record), [C10 provoz a logy](docs/evidence-and-evolution.md#c10--provozní-situace-a-logy), [C11 plán validace](docs/c11-validation-plan.md) | Implementace CR-C08-01, CI (`.github/workflows/ci.yml`), release candidate `c09-rc1`; provozní situace a minimální log; čtyři validační protokoly a `npm run validation:env`; [checklist](docs/tasks-cv9.md). |
 | [Technické dokončení C03](docs/c03-technical-completion.md) | Aktuální setup, PostgreSQL testy, převod dat, 10× zátěž a záznam uzavření lidských bodů. |
 | [Evidence C02](docs/c02-completion-evidence.md) | Provedené ověření, vazby na požadavky a uzavření issue #9. |
 | [Kontrola požadavků](docs/c02-requirement-review.md) | Technické review REQ-01 až REQ-08. |
@@ -125,6 +126,10 @@ Specifikace v0.2 je schválená baseline (křížové review a schválení Jarda
 | Účet hosta | `GET /reservations/:id/tab` |
 | Průběh objednávky | `POST /orders/:id/serve`, `POST /orders/:id/pay` |
 | Pomocné pro UI a ruční testování | `GET/POST /users`, `GET/POST /resources`, `GET /resources/:id/reservations` |
+
+`GET /resources/:id/reservations` vrací u každé rezervace navíc `approvalOverdue` (boolean):
+`true`, pokud čekající žádosti uplynul termín schválení BR-06. Příznak se jen počítá serverem,
+uložený stav nemění (C09, CR-C08-01).
 
 Časy (`startsAt`, `endsAt`, `start`, `end`) musí být ISO 8601 s časovou zónou (`Z` nebo
 `±hh:mm`), jinak API vrátí 400 (BR-01, oprava nálezu C06 F2).

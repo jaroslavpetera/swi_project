@@ -1,0 +1,31 @@
+2026-11-23T13:37:13.148Z [harness] Start aplikace
+2026-11-23T13:37:13.895Z [app stdout] Reservation service listening on port 50855
+2026-11-23T13:37:13.895Z [app stdout] Index route: http://localhost:50855/
+2026-11-23T13:37:14.147Z [harness] S1: create + confirm platné rezervace
+2026-11-23T13:37:14.237Z [harness] S2: confirm překrývající se rezervace [19:00, 21:00)
+2026-11-23T13:37:14.341Z [harness] S3: zastavuji PostgreSQL (pg_ctl stop -m fast)
+2026-11-23T13:37:15.706Z [app stderr] PrismaClientKnownRequestError: 
+2026-11-23T13:37:15.706Z [app stderr] Invalid `this.prisma.reservation.create()` invocation in
+2026-11-23T13:37:15.706Z [app stderr] C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\src\repositories\reservationRepository.ts:77:47
+2026-11-23T13:37:15.706Z [app stderr]   74 constructor(private readonly prisma: PrismaClient) {}
+2026-11-23T13:37:15.706Z [app stderr]   75 
+2026-11-23T13:37:15.706Z [app stderr]   76 async create(input: ReservationInput): Promise<ReservationRecord> {
+2026-11-23T13:37:15.706Z [app stderr] → 77   const row = await this.prisma.reservation.create(
+2026-11-23T13:37:15.706Z [app stderr] Server has closed the connection.
+2026-11-23T13:37:15.706Z [app stderr]     at Mn.handleRequestError (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\node_modules\@prisma\client\runtime\library.js:121:7753)
+2026-11-23T13:37:15.706Z [app stderr]     at Mn.handleAndLogRequestError (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\node_modules\@prisma\client\runtime\library.js:121:7061)
+2026-11-23T13:37:15.706Z [app stderr]     at Mn.request (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\node_modules\@prisma\client\runtime\library.js:121:6745)
+2026-11-23T13:37:15.706Z [app stderr]     at async l (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\node_modules\@prisma\client\runtime\library.js:130:9633)
+2026-11-23T13:37:15.706Z [app stderr]     at async ReservationRepository.create (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\src\repositories\reservationRepository.ts:77:17)
+2026-11-23T13:37:15.706Z [app stderr]     at async <anonymous> (C:\Users\micha\michal.krizak\skola\ING\1\SWI\swi_project\src\http\app.ts:169:27) {
+2026-11-23T13:37:15.706Z [app stderr]   code: 'P1017',
+2026-11-23T13:37:15.706Z [app stderr]   clientVersion: '5.20.0',
+2026-11-23T13:37:15.706Z [app stderr]   meta: { modelName: 'Reservation' }
+2026-11-23T13:37:15.706Z [app stderr] }
+2026-11-23T13:37:15.707Z [harness] S3: odpověď během výpadku: 500 za 11 ms
+2026-11-23T13:37:15.707Z [harness] S3: spouštím PostgreSQL znovu
+2026-11-23T13:37:16.407Z [harness] S4: zastavuji aplikaci
+2026-11-23T13:37:16.421Z [harness] S4: aplikace skončila, exit code null, signal SIGTERM
+2026-11-23T13:37:16.421Z [harness] S4: start aplikace znovu
+2026-11-23T13:37:17.113Z [app stdout] Reservation service listening on port 50855
+2026-11-23T13:37:17.113Z [app stdout] Index route: http://localhost:50855/

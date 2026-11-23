@@ -237,6 +237,36 @@ try {
       await expect(page.locator("#reservation-table")).toContainText("Zrušená");
     },
   );
+  await check(
+    "CR-C08-01: pending request past the approval deadline is not offered for approval",
+    async () => {
+      // Termín schválení (startsAt − 30 min) uplynul před 20 minutami; stav v DB je pořád čekající.
+      const overdue = await client.reservation.create({
+        data: {
+          resourceId: vip.id,
+          userId: host.id,
+          state: "PENDING_APPROVAL",
+          startsAt: new Date(Date.now() + 10 * 60000),
+          endsAt: new Date(Date.now() + 70 * 60000),
+        },
+      });
+      await page.reload();
+      await page.locator("#reservations-resource").selectOption(vip.id);
+      const row = page
+        .locator("#reservation-table tbody tr")
+        .filter({ hasText: "Po termínu schválení" });
+      await expect(row).toHaveCount(1);
+      await expect(row.getByRole("button", { name: "Schválit", exact: true })).toHaveCount(0);
+      await expect(row.getByRole("button", { name: "Zamítnout", exact: true })).toHaveCount(1);
+      await expect(page.locator("#stat-pending")).toHaveText("0");
+      const stored = await client.reservation.findUniqueOrThrow({ where: { id: overdue.id } });
+      assert.equal(stored.state, "PENDING_APPROVAL", "čtení přehledu nesmí měnit uložený stav (R-16)");
+      await row.scrollIntoViewIfNeeded();
+      await page.locator("#reservation-table").screenshot({
+        path: path.join(artifacts, "approval-overdue.png"),
+      });
+    },
+  );
   let active;
   await check(
     "Order totals, unavailable items, serving, payment and bill reset",
@@ -410,6 +440,7 @@ try {
       "frontend/reservations-desktop.png",
       "frontend/orders-desktop.png",
       "frontend/reservations-mobile.png",
+      "frontend/approval-overdue.png",
     ],
   });
 } finally {

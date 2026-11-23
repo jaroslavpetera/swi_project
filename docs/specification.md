@@ -3,7 +3,8 @@
 **Status: v0.2 approved baseline — team sign-off 26 October 2026 (Jaroslav Petera, Michal Křižák).**
 
 Updated 22 September 2026 by Codex under the instruction to complete issue #9.
-Last change: 29 October 2026 (C07) — BR-01 offset clarification and V-01.6/7 after C06 finding F2.
+Last change: 23 November 2026 (C09) — BR-06 derived `approvalOverdue` flag on reads and example V-05.10
+(CR-C08-01, option A; awaiting team review). Previous: 29 October 2026 (C07) — BR-01 offset and V-01.6/7.
 Authoritative behaviour is defined here; earlier drafts remain in Git.
 Prior analysis: [completion impact](c02-completion-impact.md).
 Review: [requirement acceptance](c02-requirement-review.md).
@@ -91,6 +92,11 @@ persists EXPIRED and returns 410. Without that attempt the stored state remains
 PENDING_APPROVAL, including on reads/availability. Reject may still produce
 REJECTED after the deadline; Cancel may produce CANCELLED under BR-03. Neither
 detects expiry. Once EXPIRED is stored, Approve/Reject/Cancel return 409.
+A read may expose a derived flag `approvalOverdue` (true iff the stored state is
+PENDING_APPROVAL and `now ≥ startsAt − 30 minutes`, server clock, UTC); it is
+computed, never stored, and does not change the stored state (R-16). Example V-05.10
+(CR-C08-01, C09): at `startsAt − 30:01` false, at `− 30:00` true, after `startsAt`
+true, any other state false.
 EXPIRED, REJECTED and CANCELLED distinguish different causes of closure.
 
 ### BR-07 — Ordering window
@@ -219,7 +225,8 @@ return 410; otherwise re-check current allocations and commit CONFIRMED only if 
 **Concurrency:** duplicate Approve or Approve/Reject cannot both win; checking old
 availability alone is insufficient, REQ-04 applies at commit too.
 **Examples:** existing service/API success, conflict, reject and expiry;
-V-05.5 changed availability, .6 deadline, .7 late Reject/pure read, .8 HTTP expiry;
+V-05.5 changed availability, .6 deadline, .7 late Reject/pure read, .8 HTTP expiry,
+.10 overdue flag on reads;
 V-04R.1/2/4/7 races.
 **Rationale:** table availability may change while a request waits.
 **Scope / TBD:** R-7 excludes permissions; BR-06 explicitly defines lazy expiry.
