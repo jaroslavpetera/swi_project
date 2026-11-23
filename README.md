@@ -126,6 +126,10 @@ Specifikace v0.2 je schválená baseline (křížové review a schválení Jarda
 | Průběh objednávky | `POST /orders/:id/serve`, `POST /orders/:id/pay` |
 | Pomocné pro UI a ruční testování | `GET/POST /users`, `GET/POST /resources`, `GET /resources/:id/reservations` |
 
+`GET /resources/:id/reservations` vrací u každé rezervace navíc `approvalOverdue` (boolean):
+`true`, pokud čekající žádosti uplynul termín schválení BR-06. Příznak se jen počítá serverem,
+uložený stav nemění (C09, CR-C08-01).
+
 Časy (`startsAt`, `endsAt`, `start`, `end`) musí být ISO 8601 s časovou zónou (`Z` nebo
 `±hh:mm`), jinak API vrátí 400 (BR-01, oprava nálezu C06 F2).
 

@@ -1,0 +1,63 @@
+# C09 — automatizovaná kontrola při push a PR.
+# Stejné příkazy jako lokálně podle README: `npm ci` → `npm test` (izolovaný PostgreSQL 16.14,
+# migrace, převod dat, build, celá sada Vitest) a `npm run test:frontend` (Playwright nad HTTP + DB).
+# Zelená CI znamená jen to, že tyto kontroly prošly — není to souhlas s nasazením.
+name: CI
+
+on:
+  push:
+    branches: [main, "c*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: npm test (PostgreSQL)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Instalace závislostí podle lockfile
+        run: npm ci
+      - name: Build + celá testovací sada na PostgreSQL
+        run: npm test
+      - name: Uložit report testů
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-tests-${{ github.sha }}
+          path: docs/evidence/c03-postgres-tests.json
+          if-no-files-found: warn
+
+  frontend:
+    name: npm run test:frontend (Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Instalace závislostí podle lockfile
+        run: npm ci
+      - name: Prohlížeč pro Playwright
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Test frontendu ve skutečném prohlížeči
+        run: npm run test:frontend
+      - name: Uložit report a snímky
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
+          path: |
+            docs/evidence/frontend-verification.json
+            docs/evidence/frontend/
+          if-no-files-found: warn

@@ -287,7 +287,9 @@ function renderReservations() {
     : reservations.filter((r) => r.state === "CONFIRMED").length;
   $("stat-pending").textContent = reservationLoading
     ? "—"
-    : reservations.filter((r) => r.state === "PENDING_APPROVAL").length;
+    : // CR-C08-01: žádost po termínu schválení (BR-06) už rozhodnout nejde — nepočítá se.
+      reservations.filter((r) => r.state === "PENDING_APPROVAL" && !r.approvalOverdue)
+        .length;
   $("stat-capacity").textContent = resource?.capacity ?? "—";
   if (reservationLoading) {
     emptyTable("reservation-table", 4, "Načítání rezervací…");
@@ -334,15 +336,20 @@ function renderReservations() {
     term.append(node("small", `Do ${date(r.endsAt)}`));
     const state = node("td");
     state.append(badge(r.state));
+    // Termín počítá server (serverové hodiny), ne prohlížeč — viz nález C06 F2.
+    if (r.approvalOverdue)
+      state.append(node("span", "Po termínu schválení", "badge state-overdue"));
     const cell = node("td"),
       actions = node("div", undefined, "actions");
     if (r.state === "DRAFT")
       actions.append(actionButton("Potvrdit", "confirm", r.id));
-    if (r.state === "PENDING_APPROVAL")
+    if (r.state === "PENDING_APPROVAL") {
+      if (!r.approvalOverdue)
+        actions.append(actionButton("Schválit", "approve", r.id));
       actions.append(
-        actionButton("Schválit", "approve", r.id),
         actionButton("Zamítnout", "reject", r.id, "reservation", true),
       );
+    }
     if (
       ["DRAFT", "CONFIRMED", "PENDING_APPROVAL"].includes(r.state) &&
       Date.now() < new Date(r.startsAt).getTime()

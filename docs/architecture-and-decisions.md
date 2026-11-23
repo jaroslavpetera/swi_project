@@ -883,6 +883,12 @@ proběhlo 26. 10. 2026 ([záznam](c02-completion-evidence.md#uzavření-procesn�
 pak změnit R-16, BR-06, OP-05, diagramy a V-05.7; určit retry, metriku backlogu a
 chování souběžného Reject/Approve/Cancel. Notifikace jsou nadále mimo R-15.
 
+**Doplněk C09 (CR-C08-01, varianta A):** ADR-04 platí beze změny. Přehled stolu
+(`GET /resources/:id/reservations`) navíc vrací odvozený příznak `approvalOverdue`, který
+počítá `rules.ts::isApprovalExpired` se stejným `Clock` jako Lifecycle. Čtení dál nic
+nezapisuje a pravidlo termínu má jediného vlastníka; fyzický EXPIRED bez akce (worker,
+varianta C) zůstává DEFER — [karta změny](intent-and-change.md#c08--cr-c08-01--controlled-change-card).
+
 ### L2. Architektonické pravidlo
 
 **Architektonické pravidlo:** Stav Reservation smí měnit pouze Reservation Lifecycle
